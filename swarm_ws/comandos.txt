@@ -9,3 +9,14 @@ Comandos — Terminal 1 (build + simulación):
   Terminal 2 (teleop):
   source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
   ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/summit0/cmd_vel
+
+Si ya está compilado y prefieres lanzarlo directo:
+
+  cd ~/swarmbots/swarm_ws
+  source /opt/ros/humble/setup.bash && source install/setup.bash
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
+
+  Y para moverlos, en otra terminal (con los mismos source):
+
+  ros2 topic pub /summit0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3, y: 0.2}}'
+  ros2 topic pub /drone0/cmd_vel  geometry_msgs/Twist '{linear: {x: 0.3}}'
