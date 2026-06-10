@@ -1,0 +1,18 @@
+# Artefactos de colcon (se regeneran con el build)
+swarm_ws/build/
+swarm_ws/install/
+swarm_ws/log/
+
+# Python
+__pycache__/
+*.pyc
+
+# Fuentes externas ya integradas/vendorizadas en el repo
+# (el mundo del zip vive en swarm_ws/src/swarm_worlds/worlds/tugbot_warehouse.sdf;
+#  el tar.gz pesa 103 MB y supera el límite de GitHub)
+tugbot_warehouse.zip
+summit_robot_export.tar.gz
+
+# Config local de Claude Code
+.claude/settings.local.json
+nano.*.save

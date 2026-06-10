@@ -1,0 +1,211 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Asesor — Swarm Robotics / ROS2 Humble / Gazebo & Isaac Sim / Docker
+
+## Estado actual del repo
+
+**Funciona end-to-end (vía nativa)**: `./swarm_ws/scripts/sim_native.sh 3` abre Gazebo Fortress con el **mundo warehouse (tugbot_warehouse, por defecto)** y un **enjambre de N Summit XLS omnidireccionales (mecanum)** en círculo — `/summitN/scan`, `/summitN/odom`, `/summitN/cmd_vel` (incluido strafe lateral en Y) — más **N drones X3 que despegan solos y sobrevuelan el enjambre en hover** (`/droneN/cmd_vel`, `/droneN/odom`). Validado en `isa` (Ubuntu 22.04, NVIDIA 580, Fortress 6.16.0, ROS 2 Humble) con RTF ≈ 0.99. También disponibles: enjambre de minibots (`sim.launch.py`), Summit XL skid-steer individual (`spawn_summit.launch.py`) y el mundo `empty_arena` (`world:=empty_arena center_x:=0 center_y:=0`).
+
+Estructura:
+
+- `swarm_ws/docker/` — Pipeline Docker (Dockerfile + docker-compose + entrypoint). **No se ha construido la imagen**; en `isa` no hace falta porque la vía nativa cubre todo. Existe como fallback de portabilidad.
+- `swarm_ws/scripts/` — `sim_native.sh` (host, **primaria**), `build.sh` + `run.sh` + `colcon_build.sh` + `sim.sh` (Docker, secundarias).
+- `swarm_ws/src/swarm_description/` — paquete propio: `urdf/minibot.urdf.xacro` (diff-drive + LiDAR 2D, plugins **nativos Fortress**: `libignition-gazebo-diff-drive-system.so`, `libignition-gazebo-joint-state-publisher-system.so`).
+- `swarm_ws/src/swarm_worlds/` — paquete propio: `worlds/tugbot_warehouse.sdf` (**mundo por defecto**, almacén MovAi adaptado) y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
+- `swarm_ws/src/{robotnik_common,robotnik_sensors,summit_xl_description,summit_xl_control}/` — paquetes externos Robotnik. **Summit ya portado a Fortress** en dos variantes propias: `robots/summit_xl_omni.urdf.xacro` (XLS mecanum/omni — **el robot del enjambre**, vía `sim_summit.launch.py`) y `robots/summit_xl_noarm.urdf.xacro` (XL skid-steer 4 ruedas con DiffDrive de joints agrupados 2L+2R, vía `spawn_summit.launch.py`). Siguen **sin portar** (y no se usan): `summit_xl_base.gazebo.xacro` (plugins Classic), `all_sensors.urdf.xacro` (Classic), `ros2_control.urdf.xacro` (declara joints de brazo inexistentes), `summit_xl_control/launch/*.launch` (XML ROS 1).
+
+### Lecciones aprendidas (no repetir)
+- El `MecanumDrive` de Fortress **no publica odometría** (anuncia el tópico pero nunca emite, aunque sus strings sugieran `odom_topic`). Hay que añadir `OdometryPublisher` aparte. Ojo: éste inicializa el odom en la **pose mundial** del spawn, no en cero.
+- La fricción direccional mecanum (`<fdir1 ignition:expressed_in="...">`) **no es expresable en URDF** — el parser de sdformat pierde el atributo. Solución: pipeline xacro → URDF → `ign sdf -p` → inyectar `fdir1` con regex → spawn por `-file` (ver `sim_summit.launch.py`). Patrón de rodillos en X: FL/BR `1 -1 0`, FR/BL `1 1 0`, con `mu1=1.0`/`mu2=0.0` (copiado del demo `mecanum_drive.sdf` de ign-gazebo6).
+- Al convertir URDF→SDF, los links unidos por joints fijos se fusionan (lumping) en el link raíz: el "chassis" del SDF resultante se llama `base_footprint`, no `base_link` (importa para `expressed_in`).
+- En Fortress, el plugin `Sensors` va **en el `<world>` del SDF**, NO en el `<gazebo>` del URDF del robot. Ponerlo en el URDF y spawnear N>1 robots dispara SIGINT a Gazebo.
+- SDF en Fortress soporta hasta `version="1.8"`. La 1.9 es Garden/Harmonic — Gazebo sale "limpio" (exit 0) sin warning claro.
+- `<gz_frame_id>` en sensores es tag de Harmonic; en Fortress se omite.
+- Para `IncludeLaunchDescription(ign_gazebo.launch.py)`, pasar `ign_args` como **string ya resuelto**, no como lista de substituciones — esto último confunde el wrapper.
+- `catkin_pkg` rechaza emails sin TLD válido (ej. `dev@local`). Usar uno real.
+- **Spawnear un robot dentro de una colisión estática hunde el RTF de TODA la sim** (a ~0.06): la interpenetración profunda dispara el solver de contactos de DART en cada paso. Los modelos Fuel pueden tener cajas de colisión mucho mayores que su visual (las `shelf_big` del warehouse miden 2.1×18×6 m — pasillos enteros). Antes de elegir un punto de spawn, comprobar las cajas de colisión de los `<include>`, no solo los visuales. Para diagnosticar RTF bajo: `ign topic -e -t /world/<mundo>/stats` y bisecar el mundo quitando includes.
+- Los `sleep` de **reloj de pared no sirven para secuencias dependientes del tiempo de sim** (el RTF puede ser <1): el despegue de los drones corta la subida leyendo la altitud real por odometría (`ign topic -e ... | awk`), no con `sleep 4`.
+- En headless, añadir `--headless-rendering` a `ign gazebo -s`: sin él los `gpu_lidar` caen a render por software (libEGL "failed to create dri2 screen" en el log y GPU sin uso en `nvidia-smi`).
+- `model://` en mundos requiere exportar `IGN_GAZEBO_RESOURCE_PATH` con el dir `models` del paquete (lo hace `sim_summit.launch.py` vía `os.environ` antes de lanzar Gazebo).
+
+## Comandos comunes
+
+Hay **dos vías** para correr la sim. El host (`isa`) ya tiene ROS 2 Humble + Gazebo Fortress + drivers NVIDIA → la vía nativa es la rápida; Docker queda como respaldo de portabilidad.
+
+### Vía A — nativa en el host (recomendada en `isa`)
+```bash
+./swarm_ws/scripts/sim_native.sh 3    # compila y lanza ros2 launch en el host
+```
+Equivale a:
+```bash
+cd swarm_ws && source /opt/ros/humble/setup.bash
+colcon build --symlink-install --packages-select swarm_description swarm_worlds
+source install/setup.bash
+ros2 launch swarm_worlds sim.launch.py n_robots:=3
+```
+
+### Vía B — Docker (portable)
+- Construir imagen: `./swarm_ws/scripts/build.sh` (requiere `docker compose` v2 + NVIDIA Container Toolkit)
+- Shell en contenedor: `./swarm_ws/scripts/run.sh`
+- Simular: `./swarm_ws/scripts/sim.sh 3`
+
+### Mover robots (cualquier vía, en otra terminal)
+```bash
+source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+ros2 topic pub /robot0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.2}, angular: {z: 0.3}}'
+```
+
+## Convenciones del minibot
+- Namespace por robot: `robot0`, `robot1`, … (asignado por el launch)
+- Tópicos ROS ya remapeados al namespace: `/<ns>/cmd_vel`, `/<ns>/odom`, `/<ns>/scan`, `/<ns>/joint_states`, `/<ns>/tf`
+- Frame prefix: `<ns>/base_footprint`, `<ns>/odom`, `<ns>/lidar_link`
+
+---
+
+## Enjambre Summit XLS omni en Fortress (HECHO — 2026-06-09, primario)
+
+**Validado headless en `isa` con 3 robots**: spawn en círculo (radio ≥3.5 m, mirando al centro), `/summitN/scan` publica, avance X (2.4 m en 5 s a 0.5 m/s), **strafe lateral Y** (2.39 m con deriva frontal de 0.2 mm) y giro (+114° en 4 s a 0.5 rad/s) — la cinemática mecanum funciona de verdad (física, no bypass). Los comandos `cmd_vel` **persisten** hasta recibir otro (mandar Twist en cero para frenar).
+
+```bash
+./swarm_ws/scripts/sim_native.sh 3                          # build + enjambre con GUI
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 [headless:=true]
+ros2 topic pub /summit0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3, y: 0.2}}'
+```
+
+Piezas: `summit_xl_description/robots/summit_xl_omni.urdf.xacro` (base XLS + 4 ruedas mecanum con macro propio + LiDAR 2D + `MecanumDrive` + `OdometryPublisher` + JSP) y `swarm_worlds/launch/sim_summit.launch.py` (genera URDF y SDF por robot en `/tmp/swarm_summit/`, inyecta `fdir1`, spawnea N con bridges). Namespaces `summit0…N-1`, mismos tópicos/frames que el minibot.
+
+## Enjambre de drones X3 sobrevolando (HECHO — 2026-06-09)
+
+Quadrotor **X3 UAV** vendorizado en `swarm_worlds/models/x3_uav/` (descargado de Fuel una vez; URIs de meshes relativas → autocontenido y Docker-safe). `sim_summit.launch.py` ahora spawnea también **N drones** (`n_drones:=-1` → igual que `n_robots`), namespaces `drone0…N-1`, que **despegan solos y quedan en hover ~3.5 m** sobre el anillo de summits. Validado con 3+3: hover estable (deriva <0.1 mm en 8 s), `/droneN/cmd_vel` y `/droneN/odom` por bridge, Summits intactos.
+
+Cómo vuela: a cada model.sdf se le inyectan los plugins nativos Fortress `MulticopterMotorModel` (×4) + `MulticopterVelocityControl` + `OdometryPublisher` (config copiada del demo `multicopter_velocity_control.sdf` de ign-gazebo6; los links internos del modelo se llaman `X3/rotor_N`). **El controlador no actúa hasta recibir el primer Twist** → los drones spawnean en el suelo (1 m por fuera del anillo) y un `ExecuteProcess` por dron espera su odometría, manda subida 0.7 m/s **hasta que la odometría supera 2.2 m** (corte por altitud real, robusto a RTF<1; con la latencia del sondeo quedan a ~3.4–3.9 m) y luego Twist cero = hover. El `cmd_vel` del dron es velocidad en frame del cuerpo (z sube/baja); Twist cero = hover, persiste como en los Summits.
+
+```bash
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3              # 3 summits + 3 drones
+ros2 topic pub /drone0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3, z: 0.2}}'
+# dron extra con la sim corriendo (no lanza Gazebo; reusa sim_summit vía importlib):
+ros2 launch swarm_worlds spawn_drone.launch.py name:=drone_extra x:=1.0 y:=2.0
+```
+
+## Mundo warehouse por defecto (HECHO — 2026-06-10)
+
+`worlds/tugbot_warehouse.sdf` (del zip `tugbot_warehouse.zip` del usuario, mundo demo del Tugbot de MovAi): almacén con estanterías, carros, pallets y estación de carga. Adaptaciones: se quitó el `<include>` del robot Tugbot, `max_step_size` 0.01→0.004 (igual que el demo multicóptero) y el edificio se sustituyó por `models/warehouse/` vendorizado. Es el **mundo por defecto** de `sim_summit.launch.py` (args: `world:=tugbot_warehouse|empty_arena`, `center_x`/`center_y` = centro del círculo de spawn, por defecto **(0, 18)** = zona norte abierta).
+
+**Validado headless en `isa` 3+3 (2026-06-10): RTF 0.99**, summits sobre el suelo del almacén (caja de colisión propia, tope z≈0.009), mecanum OK (avance+strafe simultáneos con ratio exacto), drones hover estable (deriva 2e-5 m/8 s), `/summit0/scan` ve la geometría del almacén (~8 m).
+
+Detalles importantes:
+- **Edificio vendorizado** (`models/warehouse/`): la colisión original era UNA malla STL (3192 tris) con AABB 30×50×12.6 m que envuelve todo el interior; se reemplazó por primitivas (caja de suelo con tope a z=0.099 en frame del modelo + 4 paredes a x=±15/y=±25 de altura completa, los drones no pueden escapar). Visuales intactos (el lidar raya contra visuales, no colisiones). También elimina la dependencia de Fuel para el edificio.
+- Los demás modelos (shelf, shelf_big, cart, pallets, charging_station) **siguen viniendo de Fuel** (cacheados en `~/.ignition/fuel/`; primera ejecución necesita internet o la caché ya poblada — en Docker habría que vendorizarlos también o montar la caché).
+- **NO mover el centro de spawn sin comprobar las colisiones**: las `shelf_big` tienen cajas de 2.1×18×6 m (shelf_big_2/3/4 cubren y∈[-22,-4] en x≈{4.7..6.8, -1..1.1, -6.9..-4.8}). Spawnear dentro hunde el RTF a ~0.06 y atrapa a los robots (así se descubrió: el centro anterior (1,-6.5) caía dentro de shelf_big_3).
+
+## Summit XL skid-steer en Fortress (HECHO — 2026-06-09, secundario)
+
+**Validado headless en `isa`**: spawn OK, `/summit/scan` publica, `/summit/cmd_vel` a 0.5 m/s durante 6 s → odometría avanza 3.02 m, `/summit/joint_states` reporta las 4 ruedas. Sin errores en el log de Gazebo.
+
+```bash
+ros2 launch swarm_worlds spawn_summit.launch.py            # con GUI
+ros2 launch swarm_worlds spawn_summit.launch.py headless:=true
+ros2 topic pub /summit/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3}}'
+ros2 topic echo /summit/scan --once
+```
+
+Decisiones de diseño (por si hay que retocarlo):
+- `summit_xl_noarm.urdf.xacro` es un robot **nuevo y limpio** (no parte de `summit_xl_std.urdf.xacro`): incluye solo `summit_xl_base.urdf.xacro` + `rubber_wheel.urdf.xacro` (ninguno trae plugins Classic) y añade LiDAR 2D propio. Se descartó incluir `all_sensors.urdf.xacro` (helios/zed2 con plugins Classic) y `ros2_control.urdf.xacro` (declara joints `arm_*` que no existen sin brazo → gz_ros2_control fallaría, y tiene tópicos `model/summit/...` hardcodeados de una sesión anterior).
+- Skid-steer 4 ruedas resuelto con DiffDrive nativo y **tags `<left_joint>`/`<right_joint>` repetidos** (2L+2R). Funciona en Fortress sin truco adicional. `wheel_separation` = 2×0.218 = 0.436, `wheel_radius` = 0.11.
+- Las meshes cargan vía `file://$(find summit_xl_description)/...` (resuelto por xacro a ruta absoluta) → **no hace falta** `GZ_SIM_RESOURCE_PATH`.
+- `sim_native.sh` ahora compila con `--packages-up-to swarm_description swarm_worlds summit_xl_description` (arrastra `robotnik_sensors`, exigido por el `package.xml` de summit aunque no se use).
+- El `frame_id` del scan sale como `summit/base_footprint/lidar` (nombre escopado de Fortress; `<gz_frame_id>` no existe en Fortress). Si Nav2/SLAM lo necesita distinto, habrá que remapear o publicar TF estático.
+
+### Posibles siguientes pasos (no comprometidos)
+- Spawnear Summit XL + minibots juntos en el mismo mundo (mezclar ambos launches).
+- Mundo más rico (obstáculos, paredes) para pruebas de evasión con el LiDAR.
+- Comportamiento de enjambre básico (nodo ROS 2 que consuma `/scan` y publique `/cmd_vel`).
+
+## Rol
+Eres un ingeniero senior especializado en robótica. Actúas como co-desarrollador y revisor técnico de este proyecto de **swarm robotics**. Tu tarea principal es apoyar el diseño del **entorno virtual** y los **modelos de robots** para simulación, garantizando que todo sea reproducible desde cualquier máquina mediante Docker.
+
+---
+
+## Contexto del proyecto
+
+| Ítem | Detalle |
+|---|---|
+| **Dominio** | Swarm robotics (enjambre de robots autónomos) |
+| **Middleware** | ROS2 Humble |
+| **Simuladores objetivo** | Gazebo (Fortress/Harmonic) — **primario**; Isaac Sim — **secundario/opcional** |
+| **Containerización** | Docker + docker-compose (portabilidad total) |
+| **Estado** | Desde cero |
+| **Responsabilidad del usuario** | Entorno virtual (mundo/escenario), diseño de robots (URDF/SDF/Xacro) |
+
+---
+
+## Reglas de trabajo
+
+1. **Docker primero.** Toda solución, script o configuración debe funcionar dentro del contenedor. Nunca asumas que algo está instalado en el host. Si algo requiere instalación, incluye el `Dockerfile` o `docker-compose.yml` actualizado.
+
+2. **Estructura de proyecto consistente.** Propón y respeta esta estructura base salvo que se indique lo contrario:
+   ```
+   swarm_ws/
+   ├── docker/
+   │   ├── Dockerfile
+   │   └── docker-compose.yml
+   ├── src/
+   │   ├── swarm_description/   # URDFs, meshes, Xacros
+   │   └── swarm_worlds/        # mundos .world / .sdf
+   ├── scripts/
+   └── README.md
+   ```
+
+3. **ROS2 Humble como estándar.** Usa siempre la API, nombres de paquetes y convenciones de ROS2 Humble. No mezcles con ROS1 ni con versiones superiores de ROS2.
+
+4. **Prioriza Gazebo.** El simulador principal es Gazebo (preferiblemente Gazebo Harmonic o Fortress). Indica explícitamente cuando una solución es solo para Isaac Sim.
+
+5. **Robots en URDF/Xacro.** Los diseños de robot deben estar en formato Xacro (`.xacro`) que compile a URDF válido. Incluye siempre: inertias, colisiones, sensores básicos (LiDAR 2D o cámara) y plugins de Gazebo necesarios.
+
+6. **Entornos en SDF.** Los mundos para Gazebo deben ser `.world` (XML/SDF). Incluye iluminación, plano de suelo, y al menos un obstáculo de referencia.
+
+7. **Sin suposiciones silenciosas.** Si hay ambigüedad (p.ej. cantidad de robots, tipo de sensor, tamaño del mundo), pregunta antes de generar código.
+
+8. **Respuestas concisas.** Explica lo necesario, sin relleno. Si el código es largo, divídelo en bloques etiquetados.
+
+---
+
+## Flujo de trabajo esperado
+
+Cuando el usuario pida algo, sigue este orden:
+1. **Entiende** — confirma el objetivo si hay duda.
+2. **Diseña** — describe brevemente la solución antes de codificar.
+3. **Implementa** — entrega el código/config listo para copiar.
+4. **Valida** — indica cómo probar que funciona (comando `docker compose up`, `ros2 launch`, etc.).
+
+---
+
+## Stack técnico de referencia
+
+```
+Base image:     osrf/ros:humble-desktop
+Gazebo:         gz-harmonic  (o  ros-humble-gazebo-ros-pkgs para Fortress)
+Isaac Sim:      isaacsim:4.x  (solo si se solicita explícitamente)
+Build system:   colcon
+Display:        X11 forwarding o VNC (para GUI en Docker)
+GPU:            NVIDIA Container Toolkit (declarar en docker-compose si se necesita)
+```
+
+---
+
+## Lo que NO debes hacer
+- No generar código que solo funcione en el host (sin Docker).
+- No usar `rospy` ni paquetes de ROS1.
+- No inventar nombres de plugins de Gazebo — usa únicamente los plugins documentados oficialmente.
+- No asumir que hay GPU disponible salvo que el usuario lo confirme.
+
+---
+
+## Primer paso sugerido
+Si no se ha hecho nada aún, propón:
+1. `Dockerfile` base con ROS2 Humble + Gazebo.
+2. `docker-compose.yml` con soporte de display (X11).
+3. Workspace vacío con la estructura de carpetas definida arriba.
+4. Script `build.sh` para construir la imagen.

@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <xacro:macro name="ros2_control">
+
+      <!-- VelocityControl: moves the robot base directly (bypasses omni-wheel physics) -->
+      <gazebo>
+        <plugin filename="ignition-gazebo-velocity-control-system"
+                name="ignition::gazebo::systems::VelocityControl">
+          <topic>model/summit/cmd_vel</topic>
+        </plugin>
+      </gazebo>
+
+      <!-- OdometryPublisher: publishes odom + TF from Ignition physics engine -->
+      <gazebo>
+        <plugin filename="ignition-gazebo-odometry-publisher-system"
+                name="ignition::gazebo::systems::OdometryPublisher">
+          <odom_frame>odom</odom_frame>
+          <robot_base_frame>base_footprint</robot_base_frame>
+          <odom_topic>model/summit/odom</odom_topic>
+          <tf_topic>tf</tf_topic>
+          <odom_publish_frequency>50</odom_publish_frequency>
+        </plugin>
+      </gazebo>
+
+      <!-- Joint state publisher for all joints -->
+      <gazebo>
+        <plugin filename="ignition-gazebo-joint-state-publisher-system"
+                name="ignition::gazebo::systems::JointStatePublisher">
+          <topic>model/summit/joint_states</topic>
+        </plugin>
+      </gazebo>
+
+      <!-- gz_ros2_control: only for arm joints (hold position) -->
+      <gazebo>
+        <plugin name="gz_ros2_control::GazeboSimROS2ControlPlugin" filename="libgz_ros2_control-system.so">
+          <parameters>$(arg config_controllers)</parameters>
+          <ros>
+            <namespace>$(arg robot_id)</namespace>
+          </ros>
+        </plugin>
+      </gazebo>
+      <ros2_control name="arm_hw" type="system">
+        <hardware>
+          <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+        </hardware>
+        <joint name="arm_shoulder_pan_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+        <joint name="arm_shoulder_lift_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+        <joint name="arm_elbow_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+        <joint name="arm_wrist_1_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+        <joint name="arm_wrist_2_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+        <joint name="arm_wrist_3_joint">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+        </joint>
+      </ros2_control>
+
+  </xacro:macro>
+</robot>
