@@ -11,9 +11,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Estructura:
 
 - `swarm_ws/docker/` — Pipeline Docker (Dockerfile + docker-compose + entrypoint). **No se ha construido la imagen**; en `isa` no hace falta porque la vía nativa cubre todo. Existe como fallback de portabilidad.
-- `swarm_ws/scripts/` — `sim_native.sh` (host, **primaria**), `build.sh` + `run.sh` + `colcon_build.sh` + `sim.sh` (Docker, secundarias).
+- `swarm_ws/scripts/` — `sim_native.sh` (host, **primaria**; ahora compila también `swarm_behavior`), `make_warehouse_map.py` (genera el occupancy grid estático del warehouse sin simular), `build.sh` + `run.sh` + `colcon_build.sh` + `sim.sh` (Docker, secundarias).
 - `swarm_ws/src/swarm_description/` — paquete propio: `urdf/minibot.urdf.xacro` (diff-drive + LiDAR 2D, plugins **nativos Fortress**: `libignition-gazebo-diff-drive-system.so`, `libignition-gazebo-joint-state-publisher-system.so`).
 - `swarm_ws/src/swarm_worlds/` — paquete propio: `worlds/tugbot_warehouse.sdf` (**mundo por defecto**, almacén MovAi adaptado) y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
+- `swarm_ws/src/swarm_behavior/` — paquete propio (Python): comportamiento de enjambre. Nodo `go_to_goal` (campos potenciales holonómico, aprovecha el strafe mecanum) + `launch/swarm_behavior.launch.py` (1 controlador por summit, modos `goal`/`follow`) + `launch/rviz.launch.py` (RViz con mapa estático + control del destino por "2D Goal Pose"). **Implementado, aún sin validar en Gazebo vivo.**
 - `swarm_ws/src/{robotnik_common,robotnik_sensors,summit_xl_description,summit_xl_control}/` — paquetes externos Robotnik. **Summit ya portado a Fortress** en dos variantes propias: `robots/summit_xl_omni.urdf.xacro` (XLS mecanum/omni — **el robot del enjambre**, vía `sim_summit.launch.py`) y `robots/summit_xl_noarm.urdf.xacro` (XL skid-steer 4 ruedas con DiffDrive de joints agrupados 2L+2R, vía `spawn_summit.launch.py`). Siguen **sin portar** (y no se usan): `summit_xl_base.gazebo.xacro` (plugins Classic), `all_sensors.urdf.xacro` (Classic), `ros2_control.urdf.xacro` (declara joints de brazo inexistentes), `summit_xl_control/launch/*.launch` (XML ROS 1).
 
 ### Lecciones aprendidas (no repetir)
@@ -100,6 +101,28 @@ Detalles importantes:
 - Los demás modelos (shelf, shelf_big, cart, pallets, charging_station) **siguen viniendo de Fuel** (cacheados en `~/.ignition/fuel/`; primera ejecución necesita internet o la caché ya poblada — en Docker habría que vendorizarlos también o montar la caché).
 - **NO mover el centro de spawn sin comprobar las colisiones**: las `shelf_big` tienen cajas de 2.1×18×6 m (shelf_big_2/3/4 cubren y∈[-22,-4] en x≈{4.7..6.8, -1..1.1, -6.9..-4.8}). Spawnear dentro hunde el RTF a ~0.06 y atrapa a los robots (así se descubrió: el centro anterior (1,-6.5) caía dentro de shelf_big_3).
 
+## Comportamiento de enjambre + RViz (IMPLEMENTADO, SIN VALIDAR EN VIVO — 2026-06-14)
+
+Paquete `swarm_behavior` (ament_python). **Solo Summit por ahora** (los drones se añaden la próxima sesión). Compila e importa OK y se validó estáticamente (config RViz, generación de mapa), pero **NO se ha lanzado Gazebo todavía** → faltan por confirmar en vivo: alineación `/map` vs nubes LiDAR, `frame_id` real del scan y afinado de ganancias de evasión.
+
+**Nodo `go_to_goal`** (uno por robot, dentro de su namespace): controlador por **campos potenciales holonómico**. Lee `odom` (frame mundo) + `scan`, publica `cmd_vel`. Suma atracción al goal + repulsión de cada rayo < `influence_radius` (1.5 m), rota el vector a frame cuerpo y manda `vx, vy` (**usa el strafe mecanum para esquivar**) + `wz` para encarar el avance (mantiene el FOV de 270° mirando adelante). Parada de seguridad si obstáculo frontal < 0.4 m; frena con Twist cero al llegar (el `cmd_vel` persiste). Escucha `/goal_pose` (PoseStamped) → reubica el goal en vivo.
+
+**Dos modos** (`swarm_behavior.launch.py`):
+- `mode:=goal` (def): todos los summits al mismo punto `goal_x/goal_y`.
+- `mode:=follow`: `summit0` va al punto; el resto **persiguen la odom de summit0** a `standoff` m (líder-seguidor, **sin SLAM** — la odom ya está en frame mundo). NO es "uno mapea y los demás navegan el mapa" (eso sería SLAM+Nav2 multi-robot, fase futura).
+
+**RViz** (`rviz.launch.py`): frame fijo `map`. Como la odom de cada robot está en frame mundo, todos los `summitN/odom` coinciden con `map` → **TF estático identidad `map→summitN/odom`** por robot. El `/tf` está namespaced (`/summitN/tf`) → se relé al `/tf` global con `topic_tools relay` (idem `/tf_static`). El `frame_id` del scan es el nombre escopado de Fortress (`summitN/base_footprint/lidar`, NO existe en el URDF) → se ata por **identidad** a `summitN/lidar_link` (mismo punto físico, ya colocado por robot_state_publisher). El mapa estático se sirve con `nav2_map_server` + `nav2_lifecycle_manager` (autostart) en `/map`.
+
+**Mapa estático** (`scripts/make_warehouse_map.py` → `swarm_worlds/maps/warehouse.{pgm,yaml}`, 640×1040 @ 0.05 m): generado **sin simular**. `ign sdf -p` NO resuelve los `<include>` desde CLI (callback vacío) → se parsea a mano: poses del mundo + colisiones de cada model.sdf (warehouse vendorizado + modelos MovAi del cache de Fuel), componiendo mundo∘link∘colisión y rasterizando box/cylinder/mesh-AABB. **Filtro de altura clave** (`Z_BAND=0.20–0.70 m`): excluye suelo (tope ~0.01 m) y pallets/rieles bajos, incluye estanterías/paredes/cajas altas. Regenerar tras tocar el mundo: `python3 scripts/make_warehouse_map.py && colcon build --packages-select swarm_worlds`.
+
+```bash
+# Terminal 1: sim   ·   Terminal 2: comportamiento   ·   Terminal 3: RViz
+./swarm_ws/scripts/sim_native.sh 3
+ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3 [mode:=follow] [goal_x:=0 goal_y:=8]
+ros2 launch swarm_behavior rviz.launch.py n_robots:=3 [map:=/ruta/otro.yaml]
+```
+En RViz: botón **"2D Goal Pose"** → clic en el mapa = nuevo destino del enjambre (en `goal` todos, en `follow` el líder).
+
 ## Summit XL skid-steer en Fortress (HECHO — 2026-06-09, secundario)
 
 **Validado headless en `isa`**: spawn OK, `/summit/scan` publica, `/summit/cmd_vel` a 0.5 m/s durante 6 s → odometría avanza 3.02 m, `/summit/joint_states` reporta las 4 ruedas. Sin errores en el log de Gazebo.
@@ -118,10 +141,13 @@ Decisiones de diseño (por si hay que retocarlo):
 - `sim_native.sh` ahora compila con `--packages-up-to swarm_description swarm_worlds summit_xl_description` (arrastra `robotnik_sensors`, exigido por el `package.xml` de summit aunque no se use).
 - El `frame_id` del scan sale como `summit/base_footprint/lidar` (nombre escopado de Fortress; `<gz_frame_id>` no existe en Fortress). Si Nav2/SLAM lo necesita distinto, habrá que remapear o publicar TF estático.
 
+### Próximos pasos
+- **SIGUIENTE SESIÓN: añadir los drones al comportamiento** — extender `swarm_behavior` para que los `droneN` también participen (p.ej. seguir/sobrevolar el enjambre, ir a un punto en 3D usando `/droneN/cmd_vel`+`/droneN/odom`). Hoy el comportamiento es **solo Summit**.
+- **Validar el comportamiento en Gazebo vivo** (pendiente desde 2026-06-14): convergencia al goal, evasión real, alineación `/map`↔LiDAR, `frame_id` del scan, afinar ganancias (`k_rep`, `influence_radius`).
+
 ### Posibles siguientes pasos (no comprometidos)
 - Spawnear Summit XL + minibots juntos en el mismo mundo (mezclar ambos launches).
-- Mundo más rico (obstáculos, paredes) para pruebas de evasión con el LiDAR.
-- Comportamiento de enjambre básico (nodo ROS 2 que consuma `/scan` y publique `/cmd_vel`).
+- Fase SLAM real (slam_toolbox en el líder + Nav2 multi-robot) si se quiere "uno mapea y los demás navegan el mapa" de verdad (vs. el líder-seguidor reactivo actual).
 
 ## Rol
 Eres un ingeniero senior especializado en robótica. Actúas como co-desarrollador y revisor técnico de este proyecto de **swarm robotics**. Tu tarea principal es apoyar el diseño del **entorno virtual** y los **modelos de robots** para simulación, garantizando que todo sea reproducible desde cualquier máquina mediante Docker.

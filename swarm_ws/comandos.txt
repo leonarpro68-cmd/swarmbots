@@ -20,3 +20,17 @@ Si ya está compilado y prefieres lanzarlo directo:
 
   ros2 topic pub /summit0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3, y: 0.2}}'
   ros2 topic pub /drone0/cmd_vel  geometry_msgs/Twist '{linear: {x: 0.3}}'
+
+Terminal 1
+
+cd swarm_ws && source /opt/ros/humble/setup.bash && source install/setup.bash
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 headless:=true
+Terminal 2 — los controladores de enjambre:
+
+  source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+  ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3
+  # o líder-seguidor:  ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3 mode:=follow
+
+  Terminal 3 — RViz:
+  source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+  ros2 launch swarm_behavior rviz.launch.py n_robots:=3

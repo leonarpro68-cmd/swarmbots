@@ -16,7 +16,7 @@ fi
 # shellcheck disable=SC1091
 source /opt/ros/humble/setup.bash
 
-colcon build --symlink-install --packages-up-to swarm_description swarm_worlds summit_xl_description
+colcon build --symlink-install --packages-up-to swarm_description swarm_worlds summit_xl_description swarm_behavior
 
 # shellcheck disable=SC1091
 source install/setup.bash
