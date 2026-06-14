@@ -9,6 +9,7 @@ Simulación de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**: 
 - **Mundo warehouse** (`tugbot_warehouse`, por defecto): almacén MovAi con estanterías, carros, pallets y estación de carga. El edificio está vendorizado con colisiones primitivas para mantener RTF ≈ 1.
 - **Summit XLS mecanum** (`summit0…N-1`): cinemática omnidireccional real (física, no bypass) con `MecanumDrive` + inyección de fricción direccional `fdir1` en el SDF. LiDAR 2D, odometría y joint states por robot.
 - **Drones X3** (`drone0…N-1`): quadrotor vendorizado con `MulticopterVelocityControl`; despegue automático por altitud real y hover estable ~3.5 m sobre el anillo de summits.
+- **Comportamiento de enjambre** (`swarm_behavior`, solo Summit por ahora): navegación reactiva go-to-goal con evasión de obstáculos por LiDAR (campos potenciales, aprovecha el strafe mecanum) y modo líder-seguidor. Destino fijado en vivo desde RViz con la herramienta "2D Goal Pose", sobre un mapa estático del almacén. _Implementado; validación en Gazebo en curso._
 - Variantes secundarias: Summit XL skid-steer individual, enjambre de minibots y mundo `empty_arena`.
 
 ## Requisitos
@@ -50,6 +51,22 @@ Argumentos útiles del launch:
 | `center_x` / `center_y` | `0` / `18` | Centro del círculo de spawn |
 | `headless` | `false` | Servidor sin GUI (usa `--headless-rendering`) |
 
+## Comportamiento de enjambre + RViz
+
+Con la sim ya corriendo, en otras dos terminales (tras los mismos `source`):
+
+```bash
+# Controladores: todos los summits van al mismo punto y esquivan obstáculos
+ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3 goal_x:=0.0 goal_y:=8.0
+# …o modo líder-seguidor (summit0 va al punto, el resto le siguen):
+ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3 mode:=follow
+
+# RViz con el mapa del almacén y control interactivo del destino
+ros2 launch swarm_behavior rviz.launch.py n_robots:=3
+```
+
+En RViz pulsa **"2D Goal Pose"** y clica en el mapa para fijar el destino del enjambre en vivo. El mapa estático se genera sin simular con `python3 swarm_ws/scripts/make_warehouse_map.py` (rasteriza las colisiones del mundo a un occupancy grid).
+
 ## Tópicos por robot
 
 `/<ns>/cmd_vel`, `/<ns>/odom`, `/<ns>/scan` (solo summits), `/<ns>/joint_states`, `/<ns>/tf` — con `<ns>` = `summit0…`, `drone0…`.
@@ -59,9 +76,10 @@ Argumentos útiles del launch:
 ```
 swarm_ws/
 ├── docker/                      # Dockerfile + compose (respaldo de portabilidad)
-├── scripts/                     # sim_native.sh (primario), build/run/sim.sh (Docker)
+├── scripts/                     # sim_native.sh (primario), make_warehouse_map.py, build/run/sim.sh (Docker)
 └── src/
-    ├── swarm_worlds/            # mundos, launches del enjambre, modelos vendorizados (X3, warehouse)
+    ├── swarm_worlds/            # mundos, launches del enjambre, mapas, modelos vendorizados (X3, warehouse)
+    ├── swarm_behavior/          # navegación reactiva go-to-goal + RViz (enjambre Summit)
     ├── swarm_description/       # minibot diff-drive
     ├── summit_xl_description/   # Summit portado a Fortress (omni + skid-steer)
     └── robotnik_*/              # paquetes externos Robotnik
