@@ -142,7 +142,22 @@ Decisiones de diseño (por si hay que retocarlo):
 - El `frame_id` del scan sale como `summit/base_footprint/lidar` (nombre escopado de Fortress; `<gz_frame_id>` no existe en Fortress). Si Nav2/SLAM lo necesita distinto, habrá que remapear o publicar TF estático.
 
 ### Próximos pasos
-- **SIGUIENTE SESIÓN: añadir los drones al comportamiento** — extender `swarm_behavior` para que los `droneN` también participen (p.ej. seguir/sobrevolar el enjambre, ir a un punto en 3D usando `/droneN/cmd_vel`+`/droneN/odom`). Hoy el comportamiento es **solo Summit**.
+
+#### ⭐ SIGUIENTE TAREA (prioritaria): migrar a Ubuntu 24.04 + ROS 2 Jazzy + Gazebo Harmonic
+El usuario cambia de máquina: **Ubuntu 22.04 → 24.04**, **ROS 2 Humble → Jazzy** y por tanto **Gazebo Fortress → Harmonic** (el par oficial de Jazzy es `gz-harmonic` / gz-sim8). Objetivo: **poner todo el proyecto a funcionar end-to-end en el nuevo stack** (enjambre Summit mecanum + drones X3 + warehouse + comportamiento + RViz).
+
+Plan de migración y puntos a revisar (algunos ya anticipados en las "Lecciones aprendidas"):
+- **Nombres de plugins**: en Harmonic los `.so` pasan de `libignition-gazebo-*-system.so` → `libgz-sim-*-system.so` (p.ej. `libgz-sim-diff-drive-system.so`, `libgz-sim-mecanum-drive-system.so`, `libgz-sim-odometry-publisher-system.so`, `libgz-sim-multicopter-*`, `libgz-sim-sensors-system.so`, `libgz-sim-joint-state-publisher-system.so`). Revisar TODOS los URDF/SDF.
+- **Comandos/CLI**: `ign gazebo` → `gz sim`; `ign topic` → `gz topic`; `ign sdf -p` → `gz sdf -p`. Actualizar `sim_summit.launch.py`, `sim_native.sh`, `make_warehouse_map.py` y todo script que invoque `ign ...`.
+- **Variables de entorno**: `IGN_GAZEBO_RESOURCE_PATH` → `GZ_SIM_RESOURCE_PATH` (y `IGN_*` en general → `GZ_*`). Revisar export en `sim_summit.launch.py`.
+- **Launch wrapper**: `ros_ign_gazebo`/`ign_gazebo.launch.py` → `ros_gz_sim`/`gz_sim.launch.py`; paquete de bridge `ros_ign_bridge` → `ros_gz_bridge` (`ros-jazzy-ros-gz`). Revisar el `parameter_bridge` y los tipos de mensaje del bridge.
+- **Versión de SDF**: Fortress topa en `1.8`; Harmonic admite `1.9`/`1.10` y soporta tags antes ignorados (`<gz_frame_id>` en sensores SÍ existe en Harmonic → puede arreglar el `frame_id` escopado del scan sin TF de identidad). Decidir si subir versión o mantener 1.8 por compatibilidad.
+- **Caché de Fuel**: los modelos MovAi (shelf, cart, pallets, charging_station) viven en `~/.ignition/fuel/`; en Harmonic la ruta es `~/.gz/fuel/`. Copiar/migrar la caché o re-descargar (necesita internet la 1ª vez). El edificio del warehouse ya está vendorizado → OK.
+- **Docker**: actualizar `Dockerfile` base a `osrf/ros:jazzy-desktop` + `gz-harmonic` y `ros-jazzy-ros-gz*`.
+- **Validar** el orden completo tras migrar: `sim_native.sh`, mecanum (avance+strafe+giro), drones (despegue+hover), warehouse RTF, comportamiento `go_to_goal` y RViz.
+
+#### Pendientes previos (siguen abiertos, abordar tras la migración)
+- **Añadir los drones al comportamiento** — extender `swarm_behavior` para que los `droneN` también participen (p.ej. seguir/sobrevolar el enjambre, ir a un punto en 3D usando `/droneN/cmd_vel`+`/droneN/odom`). Hoy el comportamiento es **solo Summit**.
 - **Validar el comportamiento en Gazebo vivo** (pendiente desde 2026-06-14): convergencia al goal, evasión real, alineación `/map`↔LiDAR, `frame_id` del scan, afinar ganancias (`k_rep`, `influence_radius`).
 
 ### Posibles siguientes pasos (no comprometidos)
