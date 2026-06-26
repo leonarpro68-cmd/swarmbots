@@ -7,11 +7,11 @@
       <real_time_factor>1</real_time_factor>
       <max_contacts>10</max_contacts>
     </physics>
-    <plugin name='ignition::gazebo::systems::Physics' filename='libignition-gazebo-physics-system.so'/>
-    <plugin name='ignition::gazebo::systems::UserCommands' filename='libignition-gazebo-user-commands-system.so'/>
-    <plugin name='ignition::gazebo::systems::SceneBroadcaster' filename='libignition-gazebo-scene-broadcaster-system.so'/>
-    <plugin name='ignition::gazebo::systems::Imu' filename='ignition-gazebo-imu-system'/>
-    <plugin name='ignition::gazebo::systems::Sensors' filename='ignition-gazebo-sensors-system'>
+    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
+    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
+    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
+    <plugin name='gz::sim::systems::Imu' filename='gz-sim-imu-system'/>
+    <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system'>
       <render_engine>ogre2</render_engine>
     </plugin>
     <scene>
@@ -46,7 +46,7 @@
 
     <!-- Base. Vendorizado en swarm_worlds/models/ con colisiones primitivas:
          la malla STL original hundía el RTF a ~0.06 con robots dentro.
-         Requiere swarm_worlds/models en IGN_GAZEBO_RESOURCE_PATH (lo exporta
+         Requiere swarm_worlds/models en GZ_SIM_RESOURCE_PATH (lo exporta
          sim_summit.launch.py). -->
     <include>
       <uri>model://warehouse</uri>

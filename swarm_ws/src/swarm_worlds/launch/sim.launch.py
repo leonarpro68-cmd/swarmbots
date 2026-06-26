@@ -1,4 +1,4 @@
-"""Spawn N minibots into Gazebo Fortress with ROS↔Gz bridges.
+"""Spawn N minibots into Gazebo Harmonic with ROS↔Gz bridges.
 
 Usage:
     ros2 launch swarm_worlds sim.launch.py n_robots:=3 world:=empty_arena
@@ -43,7 +43,7 @@ def _spawn_for_robot(context, ns_str: str, x: float, y: float):
         ),
         # Spawn into Gazebo using the same xacro output
         Node(
-            package="ros_ign_gazebo",
+            package="ros_gz_sim",
             executable="create",
             arguments=[
                 "-name", ns_str,
@@ -54,17 +54,17 @@ def _spawn_for_robot(context, ns_str: str, x: float, y: float):
         ),
         # Per-robot bridges
         Node(
-            package="ros_ign_bridge",
+            package="ros_gz_bridge",
             executable="parameter_bridge",
             namespace=ns_str,
             name=f"bridge_{ns_str}",
             output="screen",
             arguments=[
-                f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan",
-                f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model",
-                f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+                f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+                f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
+                f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
             ],
             remappings=[
                 (f"/model/{ns_str}/cmd_vel",      "cmd_vel"),
@@ -99,17 +99,17 @@ def generate_launch_description():
 
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory("ros_ign_gazebo"), "launch", "ign_gazebo.launch.py")
+            os.path.join(get_package_share_directory("ros_gz_sim"), "launch", "gz_sim.launch.py")
         ),
-        launch_arguments={"ign_args": f"-r -v 4 {world_path}"}.items(),
+        launch_arguments={"gz_args": f"-r -v 4 {world_path}"}.items(),
     )
 
     clock_bridge = Node(
-        package="ros_ign_bridge",
+        package="ros_gz_bridge",
         executable="parameter_bridge",
         name="clock_bridge",
         output="screen",
-        arguments=["/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock"],
+        arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
     )
 
     return LaunchDescription([

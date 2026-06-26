@@ -59,12 +59,12 @@
     <origin xyz="0.324 0 0.24" rpy="0 0 0"/>
   </joint>
 
-  <!-- ============ Gazebo Fortress ============ -->
+  <!-- ============ Gazebo Harmonic ============ -->
 
   <!-- DiffDrive nativo: acepta varios <left_joint>/<right_joint> → skid-steer -->
   <gazebo>
-    <plugin filename="libignition-gazebo-diff-drive-system.so"
-            name="ignition::gazebo::systems::DiffDrive">
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
       <left_joint>front_left_wheel_joint</left_joint>
       <left_joint>rear_left_wheel_joint</left_joint>
       <right_joint>front_right_wheel_joint</right_joint>
@@ -81,8 +81,8 @@
   </gazebo>
 
   <gazebo>
-    <plugin filename="libignition-gazebo-joint-state-publisher-system.so"
-            name="ignition::gazebo::systems::JointStatePublisher">
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
       <topic>/model/${ns}/joint_states</topic>
     </plugin>
   </gazebo>

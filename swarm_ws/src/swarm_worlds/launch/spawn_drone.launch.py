@@ -1,4 +1,4 @@
-"""Spawn one X3 quadrotor into an ALREADY RUNNING Gazebo Fortress sim.
+"""Spawn one X3 quadrotor into an ALREADY RUNNING Gazebo Harmonic sim.
 
 No lanza Gazebo: se engancha al servidor que ya levantó sim_summit.launch.py,
 por lo que no interfiere con los Summit XL. El dron spawnea en el suelo,

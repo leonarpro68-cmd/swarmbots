@@ -10,7 +10,7 @@ odometria y se publica como Twist en `cmd_vel`. Ademas el robot gira despacio
 para encarar la direccion de avance, manteniendo el FOV del LiDAR (270 deg)
 mirando hacia donde va.
 
-CLAVE: el OdometryPublisher de Fortress inicializa la odom en la POSE MUNDIAL
+CLAVE: el OdometryPublisher de Harmonic inicializa la odom en la POSE MUNDIAL
 del spawn, asi que `/summitN/odom` esta en frame mundo y todos los robots
 comparten el mismo marco. Por eso un goal mundial unico vale para todo el
 enjambre sin SLAM ni TF compartido.
@@ -19,6 +19,15 @@ Modos (parametro implicito via `follow_robot`):
   - follow_robot == ""  -> va al punto fijo (goal_x, goal_y).
   - follow_robot != ""  -> persigue la odom de ese robot (lider) manteniendo
     `standoff` metros de distancia. Asi se hace el lider-seguidor sin mapa.
+
+FORMACION EN ANILLO (modo goal): si varios summits comparten el mismo goal,
+apuntar TODOS al mismo punto exacto hace que el anti-colision (repulsion del
+LiDAR) les impida amontonarse y se queden oscilando sin converger. Por eso cada
+robot no va al centro sino a su propio slot en un ANILLO alrededor del goal:
+angulo `2*pi*robot_index/n_robots` y radio `formation_radius` (si es 0 se calcula
+de `formation_spacing` para que los vecinos queden a esa distancia). Asi cada uno
+tiene un destino propio y libre, y el enjambre rodea el punto sin bailar. Con
+n_robots==1 el radio es 0 (va al punto exacto).
 """
 import math
 
@@ -51,6 +60,10 @@ class GoToGoal(Node):
         self.declare_parameter("goal_y", 0.0)
         self.declare_parameter("follow_robot", "")   # "" = punto fijo; si no, ns del lider
         self.declare_parameter("standoff", 1.5)       # m a mantener del lider
+        self.declare_parameter("robot_index", 0)      # indice de este robot en el enjambre
+        self.declare_parameter("n_robots", 1)         # nº total de summits (para el anillo)
+        self.declare_parameter("formation_spacing", 2.0)  # m entre vecinos (> influence para no repelerse en reposo)
+        self.declare_parameter("formation_radius", 0.0)   # m; 0 = auto desde el spacing
         self.declare_parameter("max_lin_vel", 0.5)    # m/s
         self.declare_parameter("max_ang_vel", 1.0)    # rad/s
         self.declare_parameter("goal_tol", 0.3)       # m para dar el goal por alcanzado
@@ -66,9 +79,26 @@ class GoToGoal(Node):
         self.goal_y = self.get_parameter("goal_y").value
         self.follow_robot = self.get_parameter("follow_robot").value
         self.standoff = self.get_parameter("standoff").value
+        self.robot_index = self.get_parameter("robot_index").value
+        self.n_robots = max(1, self.get_parameter("n_robots").value)
+        spacing = self.get_parameter("formation_spacing").value
+        radius = self.get_parameter("formation_radius").value
+        # Offset (frame mundo) de este robot respecto al centro del goal: su slot
+        # en el anillo. Radio: el dado, o el que hace que los vecinos queden a
+        # `spacing` m. Con un solo robot el offset es 0 (va al punto exacto).
+        if self.n_robots > 1:
+            if radius <= 0.0:
+                radius = spacing / (2.0 * math.sin(math.pi / self.n_robots))
+            ang = 2.0 * math.pi * self.robot_index / self.n_robots
+            self.off_x = radius * math.cos(ang)
+            self.off_y = radius * math.sin(ang)
+        else:
+            self.off_x = self.off_y = 0.0
         self.max_lin = self.get_parameter("max_lin_vel").value
         self.max_ang = self.get_parameter("max_ang_vel").value
         self.goal_tol = self.get_parameter("goal_tol").value
+        self.declare_parameter("arrive_hysteresis", 0.6)  # m extra a recorrer antes de re-activar
+        self.arrive_hyst = self.get_parameter("arrive_hysteresis").value
         self.slow_radius = self.get_parameter("slow_radius").value
         self.influence = self.get_parameter("influence_radius").value
         self.k_rep = self.get_parameter("k_rep").value
@@ -81,6 +111,7 @@ class GoToGoal(Node):
         self.scan = None          # ultimo LaserScan
         self.leader_pose = None   # (x, y) del lider en frame mundo
         self._reached_logged = False
+        self.arrived = False      # latch: parado en el slot hasta que el goal se mueva
 
         # --- I/O (el nodo corre dentro del namespace del robot) ---
         sensor_qos = QoSProfile(
@@ -123,6 +154,7 @@ class GoToGoal(Node):
         self.goal_x = msg.pose.position.x
         self.goal_y = msg.pose.position.y
         self._reached_logged = False
+        self.arrived = False   # nuevo goal -> salir del latch y volver a moverse
         self.get_logger().info(
             f"nuevo goal: ({self.goal_x:.2f}, {self.goal_y:.2f}) [{msg.header.frame_id}]"
         )
@@ -133,29 +165,42 @@ class GoToGoal(Node):
             return
         x, y, yaw = self.pose
 
-        # Objetivo (frame mundo): punto fijo o posicion del lider.
+        # Objetivo (frame mundo): slot propio en el anillo del goal, o lider.
         if self.follow_robot:
             if self.leader_pose is None:
                 return
             gx, gy = self.leader_pose
         else:
-            gx, gy = self.goal_x, self.goal_y
+            # Centro + offset del anillo -> destino propio (evita que todos
+            # peleen por el mismo punto y bailen).
+            gx, gy = self.goal_x + self.off_x, self.goal_y + self.off_y
 
         dgx, dgy = gx - x, gy - y
         dist = math.hypot(dgx, dgy)
 
         # ¿Alcanzado? Para el seguidor el "alcanzado" es estar a standoff.
-        target_dist = self.standoff if self.follow_robot else self.goal_tol
-        if dist <= target_dist:
-            self.cmd_pub.publish(Twist())  # frenar (el mando persiste, hay que mandar cero)
+        # LATCH con histeresis: al llegar al slot, quedarse QUIETO y no
+        # re-activarse hasta que el objetivo se aleje > goal_tol + histeresis.
+        # Sin esto el robot entra/sale de la tolerancia y "baila" en el sitio.
+        arrive_d = self.standoff if self.follow_robot else self.goal_tol
+        if self.arrived:
+            if dist > arrive_d + self.arrive_hyst:
+                self.arrived = False          # el goal se movio -> reactivar
+            else:
+                self.cmd_pub.publish(Twist())  # frenar y mantener
+                return
+        elif dist <= arrive_d:
+            self.arrived = True
+            self.cmd_pub.publish(Twist())
             if not self.follow_robot and not self._reached_logged:
-                self.get_logger().info(f"goal alcanzado (dist {dist:.2f} m)")
+                self.get_logger().info(f"goal alcanzado (dist {dist:.2f} m), me quedo quieto")
                 self._reached_logged = True
             return
-        self._reached_logged = False
+        else:
+            self._reached_logged = False
 
         # Atraccion: vector unidad al goal, frenando dentro de slow_radius.
-        att_mag = self.max_lin * min(1.0, max(0.0, (dist - target_dist)) / self.slow_radius)
+        att_mag = self.max_lin * min(1.0, max(0.0, (dist - arrive_d)) / self.slow_radius)
         att_wx = (dgx / dist) * att_mag
         att_wy = (dgy / dist) * att_mag
 

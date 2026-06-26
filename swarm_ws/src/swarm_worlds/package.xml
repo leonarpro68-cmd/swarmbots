@@ -2,7 +2,7 @@
 <package format="3">
   <name>swarm_worlds</name>
   <version>0.1.0</version>
-  <description>Worlds and multi-robot launchers for swarm simulation in Gazebo Fortress.</description>
+  <description>Worlds and multi-robot launchers for swarm simulation in Gazebo Harmonic.</description>
   <maintainer email="leonarpro68@gmail.com">leo</maintainer>
   <license>Apache-2.0</license>
 
@@ -11,8 +11,8 @@
   <exec_depend>swarm_description</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>ros_ign_gazebo</exec_depend>
-  <exec_depend>ros_ign_bridge</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 

@@ -18,11 +18,13 @@ setup(
     zip_safe=True,
     maintainer="leo",
     maintainer_email="leonarpro68@gmail.com",
-    description="Go-to-goal reactivo con evasion LiDAR y modo lider-seguidor para Summit XLS.",
+    description="Go-to-goal reactivo con evasion LiDAR y modo lider-seguidor para Summit XLS, "
+                "y go-to-goal 3D para drones X3.",
     license="Apache-2.0",
     entry_points={
         "console_scripts": [
             "go_to_goal = swarm_behavior.go_to_goal:main",
+            "drone_go_to_goal = swarm_behavior.drone_go_to_goal:main",
         ],
     },
 )

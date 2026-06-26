@@ -1,6 +1,8 @@
 # swarmbots
 
-Simulación de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**: un enjambre de N **Summit XLS omnidireccionales (mecanum)** patrullando un almacén, sobrevolado por N **drones X3** que despegan solos y quedan en hover.
+Simulación de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**: un enjambre de N **Summit XLS omnidireccionales (mecanum)** patrullando un almacén, sobrevolado por N **drones X3** que despegan solos y quedan en hover.
+
+> Migrado de Humble/Fortress a Jazzy/Harmonic a nivel de código (2026-06-25); pendiente de validación end-to-end en vivo (requiere instalar `gz-harmonic` + `ros-jazzy-ros-gz*` en la máquina).
 
 ![Enjambre de Summits y drones X3 en el warehouse](captura.png)
 
@@ -9,12 +11,12 @@ Simulación de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**: 
 - **Mundo warehouse** (`tugbot_warehouse`, por defecto): almacén MovAi con estanterías, carros, pallets y estación de carga. El edificio está vendorizado con colisiones primitivas para mantener RTF ≈ 1.
 - **Summit XLS mecanum** (`summit0…N-1`): cinemática omnidireccional real (física, no bypass) con `MecanumDrive` + inyección de fricción direccional `fdir1` en el SDF. LiDAR 2D, odometría y joint states por robot.
 - **Drones X3** (`drone0…N-1`): quadrotor vendorizado con `MulticopterVelocityControl`; despegue automático por altitud real y hover estable ~3.5 m sobre el anillo de summits.
-- **Comportamiento de enjambre** (`swarm_behavior`, solo Summit por ahora): navegación reactiva go-to-goal con evasión de obstáculos por LiDAR (campos potenciales, aprovecha el strafe mecanum) y modo líder-seguidor. Destino fijado en vivo desde RViz con la herramienta "2D Goal Pose", sobre un mapa estático del almacén. _Implementado; validación en Gazebo en curso._
+- **Comportamiento de enjambre** (`swarm_behavior`): un mismo destino mueve **summits y drones**. Los summits hacen go-to-goal reactivo con evasión de obstáculos por LiDAR (campos potenciales, aprovecha el strafe mecanum) y modo líder-seguidor; los drones vuelan al mismo punto a su altitud de crucero (capas de altura por dron para no colisionar). Destino fijado en vivo desde RViz con la herramienta "2D Goal Pose", sobre un mapa estático del almacén.
 - Variantes secundarias: Summit XL skid-steer individual, enjambre de minibots y mundo `empty_arena`.
 
 ## Requisitos
 
-- Ubuntu 22.04 con ROS 2 Humble, Gazebo Fortress (`ign gazebo` 6.x) y `ros-humble-ros-ign*`
+- Ubuntu 24.04 con ROS 2 Jazzy, Gazebo Harmonic (`gz sim` 8.x) y `ros-jazzy-ros-gz*`
 - GPU NVIDIA recomendada (los `gpu_lidar` rinden mucho mejor)
 - Alternativa portable: Docker + NVIDIA Container Toolkit (ver `swarm_ws/docker/`)
 
@@ -27,7 +29,7 @@ Simulación de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**: 
 Equivale a:
 
 ```bash
-cd swarm_ws && source /opt/ros/humble/setup.bash
+cd swarm_ws && source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install --packages-up-to swarm_description swarm_worlds summit_xl_description
 source install/setup.bash
 ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
@@ -79,9 +81,9 @@ swarm_ws/
 ├── scripts/                     # sim_native.sh (primario), make_warehouse_map.py, build/run/sim.sh (Docker)
 └── src/
     ├── swarm_worlds/            # mundos, launches del enjambre, mapas, modelos vendorizados (X3, warehouse)
-    ├── swarm_behavior/          # navegación reactiva go-to-goal + RViz (enjambre Summit)
+    ├── swarm_behavior/          # go-to-goal summits (LiDAR) + drones (3D) + RViz
     ├── swarm_description/       # minibot diff-drive
-    ├── summit_xl_description/   # Summit portado a Fortress (omni + skid-steer)
+    ├── summit_xl_description/   # Summit portado a Harmonic (omni + skid-steer)
     └── robotnik_*/              # paquetes externos Robotnik
 ```
 

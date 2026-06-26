@@ -6,7 +6,7 @@ services:
       args:
         USER_UID: "${UID:-1000}"
         USER_GID: "${GID:-1000}"
-    image: swarmbots/humble-fortress:latest
+    image: swarmbots/jazzy-harmonic:latest
     container_name: swarm_dev
     hostname: swarm
     stdin_open: true

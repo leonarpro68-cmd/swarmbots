@@ -2,7 +2,8 @@
 """Genera un occupancy grid 2D estatico del mundo tugbot_warehouse SIN simular.
 
 Lee los <include> del mundo (nombre, uri, pose), localiza cada modelo (warehouse
-vendorizado en el repo + modelos MovAi en el cache de Fuel ~/.ignition/fuel),
+vendorizado en el repo + modelos MovAi en el cache de Fuel: ~/.gz/fuel en
+Harmonic, ~/.ignition/fuel en Fortress),
 compone la pose mundo -> link -> colision de cada <collision>, y rasteriza su
 huella (box / cylinder / mesh-AABB) en un PGM, filtrando por la franja de altura
 del LiDAR (Z_BAND) para excluir el suelo y los obstaculos bajos.
@@ -20,7 +21,25 @@ import xml.etree.ElementTree as ET
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORLD = os.path.join(REPO, "src/swarm_worlds/worlds/tugbot_warehouse.sdf")
 MODELS_DIR = os.path.join(REPO, "src/swarm_worlds/models")
-FUEL = os.path.expanduser("~/.ignition/fuel/fuel.ignitionrobotics.org/movai/models")
+def _find_fuel():
+    """Cache de Fuel de los modelos MovAi. Harmonic usa ~/.gz/fuel y el server
+    fuel.gazebosim.org; Fortress usaba ~/.ignition/fuel y fuel.ignitionrobotics.org.
+    Devuelve el primer .../movai/models que exista."""
+    candidates = [
+        "~/.gz/fuel/fuel.gazebosim.org/movai/models",
+        "~/.ignition/fuel/fuel.gazebosim.org/movai/models",
+        "~/.gz/fuel/fuel.ignitionrobotics.org/movai/models",
+        "~/.ignition/fuel/fuel.ignitionrobotics.org/movai/models",
+    ]
+    for c in candidates:
+        p = os.path.expanduser(c)
+        if os.path.isdir(p):
+            return p
+    # Si nada existe aún (1ª ejecución sin cache), devuelve la ruta Harmonic.
+    return os.path.expanduser(candidates[0])
+
+
+FUEL = _find_fuel()
 OUT_DIR = os.path.join(REPO, "src/swarm_worlds/maps")
 
 # Plano del mundo: limites y resolucion del grid.

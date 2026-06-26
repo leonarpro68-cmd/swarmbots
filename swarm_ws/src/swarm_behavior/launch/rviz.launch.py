@@ -29,8 +29,9 @@ _SCAN_COLORS = [
 ]
 
 
-def _make_rviz_config(n: int) -> str:
-    """Genera un .rviz con Grid, TF y un LaserScan por robot. Devuelve la ruta."""
+def _make_rviz_config(n: int, n_drones: int = 0) -> str:
+    """Genera un .rviz con Grid, TF, un LaserScan por summit y la odom de cada
+    dron. Devuelve la ruta."""
     displays = [
         {"Class": "rviz_default_plugins/Grid", "Name": "Grid", "Enabled": True,
          "Cell Size": 1.0, "Plane Cell Count": 60},
@@ -54,6 +55,22 @@ def _make_rviz_config(n: int) -> str:
             "Size (Pixels)": 3,
             "Color Transformer": "FlatColor",
             "Color": f"{r}; {g}; {b}",
+        })
+    # Drones: no tienen TF/URDF en ROS, pero publican odom (en frame mundo).
+    # Un display Odometry por dron muestra una flecha en su posicion.
+    for i in range(n_drones):
+        r, g, b = _SCAN_COLORS[i % len(_SCAN_COLORS)]
+        displays.append({
+            "Class": "rviz_default_plugins/Odometry",
+            "Name": f"drone{i}",
+            "Enabled": True,
+            "Topic": {"Value": f"/drone{i}/odom",
+                      "Reliability Policy": "Reliable",
+                      "Durability Policy": "Volatile"},
+            "Shape": "Arrow",
+            "Color": f"{r}; {g}; {b}",
+            "Keep": 1,
+            "Covariance": {"Value": False},
         })
     # Marcador persistente del ultimo goal publicado.
     displays.append({
@@ -98,6 +115,9 @@ def _make_rviz_config(n: int) -> str:
 
 def _setup(context, *args, **kwargs):
     n = int(LaunchConfiguration("n_robots").perform(context))
+    n_drones = int(LaunchConfiguration("n_drones").perform(context))
+    if n_drones < 0:
+        n_drones = n
     map_yaml = LaunchConfiguration("map").perform(context)
     if not map_yaml:
         map_yaml = os.path.join(
@@ -126,7 +146,7 @@ def _setup(context, *args, **kwargs):
             name=f"map_to_{ns}_odom",
             arguments=["0", "0", "0", "0", "0", "0", "map", f"{ns}/odom"],
         ))
-        # El frame_id del /scan es el nombre escopado del sensor en Fortress
+        # El frame_id del /scan es el nombre escopado del sensor en Harmonic
         # (`summitN/base_footprint/lidar`), que no existe en el URDF. Se ata por
         # identidad a `summitN/lidar_link` (mismo punto fisico, ya colocado por
         # robot_state_publisher) para que RViz pueda transformar el laser.
@@ -146,9 +166,18 @@ def _setup(context, *args, **kwargs):
             name=f"tf_static_relay_{ns}", arguments=[f"/{ns}/tf_static", "/tf_static"],
         ))
 
+    # Drones: su odom esta en frame mundo igual que la de los summits -> TF
+    # estatico identidad map->droneN/odom para que RViz situe la flecha.
+    for i in range(n_drones):
+        nodes.append(Node(
+            package="tf2_ros", executable="static_transform_publisher",
+            name=f"map_to_drone{i}_odom",
+            arguments=["0", "0", "0", "0", "0", "0", "map", f"drone{i}/odom"],
+        ))
+
     nodes.append(Node(
         package="rviz2", executable="rviz2", name="rviz2", output="screen",
-        arguments=["-d", _make_rviz_config(n)],
+        arguments=["-d", _make_rviz_config(n, n_drones)],
         parameters=[{"use_sim_time": True}],
     ))
     return nodes
@@ -157,6 +186,8 @@ def _setup(context, *args, **kwargs):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("n_robots", default_value="3"),
+        DeclareLaunchArgument("n_drones", default_value="-1",
+                              description="Nº de drones a visualizar (-1 = igual que n_robots; 0 = ninguno)"),
         DeclareLaunchArgument("map", default_value="",
                               description="Ruta a un .yaml de mapa (vacio = warehouse.yaml)"),
         OpaqueFunction(function=_setup),

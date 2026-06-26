@@ -127,12 +127,12 @@
     <origin xyz="${base_x/2.0 - 0.04} 0 ${base_z/2.0 + 0.02}" rpy="0 0 0"/>
   </joint>
 
-  <!-- ============ Gazebo Fortress ============ -->
+  <!-- ============ Gazebo Harmonic ============ -->
 
   <!-- Diff-drive controller (native Gz Sim plugin) -->
   <gazebo>
-    <plugin filename="libignition-gazebo-diff-drive-system.so"
-            name="ignition::gazebo::systems::DiffDrive">
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
       <right_joint>right_wheel_joint</right_joint>
       <wheel_separation>${wheel_sep}</wheel_separation>
@@ -148,8 +148,8 @@
 
   <!-- Joint state publisher (so Gz exposes joint angles) -->
   <gazebo>
-    <plugin filename="libignition-gazebo-joint-state-publisher-system.so"
-            name="ignition::gazebo::systems::JointStatePublisher">
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
       <topic>/model/${ns}/joint_states</topic>
     </plugin>
   </gazebo>

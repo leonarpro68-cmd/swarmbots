@@ -1,9 +1,9 @@
-FROM osrf/ros:humble-desktop
+FROM osrf/ros:jazzy-desktop
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-# Gazebo Fortress (Ignition Gazebo 6) repo
+# Gazebo Harmonic (gz-sim 8) repo
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl gnupg lsb-release ca-certificates \
     && curl -sSL https://packages.osrfoundation.org/gazebo.gpg \
@@ -12,17 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         > /etc/apt/sources.list.d/gazebo-stable.list \
     && rm -rf /var/lib/apt/lists/*
 
-# ROS 2 Humble + Gazebo Fortress integration + build tooling
+# ROS 2 Jazzy + Gazebo Harmonic integration + build tooling
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ignition-fortress \
-        ros-humble-ros-ign \
-        ros-humble-ros-ign-bridge \
-        ros-humble-ros-ign-gazebo \
-        ros-humble-ros-ign-image \
-        ros-humble-xacro \
-        ros-humble-robot-state-publisher \
-        ros-humble-joint-state-publisher \
-        ros-humble-rviz2 \
+        gz-harmonic \
+        ros-jazzy-ros-gz \
+        ros-jazzy-ros-gz-bridge \
+        ros-jazzy-ros-gz-sim \
+        ros-jazzy-ros-gz-image \
+        ros-jazzy-xacro \
+        ros-jazzy-robot-state-publisher \
+        ros-jazzy-joint-state-publisher \
+        ros-jazzy-rviz2 \
         python3-colcon-common-extensions \
         python3-rosdep \
         python3-vcstool \

@@ -1,6 +1,6 @@
 # swarm_ws
 
-Workspace de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**, containerizado con Docker + NVIDIA Container Toolkit.
+Workspace de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**, containerizado con Docker + NVIDIA Container Toolkit.
 
 ## Requisitos del host
 
@@ -13,7 +13,7 @@ Workspace de **swarm robotics** sobre **ROS 2 Humble** + **Gazebo Fortress**, co
 ```
 swarm_ws/
 ├── docker/
-│   ├── Dockerfile           # ROS 2 Humble + Gazebo Fortress + ros_ign
+│   ├── Dockerfile           # ROS 2 Jazzy + Gazebo Harmonic + ros_gz
 │   ├── docker-compose.yml   # X11, GPU NVIDIA, bind mount del workspace
 │   └── entrypoint.sh        # source de ROS y del overlay
 ├── src/
@@ -45,12 +45,12 @@ source install/setup.bash
 # ROS 2
 ros2 doctor --report
 
-# Gazebo Fortress
-ign gazebo --version          # debe imprimir 6.x
-ign gazebo -v 4 shapes.sdf    # GUI con GPU
+# Gazebo Harmonic
+gz sim --version              # debe imprimir 8.x
+gz sim -v 4 shapes.sdf       # GUI con GPU
 
-# Puente ros_ign
-ros2 run ros_ign_bridge parameter_bridge --help
+# Puente ros_gz
+ros2 run ros_gz_bridge parameter_bridge --help
 ```
 
 ## Notas

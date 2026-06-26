@@ -1,13 +1,13 @@
-"""Spawn N Summit XLS (mecanum/omni) + N drones X3 into Gazebo Fortress.
+"""Spawn N Summit XLS (mecanum/omni) + N drones X3 into Gazebo Harmonic.
 
 Summits: el plugin MecanumDrive necesita fricción direccional en las ruedas
-(<fdir1 ignition:expressed_in=...>), que no es expresable en URDF. Por eso
-aquí se hace: xacro → URDF → `ign sdf -p` → inyección de fdir1 → spawn del
+(<fdir1 gz:expressed_in=...>), que no es expresable en URDF. Por eso
+aquí se hace: xacro → URDF → `gz sdf -p` → inyección de fdir1 → spawn del
 SDF resultante. El URDF (sin fdir1) se sigue usando para robot_state_publisher.
 
 Drones: al model.sdf vendorizado (x3_uav) se le inyectan los plugins nativos
 MulticopterMotorModel (x4) + MulticopterVelocityControl + OdometryPublisher
-(config copiada del demo multicopter_velocity_control.sdf de ign-gazebo6).
+(config copiada del demo multicopter_velocity_control.sdf de gz-sim8).
 Despegan solos al arrancar y quedan en hover ~2.3 m sobre el anillo de
 summits. El controlador no actúa hasta recibir el primer Twist, por eso
 spawnean en el suelo y un proceso por dron manda subida y luego hover.
@@ -20,6 +20,7 @@ Usage:
 import math
 import os
 import re
+import shutil
 import subprocess
 
 from ament_index_python.packages import get_package_share_directory
@@ -32,7 +33,7 @@ from launch_ros.actions import Node
 GEN_DIR = "/tmp/swarm_summit"
 
 # Direcciones de rodillo mecanum (patrón X, igual que el demo
-# mecanum_drive.sdf de ign-gazebo6). FL/BR vs FR/BL alternados.
+# mecanum_drive.sdf de gz-sim8). FL/BR vs FR/BL alternados.
 _FDIR = {
     "front_left":  "1 -1 0",
     "back_right":  "1 -1 0",
@@ -54,20 +55,20 @@ def _generate_sdf(ns_str: str, xacro_path: str):
         f.write(urdf_str)
 
     sdf_str = subprocess.run(
-        ["ign", "sdf", "-p", urdf_path],
+        ["gz", "sdf", "-p", urdf_path],
         check=True, capture_output=True, text=True,
     ).stdout
 
-    # Namespace XML para el atributo ignition:expressed_in
+    # Namespace XML para el atributo gz:expressed_in
     sdf_str = sdf_str.replace(
         "<model name='summit_xls'>",
-        "<model name='summit_xls' xmlns:ignition='http://ignitionrobotics.org/schema'>",
+        "<model name='summit_xls' xmlns:gz='http://gazebosim.org/schema'>",
         1,
     )
 
     # Inyectar fdir1 dentro del <ode> de la colisión de cada rueda
     for wheel, fdir in _FDIR.items():
-        tag = f"<fdir1 ignition:expressed_in='base_footprint'>{fdir}</fdir1>"
+        tag = f"<fdir1 gz:expressed_in='base_footprint'>{fdir}</fdir1>"
         pattern = re.compile(
             rf"(<collision name='{wheel}_wheel_link_collision'>.*?<ode>)(.*?)(</ode>)",
             re.S,
@@ -76,7 +77,7 @@ def _generate_sdf(ns_str: str, xacro_path: str):
         if n_subs != 1:
             raise RuntimeError(
                 f"fdir1 injection failed for '{wheel}' ({n_subs} matches). "
-                "¿Cambió el formato de salida de 'ign sdf -p'?"
+                "¿Cambió el formato de salida de 'gz sdf -p'?"
             )
 
     sdf_path = os.path.join(GEN_DIR, f"{ns_str}.sdf")
@@ -86,7 +87,7 @@ def _generate_sdf(ns_str: str, xacro_path: str):
 
 
 _MOTOR_PLUGIN = """
-      <plugin filename="ignition-gazebo-multicopter-motor-model-system"
+      <plugin filename="gz-sim-multicopter-motor-model-system"
               name="gz::sim::systems::MulticopterMotorModel">
         <robotNamespace>{ns}</robotNamespace>
         <jointName>X3/rotor_{n}_joint</jointName>
@@ -115,7 +116,7 @@ _ROTOR_CFG = """
           </rotor>"""
 
 _CONTROL_PLUGIN = """
-      <plugin filename="ignition-gazebo-multicopter-control-system"
+      <plugin filename="gz-sim-multicopter-control-system"
               name="gz::sim::systems::MulticopterVelocityControl">
         <robotNamespace>{ns}</robotNamespace>
         <commandSubTopic>gazebo/command/twist</commandSubTopic>
@@ -128,8 +129,8 @@ _CONTROL_PLUGIN = """
         <rotorConfiguration>{rotors}
         </rotorConfiguration>
       </plugin>
-      <plugin filename="ignition-gazebo-odometry-publisher-system"
-              name="ignition::gazebo::systems::OdometryPublisher">
+      <plugin filename="gz-sim-odometry-publisher-system"
+              name="gz::sim::systems::OdometryPublisher">
         <dimensions>3</dimensions>
         <odom_frame>{ns}/odom</odom_frame>
         <robot_base_frame>{ns}/base_footprint</robot_base_frame>
@@ -178,21 +179,21 @@ def _spawn_for_drone(ns_str: str, x: float, y: float, yaw: float):
     odom_topic = f"/model/{ns_str}/odometry"
     takeoff = (
         f"for i in $(seq 1 60); do "
-        f"  ign topic -l 2>/dev/null | grep -q '{odom_topic}' && break; sleep 1; "
+        f"  gz topic -l 2>/dev/null | grep -q '{odom_topic}' && break; sleep 1; "
         f"done; sleep 1; "
-        f"ign topic -t '{twist_topic}' -m ignition.msgs.Twist -p 'linear: {{z: 0.7}}'; "
+        f"gz topic -t '{twist_topic}' -m gz.msgs.Twist -p 'linear: {{z: 0.7}}'; "
         f"for i in $(seq 1 300); do "
-        f"  z=$(ign topic -e -t '{odom_topic}' -n 1 2>/dev/null "
+        f"  z=$(gz topic -e -t '{odom_topic}' -n 1 2>/dev/null "
         f"      | awk '/position {{/{{f=1}} f&&/z:/{{print $2; exit}}'); "
         f"  case \"$z\" in ''|*[!0-9.eE+-]*) z=0;; esac; "
         f"  awk -v z=\"$z\" 'BEGIN{{exit !(z>=2.2)}}' && break; "
         f"  sleep 1; "
         f"done; "
-        f"ign topic -t '{twist_topic}' -m ignition.msgs.Twist -p 'linear: {{z: 0.0}}'"
+        f"gz topic -t '{twist_topic}' -m gz.msgs.Twist -p 'linear: {{z: 0.0}}'"
     )
     return [
         Node(
-            package="ros_ign_gazebo",
+            package="ros_gz_sim",
             executable="create",
             arguments=[
                 "-name", ns_str,
@@ -204,14 +205,14 @@ def _spawn_for_drone(ns_str: str, x: float, y: float, yaw: float):
         ),
         ExecuteProcess(cmd=["bash", "-c", takeoff], name=f"takeoff_{ns_str}", output="screen"),
         Node(
-            package="ros_ign_bridge",
+            package="ros_gz_bridge",
             executable="parameter_bridge",
             namespace=ns_str,
             name=f"bridge_{ns_str}",
             output="screen",
             arguments=[
-                f"{twist_topic}@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+                f"{twist_topic}@geometry_msgs/msg/Twist]gz.msgs.Twist",
+                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             ],
             remappings=[
                 (twist_topic,                  "cmd_vel"),
@@ -240,7 +241,7 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float):
             }],
         ),
         Node(
-            package="ros_ign_gazebo",
+            package="ros_gz_sim",
             executable="create",
             arguments=[
                 "-name", ns_str,
@@ -251,17 +252,17 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float):
             output="screen",
         ),
         Node(
-            package="ros_ign_bridge",
+            package="ros_gz_bridge",
             executable="parameter_bridge",
             namespace=ns_str,
             name=f"bridge_{ns_str}",
             output="screen",
             arguments=[
-                f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan",
-                f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[ignition.msgs.Model",
-                f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+                f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+                f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
+                f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
             ],
             remappings=[
                 (f"/model/{ns_str}/cmd_vel",      "cmd_vel"),
@@ -273,6 +274,23 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float):
         ),
     ]
     return nodes
+
+
+_NVIDIA_EGL_JSON = "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
+
+
+def _force_nvidia_render():
+    """Forzar render por la NVIDIA (Optimus). No-op si no hay NVIDIA o si el
+    usuario ya fijo las variables (para no pisar una config manual)."""
+    if shutil.which("nvidia-smi") is None:
+        return
+    # GLX (viewport del GUI) -> offload a la NVIDIA.
+    os.environ.setdefault("__NV_PRIME_RENDER_OFFLOAD", "1")
+    os.environ.setdefault("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
+    # EGL (render de sensores del servidor) -> usar SOLO el vendor NVIDIA, sin
+    # intentar Mesa/dri2 sobre la PCI de la NVIDIA.
+    if os.path.exists(_NVIDIA_EGL_JSON):
+        os.environ.setdefault("__EGL_VENDOR_LIBRARY_FILENAMES", _NVIDIA_EGL_JSON)
 
 
 def _launch_setup(context, *args, **kwargs):
@@ -288,20 +306,29 @@ def _launch_setup(context, *args, **kwargs):
     # Los mundos referencian modelos vendorizados vía model:// (p.ej. el
     # warehouse). Exportar antes de lanzar Gazebo; hereda a todos los hijos.
     models_dir = os.path.join(worlds_share, "models")
-    prev = os.environ.get("IGN_GAZEBO_RESOURCE_PATH", "")
+    prev = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
     if models_dir not in prev.split(":"):
-        os.environ["IGN_GAZEBO_RESOURCE_PATH"] = f"{models_dir}:{prev}" if prev else models_dir
+        os.environ["GZ_SIM_RESOURCE_PATH"] = f"{models_dir}:{prev}" if prev else models_dir
+
+    # En portatiles Optimus (p.ej. RTX 4060 Laptop) con X en una GPU integrada,
+    # glvnd intenta el vendor Mesa (dri2) para la PCI de la NVIDIA y falla
+    # ("failed to create dri2 screen", driver null) -> el render del servidor
+    # (gpu_lidar) y el viewport del GUI caen a software y el RTF se hunde a
+    # ~0.05. Forzar el vendor NVIDIA para EGL y el offload NVIDIA para GLX lo
+    # arregla. Solo si hay NVIDIA y el usuario no lo fijo ya (no rompe headless
+    # ni maquinas sin NVIDIA).
+    _force_nvidia_render()
     # En headless, --headless-rendering usa la GPU vía EGL (sin X). Sin ello
     # los gpu_lidar caen a render por software y el RTF se hunde (~0.05 en
     # el warehouse).
-    ign_args = f"-r -v 4 {world_path}" + (" -s --headless-rendering" if headless else "")
+    gz_args = f"-r -v 4 {world_path}" + (" -s --headless-rendering" if headless else "")
 
     actions = [
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory("ros_ign_gazebo"), "launch", "ign_gazebo.launch.py")
+                os.path.join(get_package_share_directory("ros_gz_sim"), "launch", "gz_sim.launch.py")
             ),
-            launch_arguments={"ign_args": ign_args}.items(),
+            launch_arguments={"gz_args": gz_args}.items(),
         ),
     ]
 
@@ -341,11 +368,11 @@ def _launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     clock_bridge = Node(
-        package="ros_ign_bridge",
+        package="ros_gz_bridge",
         executable="parameter_bridge",
         name="clock_bridge",
         output="screen",
-        arguments=["/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock"],
+        arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
     )
 
     return LaunchDescription([
