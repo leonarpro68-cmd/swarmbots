@@ -47,6 +47,7 @@ class DroneGoToGoal(Node):
         self.declare_parameter("k_z", 0.8)             # ganancia de altitud
         self.declare_parameter("control_rate", 20.0)   # Hz
         self.declare_parameter("goal_topic", "/goal_pose")  # RViz "2D Goal Pose"
+        self.declare_parameter("use_goal_topic", True)  # escuchar /goal_pose (off en modo pares)
 
         self.goal_x = self.get_parameter("goal_x").value
         self.goal_y = self.get_parameter("goal_y").value
@@ -66,9 +67,10 @@ class DroneGoToGoal(Node):
         self.cmd_pub = self.create_publisher(Twist, "cmd_vel", 10)
         self.create_subscription(Odometry, "odom", self._on_odom, 10)
         # Goal interactivo desde RViz: topico absoluto, una publicacion mueve a
-        # todo el enjambre (summits y drones).
-        goal_topic = self.get_parameter("goal_topic").value
-        self.create_subscription(PoseStamped, goal_topic, self._on_goal, 10)
+        # todo el enjambre (summits y drones). En modo pares se desactiva.
+        if self.get_parameter("use_goal_topic").value:
+            goal_topic = self.get_parameter("goal_topic").value
+            self.create_subscription(PoseStamped, goal_topic, self._on_goal, 10)
 
         self.timer = self.create_timer(1.0 / rate, self._control_step)
         self.get_logger().info(

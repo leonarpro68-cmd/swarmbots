@@ -1,36 +1,80 @@
-Comandos — Terminal 1 (build + simulación):
+==========================================================================
+ SWARMBOTS — COMANDOS PARA LA DEMO   (ROS 2 Jazzy + Gazebo Harmonic)
+==========================================================================
+
+En CADA terminal, primero cargar el entorno:
+
+  source /opt/ros/jazzy/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+
+Compilar una sola vez (o tras cambiar código):
+
   cd ~/swarmbots/swarm_ws
-  source /opt/ros/humble/setup.bash
-  colcon build --symlink-install --packages-up-to swarm_description swarm_worlds summit_xl_description
+  colcon build --symlink-install
   source install/setup.bash
+
+Nota GPU (portátil Optimus): el launch ya fuerza la NVIDIA. Si la ventana 3D
+de Gazebo va a tirones, lánzalo headless (headless:=true) y visualiza en RViz.
+
+
+--------------------------------------------------------------------------
+ DEMO 1 — Enjambre dirigido por RViz (control con el ratón)
+--------------------------------------------------------------------------
+Un enjambre de N Summit (anillo) + N drones; el destino se fija en vivo
+clicando en el mapa con la herramienta "2D Goal Pose".
+
+  # Terminal 1 — simulación (Gazebo + warehouse + robots)
   ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
-  (o todo en uno: ./swarm_ws/scripts/sim_native.sh 3)
+      # si la GUI va lenta:  ... n_robots:=3 headless:=true
 
-  Terminal 2 (teleop):
-  source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
-  ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/summit0/cmd_vel
-
-Si ya está compilado y prefieres lanzarlo directo:
-
-  cd ~/swarmbots/swarm_ws
-  source /opt/ros/humble/setup.bash && source install/setup.bash
-  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
-
-  Y para moverlos, en otra terminal (con los mismos source):
-
-  ros2 topic pub /summit0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.3, y: 0.2}}'
-  ros2 topic pub /drone0/cmd_vel  geometry_msgs/Twist '{linear: {x: 0.3}}'
-
-Terminal 1
-
-cd swarm_ws && source /opt/ros/humble/setup.bash && source install/setup.bash
-ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 headless:=true
-Terminal 2 — los controladores de enjambre:
-
-  source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+  # Terminal 2 — comportamiento (summits rodean el goal, drones lo sobrevuelan)
   ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3
-  # o líder-seguidor:  ros2 launch swarm_behavior swarm_behavior.launch.py n_robots:=3 mode:=follow
+      # variante líder-seguidor:  ... n_robots:=3 mode:=follow
 
-  Terminal 3 — RViz:
-  source /opt/ros/humble/setup.bash && source ~/swarmbots/swarm_ws/install/setup.bash
+  # Terminal 3 — RViz (visualización + control del destino)
   ros2 launch swarm_behavior rviz.launch.py n_robots:=3
+
+  >> EN RVIZ: pulsar el botón "2D Goal Pose" (barra superior) y hacer clic en
+     el mapa. Los Summits van por el suelo (esquivan obstáculos con el LiDAR) y
+     se reparten en un ANILLO alrededor del punto (no se amontonan ni "bailan");
+     los drones vuelan al mismo punto en capas de altura. Cada clic = nuevo destino.
+
+
+--------------------------------------------------------------------------
+ DEMO 2 — Varios grupos a metas aleatorias con cesión de paso
+--------------------------------------------------------------------------
+N_GROUPS grupos; cada grupo tiene PAIRS_PER_GROUP pares {Summit + dron} y va a
+SU PROPIA meta aleatoria. Dentro del grupo: summits en anillo + drones en capas.
+Entre grupos: si las trayectorias se cruzan, el grupo de menor prioridad SE
+APARTA para ceder el paso (evita colisiones). Los drones no chocan (van por capas).
+
+  Regla:  nº de robots de la sim  n_robots = n_groups × pairs_per_group
+
+  # Ejemplo: 2 grupos de 1 par (4 robots = 2 summits + 2 drones)
+  # Terminal 1
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=2
+  # Terminal 2
+  ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=2 pairs_per_group:=1
+  # Terminal 3 (opcional, ver todo en RViz)
+  ros2 launch swarm_behavior rviz.launch.py n_robots:=2
+
+  # Ejemplo del demo: 3 grupos de 4 pares (24 robots = 12 summits + 12 drones)
+  # Terminal 1   (pesado: si va lento, añade headless:=true)
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=12
+  # Terminal 2
+  ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=3 pairs_per_group:=4
+  # Terminal 3
+  ros2 launch swarm_behavior rviz.launch.py n_robots:=12
+
+  Opciones útiles de swarm_pairs:
+    seed:=5            metas reproducibles (mismas cada vez); -1 = aleatorias
+    min_goal_sep:=6    separación mínima entre metas de grupos (m)
+    formation_spacing:=2.0   separación entre summits del mismo grupo (anillo)
+    cruise_z:=3.5  drone_layer:=1.0   altitud del 1er dron y separación de capas
+
+
+--------------------------------------------------------------------------
+ Mover un robot a mano (sin comportamiento, para probar)
+--------------------------------------------------------------------------
+  ros2 topic pub /summit0/cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3, y: 0.2}}'  # avance + strafe
+  ros2 topic pub /drone0/cmd_vel  geometry_msgs/msg/Twist '{linear: {z: 0.2}}'          # subir el dron
+  ros2 topic pub /summit0/cmd_vel geometry_msgs/msg/Twist '{}'                           # frenar (persiste)

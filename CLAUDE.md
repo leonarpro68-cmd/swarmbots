@@ -130,6 +130,27 @@ ros2 launch swarm_behavior rviz.launch.py n_robots:=3 [map:=/ruta/otro.yaml]
 ```
 En RViz: botón **"2D Goal Pose"** → clic en el mapa = nuevo destino del enjambre (en `goal` todos, en `follow` el líder).
 
+## Grupos {Summit + dron} a metas aleatorias con cesión de paso (HECHO y VALIDADO — 2026-06-26)
+
+`swarm_pairs.launch.py`: **N grupos**, cada grupo con **n pares {Summit + dron}**, cada grupo a su **propia meta aleatoria**. Dos parámetros independientes:
+- `n_groups` (**N**): nº de grupos.
+- `pairs_per_group` (**n**): pares por grupo (n=2 ⇒ cada grupo = 2 summits + 2 drones).
+- **Total = N·n** summits + N·n drones. **La sim debe spawnear `n_robots = N·n`.**
+```bash
+# 2 grupos de 1 par (4 robots)
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=2
+ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=2 pairs_per_group:=1 [seed:=3]
+# 2 grupos de 2 pares (8 robots: 4 summits + 4 drones)
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=4
+ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=2 pairs_per_group:=2
+```
+Asignación: el robot global `idx = g·n + j` pertenece al grupo `g`, posición `j` en el grupo (summit{idx}/drone{idx}).
+- **Dentro de un grupo**: los n summits forman un **anillo** alrededor de la meta del grupo (`n_robots=n`, `robot_index=j`, reusa el latch+anillo de go_to_goal) y los n drones la sobrevuelan en **capas** (`cruise_z + j·drone_layer`, acotado por j ⇒ no crece con N, no se sale del almacén).
+- **Metas aleatorias** distintas por grupo, en caja segura (def `x∈[-6,6] y∈[11,23]`, zona norte abierta; `min_goal_sep` para que las rutas crucen). `seed:=-1` (def) = distintas cada vez. NO ampliar la caja a zonas con estanterías (hunden el RTF y atrapan robots).
+- **Cesión de paso por PRIORIDAD entre grupos** (grupo de índice menor = preferente): cada summit del grupo g recibe `yield_peers` = todos los summits de los grupos 0..g-1 (índices globales `0..g·n-1`); si un prioritario está a < `yield_radius` (3 m) y **en movimiento**, el summit que cede **se aparta** (strafe perpendicular a la línea hacia el peer + repulsión, aprovecha el mecanum) en vez de solo frenar — frenar en medio del pasillo causaba **deadlock** (el prioritario se atascaba delante del parado). El prioritario nunca cede ⇒ no hay deadlock (prioridad total). Dentro de un grupo NO se ceden entre sí (cooperan por anillo+LiDAR). Solo ceden summits (los drones van por capas, no colisionan).
+- Validado headless: cruce frontal (metas intercambiadas) → el que cede se aparta ~2 m, el prioritario pasa, ambos llegan y quedan quietos; `n_groups=2 pairs_per_group=2` (8 robots) → cada grupo llega a su meta con summits en anillo y drones en capas.
+- Params útiles: `yield_radius`, `yield_speed` (umbral de "se mueve"), `yield_speed_aside` (rapidez al apartarse), `formation_spacing` (anillo intra-grupo), `cruise_z`/`drone_layer` (altitud), `area_*`/`min_goal_sep` (metas).
+
 ## Summit XL skid-steer en Fortress (HECHO — 2026-06-09, secundario)
 
 **Validado headless en `isa`**: spawn OK, `/summit/scan` publica, `/summit/cmd_vel` a 0.5 m/s durante 6 s → odometría avanza 3.02 m, `/summit/joint_states` reporta las 4 ruedas. Sin errores en el log de Gazebo.

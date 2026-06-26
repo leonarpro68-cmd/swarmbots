@@ -106,12 +106,28 @@ class GoToGoal(Node):
         self.k_yaw = self.get_parameter("k_yaw").value
         rate = self.get_parameter("control_rate").value
 
+        # Cesion de paso por prioridad (para grupos que cruzan trayectorias):
+        # este robot CEDE (se detiene) si algun peer de MAYOR prioridad esta
+        # cerca y en movimiento. yield_peers = CSV de namespaces prioritarios.
+        self.declare_parameter("yield_peers", "")
+        self.declare_parameter("yield_radius", 3.0)   # m: distancia a la que se cede
+        self.declare_parameter("yield_speed", 0.05)   # m/s: el peer cuenta si se mueve mas que esto
+        self.declare_parameter("yield_speed_aside", 0.45)  # m/s al apartarse
+        self.declare_parameter("use_goal_topic", True)  # escuchar /goal_pose (RViz)
+        peers_csv = self.get_parameter("yield_peers").value
+        self.yield_peers = [p for p in peers_csv.split(",") if p]
+        self.yield_radius = self.get_parameter("yield_radius").value
+        self.yield_speed = self.get_parameter("yield_speed").value
+        self.yield_speed_aside = self.get_parameter("yield_speed_aside").value
+
         # --- Estado ---
         self.pose = None          # (x, y, yaw) propio en frame mundo
         self.scan = None          # ultimo LaserScan
         self.leader_pose = None   # (x, y) del lider en frame mundo
         self._reached_logged = False
         self.arrived = False      # latch: parado en el slot hasta que el goal se mueva
+        self.peer_state = {}      # ns -> (x, y, speed) de peers prioritarios
+        self._yield_logged = False
 
         # --- I/O (el nodo corre dentro del namespace del robot) ---
         sensor_qos = QoSProfile(
@@ -128,14 +144,24 @@ class GoToGoal(Node):
                 Odometry, f"/{self.follow_robot}/odom", self._on_leader_odom, 10
             )
         # Goal interactivo desde RViz (herramienta "2D Goal Pose" -> /goal_pose).
-        # Topico absoluto: una sola publicacion reubica a todo el enjambre.
-        goal_topic = self.get_parameter("goal_topic").value
-        self.create_subscription(PoseStamped, goal_topic, self._on_goal, 10)
+        # Topico absoluto: una sola publicacion reubica a todo el enjambre. En
+        # modo "pares" (cada grupo a su meta) se desactiva para que RViz no las pise.
+        if self.get_parameter("use_goal_topic").value:
+            goal_topic = self.get_parameter("goal_topic").value
+            self.create_subscription(PoseStamped, goal_topic, self._on_goal, 10)
+
+        # Suscripcion a la odom de cada peer prioritario (para cederle el paso).
+        for peer in self.yield_peers:
+            self.create_subscription(
+                Odometry, f"/{peer}/odom",
+                lambda msg, ns=peer: self._on_peer(ns, msg), 10,
+            )
 
         self.timer = self.create_timer(1.0 / rate, self._control_step)
         tgt = f"sigue a '{self.follow_robot}' (standoff {self.standoff} m)" if self.follow_robot \
             else f"goal ({self.goal_x:.2f}, {self.goal_y:.2f})"
-        self.get_logger().info(f"go_to_goal activo: {tgt}")
+        ceder = f", cede ante {self.yield_peers}" if self.yield_peers else ""
+        self.get_logger().info(f"go_to_goal activo: {tgt}{ceder}")
 
     # --- Callbacks ---
     def _on_odom(self, msg: Odometry):
@@ -144,6 +170,23 @@ class GoToGoal(Node):
 
     def _on_leader_odom(self, msg: Odometry):
         self.leader_pose = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _on_peer(self, ns: str, msg: Odometry):
+        p = msg.pose.pose.position
+        v = msg.twist.twist.linear
+        self.peer_state[ns] = (p.x, p.y, math.hypot(v.x, v.y))
+
+    def _nearest_priority_peer(self, x: float, y: float):
+        """(px, py) del peer prioritario mas cercano que esta cerca Y en
+        movimiento, o None. No se cede ante uno parado (ya llego o tambien cede)
+        para no bloquearse mutuamente."""
+        best = None
+        best_d = self.yield_radius
+        for px, py, spd in self.peer_state.values():
+            d = math.hypot(px - x, py - y)
+            if spd > self.yield_speed and d < best_d:
+                best, best_d = (px, py), d
+        return best
 
     def _on_scan(self, msg: LaserScan):
         self.scan = msg
@@ -164,6 +207,38 @@ class GoToGoal(Node):
         if self.pose is None:
             return
         x, y, yaw = self.pose
+
+        # Cesion de paso: si un grupo prioritario pasa cerca, APARTARSE de su
+        # linea (no solo frenar: frenar en medio del pasillo bloquea al
+        # prioritario -> deadlock). Se hace strafe perpendicular a la direccion
+        # hacia el peer (aprovecha el mecanum) + repulsion para no chocar muros,
+        # sin atraccion al goal. Al alejarse el prioritario, se retoma la nav.
+        peer = self._nearest_priority_peer(x, y)
+        if peer is not None:
+            px, py = peer
+            bx, by = px - x, py - y
+            b = math.hypot(bx, by) or 1.0
+            # Perpendicular a la linea hacia el peer + componente de alejamiento.
+            perp_wx, perp_wy = -by / b, bx / b
+            wvx = self.yield_speed_aside * (perp_wx - 0.4 * bx / b)
+            wvy = self.yield_speed_aside * (perp_wy - 0.4 * by / b)
+            rep_bx, rep_by, _ = self._repulsion()
+            cos_y, sin_y = math.cos(yaw), math.sin(yaw)
+            vx = cos_y * wvx + sin_y * wvy + rep_bx
+            vy = -sin_y * wvx + cos_y * wvy + rep_by
+            speed = math.hypot(vx, vy)
+            if speed > self.max_lin:
+                vx *= self.max_lin / speed
+                vy *= self.max_lin / speed
+            cmd = Twist()
+            cmd.linear.x = vx
+            cmd.linear.y = vy
+            self.cmd_pub.publish(cmd)
+            if not self._yield_logged:
+                self.get_logger().info("cediendo el paso (apartandose) a un grupo prioritario")
+                self._yield_logged = True
+            return
+        self._yield_logged = False
 
         # Objetivo (frame mundo): slot propio en el anillo del goal, o lider.
         if self.follow_robot:

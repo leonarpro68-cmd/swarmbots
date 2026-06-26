@@ -69,6 +69,20 @@ ros2 launch swarm_behavior rviz.launch.py n_robots:=3
 
 En RViz pulsa **"2D Goal Pose"** y clica en el mapa para fijar el destino del enjambre en vivo. El mapa estático se genera sin simular con `python3 swarm_ws/scripts/make_warehouse_map.py` (rasteriza las colisiones del mundo a un occupancy grid).
 
+### Grupos {Summit + dron} a metas aleatorias (con cesión de paso)
+
+**N grupos** (`n_groups`), cada uno con **n pares** Summit+dron (`pairs_per_group`), cada grupo a su **propia meta aleatoria**. Dentro de un grupo los Summits forman un anillo alrededor de la meta y los drones la sobrevuelan en capas; si las rutas de dos grupos se cruzan, el de menor prioridad **se aparta** para ceder el paso. **La sim debe tener `n_robots = n_groups × pairs_per_group`.**
+
+```bash
+# 2 grupos de 1 par (4 robots)
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=2
+ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=2 pairs_per_group:=1  # [seed:=3]
+
+# 2 grupos de 2 pares (8 robots: 4 summits + 4 drones)
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=4
+ros2 launch swarm_behavior swarm_pairs.launch.py n_groups:=2 pairs_per_group:=2
+```
+
 ## Tópicos por robot
 
 `/<ns>/cmd_vel`, `/<ns>/odom`, `/<ns>/scan` (solo summits), `/<ns>/joint_states`, `/<ns>/tf` — con `<ns>` = `summit0…`, `drone0…`.
