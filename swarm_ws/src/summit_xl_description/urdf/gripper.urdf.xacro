@@ -1,0 +1,154 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+
+  <!-- Pinza paralela simple (2 dedos) fija al frente del Summit XLS.
+       SOLO abre/cierra: sin mecanica de agarre (no DetachableJoint, no
+       friccion). Pensada para montarse sobre `<prefix>base_link`.
+
+       Geometria minima:
+         - gripper_palm : link fijo al frente del chasis.
+         - <prefix>finger_left / _right : dos joints PRISMATICOS (eje Y).
+           Comandar ambos al mismo valor abre/cierra simetricamente.
+             posicion 0.00 -> cerrado (separacion ~0.08 m)
+             posicion 0.04 -> abierto  (separacion ~0.16 m)
+
+       El control real (gz_ros2_control + JointTrajectoryController) se anade
+       en una fase posterior. Para verlo moverse en RViz basta el
+       joint_state_publisher_gui (sliders sobre estos 2 joints). -->
+
+  <xacro:macro name="summit_gripper" params="prefix:=''">
+
+    <material name="gripper_dark"><color rgba="0.15 0.15 0.18 1"/></material>
+    <material name="gripper_gray"><color rgba="0.5 0.5 0.55 1"/></material>
+
+    <!-- ===== Palma (fija al frente del chasis) ===== -->
+    <link name="${prefix}gripper_palm">
+      <visual>
+        <geometry><box size="0.05 0.16 0.05"/></geometry>
+        <material name="gripper_dark"/>
+      </visual>
+      <collision>
+        <geometry><box size="0.05 0.16 0.05"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.3"/>
+        <inertia ixx="7.0e-4" ixy="0" ixz="0" iyy="1.3e-4" iyz="0" izz="7.0e-4"/>
+      </inertial>
+    </link>
+    <!-- Pegada a la cara frontal del chasis: el frontal esta en x~0.345
+         (placa/logo frontal en summit_xls_base), z=0 es el centro de esa cara.
+         La palma (0.05 de fondo) se centra en x=0.36 -> su cara trasera (0.335)
+         queda solapada con el chasis = sin hueco visible. -->
+    <joint name="${prefix}gripper_palm_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child  link="${prefix}gripper_palm"/>
+      <origin xyz="0.36 0 0.0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ===== Macro de un dedo ===== -->
+    <!-- reflect=+1 -> dedo izquierdo (+Y), reflect=-1 -> derecho (-Y).
+         El eje del joint apunta SIEMPRE hacia afuera (reflect*Y) para que un
+         mismo valor de comando mueva los dos dedos simetricamente. -->
+    <xacro:macro name="gripper_finger" params="side reflect">
+      <link name="${prefix}finger_${side}">
+        <visual>
+          <geometry><box size="0.09 0.02 0.06"/></geometry>
+          <material name="gripper_gray"/>
+        </visual>
+        <collision>
+          <geometry><box size="0.09 0.02 0.06"/></geometry>
+        </collision>
+        <inertial>
+          <mass value="0.1"/>
+          <inertia ixx="3.6e-5" ixy="0" ixz="0" iyy="9.8e-5" iyz="0" izz="7.4e-5"/>
+        </inertial>
+      </link>
+      <joint name="${prefix}finger_${side}_joint" type="prismatic">
+        <parent link="${prefix}gripper_palm"/>
+        <child  link="${prefix}finger_${side}"/>
+        <!-- arranca a la altura de la palma, adelantado y separado 0.04 m -->
+        <origin xyz="0.07 ${reflect*0.04} 0" rpy="0 0 0"/>
+        <axis xyz="0 ${reflect} 0"/>
+        <limit lower="0.0" upper="0.04" effort="20" velocity="0.1"/>
+        <dynamics damping="5.0" friction="1.0"/>
+      </joint>
+    </xacro:macro>
+
+    <xacro:gripper_finger side="left"  reflect="1"/>
+    <xacro:gripper_finger side="right" reflect="-1"/>
+
+    <!-- ===== ros2_control: interfaz de posicion para los 2 dedos ===== -->
+    <ros2_control name="${prefix}GripperSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="${prefix}finger_left_joint">
+        <command_interface name="position">
+          <param name="min">0.0</param>
+          <param name="max">0.04</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="${prefix}finger_right_joint">
+        <command_interface name="position">
+          <param name="min">0.0</param>
+          <param name="max">0.04</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+
+    <!-- ===== Camara frontal (encima de la pinza, pegada al frontal) ===== -->
+    <material name="camera_body"><color rgba="0.05 0.05 0.05 1"/></material>
+    <link name="${prefix}camera_link">
+      <visual>
+        <geometry><box size="0.03 0.09 0.03"/></geometry>
+        <material name="camera_body"/>
+      </visual>
+      <collision>
+        <geometry><box size="0.03 0.09 0.03"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.08"/>
+        <inertia ixx="6.0e-5" ixy="0" ixz="0" iyy="6.0e-6" iyz="0" izz="6.0e-5"/>
+      </inertial>
+    </link>
+    <!-- cara frontal del chasis ~x=0.345; cuerpo de 0.03 centrado en x=0.35
+         -> trasera (0.335) solapada con el chasis. z=0.065 = encima de la pinza. -->
+    <joint name="${prefix}camera_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child  link="${prefix}camera_link"/>
+      <origin xyz="0.35 0 0.065" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Frame optico (REP 103): z hacia adelante, x a la derecha, y abajo.
+         La imagen de Gazebo se publica en este frame (gz_frame_id). -->
+    <link name="${prefix}camera_optical"/>
+    <joint name="${prefix}camera_optical_joint" type="fixed">
+      <parent link="${prefix}camera_link"/>
+      <child  link="${prefix}camera_optical"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <!-- Sensor de camara nativo Harmonic (mira a lo largo de +X del link).
+         El plugin Sensors del mundo lo activa, igual que el gpu_lidar. -->
+    <gazebo reference="${prefix}camera_link">
+      <sensor name="front_camera" type="camera">
+        <topic>/model/${ns}/camera</topic>
+        <gz_frame_id>${prefix}camera_optical</gz_frame_id>
+        <update_rate>15</update_rate>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image><width>640</width><height>480</height><format>R8G8B8</format></image>
+          <clip><near>0.05</near><far>30.0</far></clip>
+        </camera>
+        <always_on>1</always_on>
+        <visualize>true</visualize>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

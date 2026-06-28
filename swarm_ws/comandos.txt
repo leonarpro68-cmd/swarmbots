@@ -73,6 +73,54 @@ APARTA para ceder el paso (evita colisiones). Los drones no chocan (van por capa
 
 
 --------------------------------------------------------------------------
+ DEMO 3 — Pinza (gripper) + cámara frontal en el Summit
+--------------------------------------------------------------------------
+Un Summit con pinza paralela al frente (abre/cierra) + cámara encima de la
+pinza. Probar con 1 robot (el control de la pinza va por gz_ros2_control).
+
+  Requisito (una vez):
+  sudo apt install -y ros-jazzy-gz-ros2-control ros-jazzy-ros2-control \
+                      ros-jazzy-ros2-controllers ros-jazzy-rqt-image-view
+
+  # Terminal 1 — simulación con pinza + cámara (1 robot)
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=1 gripper:=true
+
+  # Terminal 2 — comprobar que el controlador de la pinza cargó
+  ros2 control list_controllers -c /summit0/controller_manager
+      # debe aparecer:  gripper_controller ... active
+
+  # Terminal 2 — ABRIR la pinza (dedos a 0.04 m)
+  ros2 topic pub --once /summit0/gripper_controller/joint_trajectory \
+    trajectory_msgs/msg/JointTrajectory \
+    '{joint_names: [finger_left_joint, finger_right_joint], points: [{positions: [0.04, 0.04], time_from_start: {sec: 1}}]}'
+
+  # Terminal 2 — CERRAR la pinza (dedos a 0.0 m)
+  ros2 topic pub --once /summit0/gripper_controller/joint_trajectory \
+    trajectory_msgs/msg/JointTrajectory \
+    '{joint_names: [finger_left_joint, finger_right_joint], points: [{positions: [0.0, 0.0], time_from_start: {sec: 1}}]}'
+
+  # Terminal 3 — ver la CÁMARA frontal
+  rqt_image_view /summit0/camera
+      # alternativa:  ros2 run image_tools showimage --ros-args -r image:=/summit0/camera
+      # comprobar tasa (~15 Hz):  ros2 topic hz /summit0/camera
+
+  Solo geometría (mover los dedos con sliders, sin Gazebo, en RViz):
+  ros2 launch summit_xl_description display_gripper.launch.py
+      # requiere: sudo apt install -y ros-jazzy-joint-state-publisher-gui
+
+
+--------------------------------------------------------------------------
+ Sensores extra del Summit (IMU + odometría de encoders)
+--------------------------------------------------------------------------
+Disponibles en cualquier lanzamiento de la sim (con o sin pinza):
+
+  ros2 topic echo /summit0/imu --once           # IMU (orientación + giro + acel.)
+  ros2 topic hz   /summit0/imu                   # ~100 Hz
+  ros2 topic echo /summit0/encoder_odom --once   # odom de encoders (deriva)
+  ros2 topic echo /summit0/odom --once           # odom ground-truth (motor físico)
+
+
+--------------------------------------------------------------------------
  Mover un robot a mano (sin comportamiento, para probar)
 --------------------------------------------------------------------------
   ros2 topic pub /summit0/cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3, y: 0.2}}'  # avance + strafe

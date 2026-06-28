@@ -3,7 +3,7 @@ project(summit_xl_description)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch meshes urdf robots
+install(DIRECTORY launch meshes urdf robots config
   DESTINATION share/${PROJECT_NAME}
 )
 

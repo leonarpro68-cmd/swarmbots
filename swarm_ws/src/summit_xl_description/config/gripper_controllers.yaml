@@ -1,0 +1,28 @@
+# Controladores de la pinza del Summit XLS (gz_ros2_control).
+# Lo carga el plugin gz-sim-ros2-control-system al arrancar Gazebo; el spawner
+# (gripper_controller) lo activa.
+#
+# Claves comodin /** para casar con el controller_manager namespaceado por
+# robot (/summitN/controller_manager). NO se usa joint_state_broadcaster: el
+# JointStatePublisher nativo de gz ya publica los joints de los dedos en
+# /summitN/joint_states (dos publicadores en el mismo topico chocarian).
+
+/**/controller_manager:
+  ros__parameters:
+    update_rate: 100
+    use_sim_time: true
+
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+/**/gripper_controller:
+  ros__parameters:
+    joints:
+      - finger_left_joint
+      - finger_right_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    allow_partial_joints_goal: false

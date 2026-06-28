@@ -16,8 +16,10 @@
   <xacro:arg name="robot_ns" default="summit0"/>
   <xacro:property name="ns" value="$(arg robot_ns)"/>
   <xacro:arg name="prefix" default=""/>
+  <xacro:arg name="gripper" default="false"/>
 
   <xacro:include filename="$(find summit_xl_description)/urdf/bases/summit_xls_base.urdf.xacro"/>
+  <xacro:include filename="$(find summit_xl_description)/urdf/gripper.urdf.xacro"/>
 
   <!-- Parámetros (de summit_xls.urdf.xacro / omni_wheel.urdf.xacro) -->
   <xacro:property name="wheel_offset_x" value="0.2225"/>
@@ -91,6 +93,26 @@
     <origin xyz="-${wheel_offset_x} -${wheel_offset_y} ${wheel_offset_z}" rpy="0 0 0"/>
   </xacro:mecanum_wheel>
 
+  <!-- Pinza paralela al frente (solo si gripper:=true) -->
+  <xacro:if value="$(arg gripper)">
+    <xacro:summit_gripper prefix="$(arg prefix)"/>
+    <!-- gz_ros2_control: arranca un controller_manager por robot que actua
+         sobre los dedos. Va en namespace ${ns} para alinearse con el
+         robot_state_publisher namespaceado (de donde el plugin lee el
+         <ros2_control> del robot_description) -> controller_manager en
+         /${ns}/controller_manager. El YAML usa claves comodin /** para casar
+         con cualquier namespace. -->
+    <gazebo>
+      <plugin filename="gz_ros2_control-system"
+              name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(find summit_xl_description)/config/gripper_controllers.yaml</parameters>
+        <ros>
+          <namespace>${ns}</namespace>
+        </ros>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+
   <!-- LiDAR 2D sobre la tapa del chasis -->
   <link name="$(arg prefix)lidar_link">
     <visual>
@@ -109,6 +131,19 @@
     <parent link="$(arg prefix)base_link"/>
     <child  link="$(arg prefix)lidar_link"/>
     <origin xyz="0.25 0 0.43" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU en el centro del chasis (sobre base_link). Frame ENU del sensor. -->
+  <link name="$(arg prefix)imu_link">
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="$(arg prefix)base_link"/>
+    <child  link="$(arg prefix)imu_link"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
   </joint>
 
   <!-- ============ Gazebo Harmonic ============ -->
@@ -154,6 +189,20 @@
             name="gz::sim::systems::JointStatePublisher">
       <topic>/model/${ns}/joint_states</topic>
     </plugin>
+  </gazebo>
+
+  <!-- IMU nativo Harmonic. Requiere el sistema Imu en el <world> (ya esta en
+       tugbot_warehouse.sdf y empty_arena.sdf). Publica gz.msgs.IMU. -->
+  <gazebo reference="$(arg prefix)imu_link">
+    <sensor name="imu" type="imu">
+      <topic>/model/${ns}/imu</topic>
+      <gz_frame_id>${ns}/imu_link</gz_frame_id>
+      <update_rate>100</update_rate>
+      <always_on>1</always_on>
+      <imu>
+        <enable_orientation>true</enable_orientation>
+      </imu>
+    </sensor>
   </gazebo>
 
   <gazebo reference="$(arg prefix)lidar_link">

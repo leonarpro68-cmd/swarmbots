@@ -42,12 +42,15 @@ _FDIR = {
 }
 
 
-def _generate_sdf(ns_str: str, xacro_path: str):
+def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False):
     """xacro → URDF → SDF con fdir1 inyectado. Devuelve (urdf_str, sdf_path)."""
     os.makedirs(GEN_DIR, exist_ok=True)
 
+    xacro_cmd = ["xacro", xacro_path, f"robot_ns:={ns_str}"]
+    if gripper:
+        xacro_cmd.append("gripper:=true")
     urdf_str = subprocess.run(
-        ["xacro", xacro_path, f"robot_ns:={ns_str}"],
+        xacro_cmd,
         check=True, capture_output=True, text=True,
     ).stdout
     urdf_path = os.path.join(GEN_DIR, f"{ns_str}.urdf")
@@ -222,10 +225,38 @@ def _spawn_for_drone(ns_str: str, x: float, y: float, yaw: float):
     ]
 
 
-def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float):
+def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool = False):
     desc_share = get_package_share_directory("summit_xl_description")
     xacro_path = os.path.join(desc_share, "robots", "summit_xl_omni.urdf.xacro")
-    urdf_str, sdf_path = _generate_sdf(ns_str, xacro_path)
+    urdf_str, sdf_path = _generate_sdf(ns_str, xacro_path, gripper)
+
+    bridge_args = [
+        f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+        f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+        f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+        f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
+        f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+        # IMU del chasis
+        f"/model/{ns_str}/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+        # Odometria de ENCODERS (dead-reckoning del MecanumDrive, frame del
+        # spawn). Es la odom realista (deriva); /odom sigue siendo el
+        # ground-truth del OdometryPublisher.
+        f"/model/{ns_str}/mecanum_odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+    ]
+    bridge_remaps = [
+        (f"/model/{ns_str}/cmd_vel",      "cmd_vel"),
+        (f"/model/{ns_str}/odometry",     "odom"),
+        (f"/model/{ns_str}/scan",         "scan"),
+        (f"/model/{ns_str}/joint_states", "joint_states"),
+        (f"/model/{ns_str}/tf",           "tf"),
+        (f"/model/{ns_str}/imu",          "imu"),
+        (f"/model/{ns_str}/mecanum_odom", "encoder_odom"),
+    ]
+    # La camara solo existe con la pinza (esta en el macro del gripper).
+    if gripper:
+        bridge_args.append(
+            f"/model/{ns_str}/camera@sensor_msgs/msg/Image[gz.msgs.Image")
+        bridge_remaps.append((f"/model/{ns_str}/camera", "camera"))
 
     nodes = [
         Node(
@@ -257,22 +288,24 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float):
             namespace=ns_str,
             name=f"bridge_{ns_str}",
             output="screen",
-            arguments=[
-                f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
-                f"/model/{ns_str}/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-                f"/model/{ns_str}/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
-                f"/model/{ns_str}/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
-                f"/model/{ns_str}/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
-            ],
-            remappings=[
-                (f"/model/{ns_str}/cmd_vel",      "cmd_vel"),
-                (f"/model/{ns_str}/odometry",     "odom"),
-                (f"/model/{ns_str}/scan",         "scan"),
-                (f"/model/{ns_str}/joint_states", "joint_states"),
-                (f"/model/{ns_str}/tf",           "tf"),
-            ],
+            arguments=bridge_args,
+            remappings=bridge_remaps,
         ),
     ]
+
+    # Pinza: spawner del gripper_controller contra el controller_manager
+    # namespaceado por robot (/<ns>/controller_manager). El gz_ros2_control lo
+    # arranca al cargar el modelo; el spawner reintenta hasta que esta listo.
+    if gripper:
+        nodes.append(Node(
+            package="controller_manager",
+            executable="spawner",
+            name=f"spawn_gripper_{ns_str}",
+            arguments=["gripper_controller",
+                       "--controller-manager", f"/{ns_str}/controller_manager"],
+            output="screen",
+        ))
+
     return nodes
 
 
@@ -299,6 +332,7 @@ def _launch_setup(context, *args, **kwargs):
     world = LaunchConfiguration("world").perform(context)
     cx = float(LaunchConfiguration("center_x").perform(context))
     cy = float(LaunchConfiguration("center_y").perform(context))
+    gripper = LaunchConfiguration("gripper").perform(context).lower() in ("true", "1")
 
     worlds_share = get_package_share_directory("swarm_worlds")
     world_path = os.path.join(worlds_share, "worlds", f"{world}.sdf")
@@ -347,7 +381,7 @@ def _launch_setup(context, *args, **kwargs):
         x = cx + radius * math.cos(ang)
         y = cy + radius * math.sin(ang)
         yaw = ang + math.pi  # mirando al centro
-        actions += _spawn_for_robot(f"summit{i}", x, y, yaw)
+        actions += _spawn_for_robot(f"summit{i}", x, y, yaw, gripper)
 
     # Drones: spawnean en el suelo, 1 m por fuera del anillo de summits
     # (despegar encima de uno acabaría aterrizándole en el techo), y la
@@ -382,6 +416,7 @@ def generate_launch_description():
         DeclareLaunchArgument("center_x", default_value="0.0", description="Spawn circle center X"),
         DeclareLaunchArgument("center_y", default_value="18.0", description="Spawn circle center Y"),
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
+        DeclareLaunchArgument("gripper", default_value="false", description="Anadir pinza + camara + controladores gz_ros2_control (probar con n_robots:=1)"),
         clock_bridge,
         OpaqueFunction(function=_launch_setup),
     ])
