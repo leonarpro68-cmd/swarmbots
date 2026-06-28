@@ -409,6 +409,15 @@ def generate_launch_description():
         arguments=["/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
     )
 
+    # Camara cenital del mundo (vista superior de las posiciones de los robots).
+    overhead_cam_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="overhead_cam_bridge",
+        output="screen",
+        arguments=["/overhead/image@sensor_msgs/msg/Image[gz.msgs.Image"],
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument("n_robots", default_value="3", description="Number of Summit XLS to spawn"),
         DeclareLaunchArgument("n_drones", default_value="-1", description="Number of X3 drones (-1 = same as n_robots)"),
@@ -418,5 +427,6 @@ def generate_launch_description():
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
         DeclareLaunchArgument("gripper", default_value="false", description="Anadir pinza + camara + controladores gz_ros2_control (probar con n_robots:=1)"),
         clock_bridge,
+        overhead_cam_bridge,
         OpaqueFunction(function=_launch_setup),
     ])

@@ -121,6 +121,21 @@ Disponibles en cualquier lanzamiento de la sim (con o sin pinza):
 
 
 --------------------------------------------------------------------------
+ Cámara cenital (vista superior de todo el enjambre)
+--------------------------------------------------------------------------
+Cámara fija mirando hacia abajo sobre la zona de spawn. Disponible en
+CUALQUIER lanzamiento de la sim (ya bridgeada por sim_summit).
+
+  rqt_image_view /overhead/image
+      # o:  ros2 run image_tools showimage --ros-args -r image:=/overhead/image
+      # tasa (~15 Hz):  ros2 topic hz /overhead/image
+
+  Nota: en el warehouse cubre el almacén ENTERO (centrada en (0,0) a 38 m,
+  FOV 1.3). Para acercar a una zona concreta, baja el z o reduce el FOV y
+  recentra el <pose> del modelo "overhead_camera" en el .sdf del mundo.
+
+
+--------------------------------------------------------------------------
  Mover un robot a mano (sin comportamiento, para probar)
 --------------------------------------------------------------------------
   ros2 topic pub /summit0/cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3, y: 0.2}}'  # avance + strafe
