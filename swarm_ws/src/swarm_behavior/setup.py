@@ -25,6 +25,8 @@ setup(
         "console_scripts": [
             "go_to_goal = swarm_behavior.go_to_goal:main",
             "drone_go_to_goal = swarm_behavior.drone_go_to_goal:main",
+            "grasp_manager = swarm_behavior.grasp_manager:main",
+            "ps5_teleop = swarm_behavior.ps5_teleop:main",
         ],
     },
 )

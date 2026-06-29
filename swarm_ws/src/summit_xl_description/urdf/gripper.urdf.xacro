@@ -100,6 +100,35 @@
       </joint>
     </ros2_control>
 
+    <!-- ===== Agarre fiable: DetachableJoint por objeto de basura =====
+         Con attach_topic definido el joint NACE SUELTO; el nodo grasp_manager
+         adjunta el objeto mas cercano al recibir 'grasp' y lo suelta con
+         'release'. parent_link = base_footprint (la palma se fusiona en el
+         root al convertir URDF->SDF). child_link = 'link' (link de cada objeto
+         de basura). Los nombres deben coincidir con los del mundo. -->
+    <xacro:property name="trash_list"
+      value="trash_can_0 trash_can_1 trash_can_2 trash_crate_0 trash_crate_1 trash_block_0"/>
+    <xacro:macro name="detach_plugin" params="obj">
+      <gazebo>
+        <plugin filename="gz-sim-detachable-joint-system"
+                name="gz::sim::systems::DetachableJoint">
+          <parent_link>${prefix}base_footprint</parent_link>
+          <child_model>${obj}</child_model>
+          <child_link>link</child_link>
+          <attach_topic>/${ns}/grasp/${obj}/attach</attach_topic>
+          <detach_topic>/${ns}/grasp/${obj}/detach</detach_topic>
+          <output_topic>/${ns}/grasp/${obj}/state</output_topic>
+        </plugin>
+      </gazebo>
+    </xacro:macro>
+    <xacro:macro name="detach_all" params="names">
+      <xacro:if value="${names != []}">
+        <xacro:detach_plugin obj="${names[0]}"/>
+        <xacro:detach_all names="${names[1:]}"/>
+      </xacro:if>
+    </xacro:macro>
+    <xacro:detach_all names="${trash_list.split()}"/>
+
     <!-- ===== Camara frontal (encima de la pinza, pegada al frontal) ===== -->
     <material name="camera_body"><color rgba="0.05 0.05 0.05 1"/></material>
     <link name="${prefix}camera_link">

@@ -99,6 +99,19 @@ pinza. Probar con 1 robot (el control de la pinza va por gz_ros2_control).
     trajectory_msgs/msg/JointTrajectory \
     '{joint_names: [finger_left_joint, finger_right_joint], points: [{positions: [0.0, 0.0], time_from_start: {sec: 1}}]}'
 
+  AGARRAR BASURA (DetachableJoint, fiable): frente al spawn (sobre (0,18)) hay
+  6 objetos (cilindros + cajas). El agarre lo gestiona el nodo grasp_manager:
+  cierra la pinza y "pega" el objeto más cercano; al soltar lo despega.
+
+  # Terminal 4 — gestor de agarre (déjalo corriendo)
+  ros2 run swarm_behavior grasp_manager --ros-args -p robot:=summit0 -p world:=world_demo
+
+  # Acerca el robot a un objeto (con /summit0/cmd_vel) y luego:
+  ros2 topic pub --once /summit0/gripper/grasp   std_msgs/msg/Empty '{}'   # agarrar el más cercano
+  ros2 topic pub --once /summit0/gripper/release std_msgs/msg/Empty '{}'   # soltar
+      # grasp_manager avisa si no hay objeto dentro de alcance (param grasp_radius, def 0.30 m)
+      # mundo empty_arena -> usar  -p world:=empty_arena  (pero la basura está en el warehouse)
+
   # Terminal 3 — ver la CÁMARA frontal
   rqt_image_view /summit0/camera
       # alternativa:  ros2 run image_tools showimage --ros-args -r image:=/summit0/camera
@@ -133,6 +146,40 @@ CUALQUIER lanzamiento de la sim (ya bridgeada por sim_summit).
   Nota: en el warehouse cubre el almacén ENTERO (centrada en (0,0) a 38 m,
   FOV 1.3). Para acercar a una zona concreta, baja el z o reduce el FOV y
   recentra el <pose> del modelo "overhead_camera" en el .sdf del mundo.
+
+
+--------------------------------------------------------------------------
+ DEMO 4 — Teleop con mando PS5 (DualSense) + recoger basura
+--------------------------------------------------------------------------
+Manejar 1 Summit con gripper usando el mando, para ver el gripper y para
+GRABAR demostraciones (entrenar ACT con odom + IMU + cámaras).
+
+  Conecta el DualSense por USB (o Bluetooth) -> aparece /dev/input/js0.
+  Comprueba:  ls /dev/input/js*   (y opcional:  ros2 topic echo /joy)
+
+  # Terminal 1 — sim (solo summit + gripper, sin drones)
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=1 n_drones:=0 gripper:=true
+
+  # Terminal 2 — gestor de agarre
+  ros2 run swarm_behavior grasp_manager --ros-args -p robot:=summit0 -p world:=world_demo
+
+  # Terminal 3 — teleop con el mando (SIEMPRE con el launch: arranca joy_node +
+  # teleop. 'ros2 run ps5_teleop' solo NO sirve: sin joy_node no hay /joy)
+  ros2 launch swarm_behavior teleop_ps5.launch.py robot:=summit0
+      # frame del morro (1ª persona, cámara frontal):  ... frame:=body
+      # orientado al campo, alinear con tu cámara:      ... view_yaw_deg:=90
+
+  Mando:  stick izq = trasladar · stick der = girar
+          R1(btn 10) = agarrar/cerrar · L1(btn 9) = soltar/abrir
+  Comprueba que llega:  ros2 topic echo /joy   (si no imprime nada -> driver/mando)
+  Si un eje va al revés: arg invert_strafe:=1.0  (o params invert_*/axis_*)
+
+  GRABAR demostración para ACT (observación + acción, en otra terminal):
+  ros2 bag record -o demo_$(date +%H%M%S) \
+    /summit0/odom /summit0/imu /summit0/camera /overhead/image \
+    /summit0/joint_states /summit0/cmd_vel \
+    /summit0/gripper/grasp /summit0/gripper/release
+      # luego se convierte el bag a HDF5 (formato ACT). Pipeline aún por montar.
 
 
 --------------------------------------------------------------------------
