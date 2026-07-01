@@ -201,21 +201,26 @@ Se está dotando al Summit XLS del enjambre de un **manipulador y más sensores*
 
 ## Pipeline de datos para ACT: rosbag → HDF5 (HECHO a nivel de código 2026-06-30, validado con test sintético)
 
-`scripts/bag_to_act_hdf5.py` convierte **un rosbag2 de teleop (DEMO 4) → un HDF5 = un episodio** en el formato que espera ACT (Zhao et al./ALOHA) y que `lerobot` también ingiere. **Espacio obs/acción decidido:**
-- `/observations/qpos` (T, 4) = `[x, y, yaw, gripper_width]` (pose mundo del `OdometryPublisher` ground-truth + ancho de pinza del `finger_left_joint` de `joint_states`).
-- `/observations/qvel` (T, 3) = `[vx, vy, wz]` (twist del odom).
-- `/observations/imu` (T, 10) = `[qx,qy,qz,qw, wx,wy,wz, ax,ay,az]` (para fusión/EKF futura; ACT no lo usa por defecto).
+`scripts/bag_to_act_hdf5.py` convierte **un rosbag2 de teleop (DEMO 4) → un HDF5 = un episodio** en el formato que espera ACT (Zhao et al./ALOHA) y que `lerobot` también ingiere. Pensado para entrenar UNA política compartida en N robots idénticos. **Espacio obs/acción decidido** (dimensiones dependen de dos flags, ver abajo):
+- `/observations/qpos` = **por defecto (T, 2) `[yaw, gripper_width]`** (EGOCÉNTRICO); con `--include_xy` → (T, 4) `[x, y, yaw, gripper_width]`. `yaw` (de `OdometryPublisher`) + ancho de pinza (`finger_left_joint` de `joint_states`) siempre presentes.
+- `/observations/qvel` (T, 3) = `[vx, vy, wz]` (twist del odom, siempre).
+- `/observations/imu` (T, 10) = `[qx,qy,qz,qw, wx,wy,wz, ax,ay,az]` (siempre; para fusión/EKF futura; ACT no lo usa por defecto).
 - `/observations/images/{front,overhead}` (T, H, W, 3) uint8 RGB — front 480×640, overhead 900×900, comprimidas gzip.
-- `/action` (T, 4) = `[cmd_vx, cmd_vy, cmd_wz, grasp]`. **`grasp` es un estado LATCHEADO 0/1** derivado de los eventos `gripper/grasp`(→1)/`release`(→0) (`std_msgs/Empty` sin header → se usa el timestamp de recepción del bag).
-- Atributo raíz `sim=True`.
+- `/action` = **por defecto (T, 4) `[cmd_vx, cmd_vy, cmd_wz, grasp]`** (HOLONÓMICO, el robot es mecanum); con `--no-holonomic` → (T, 3) `[cmd_vx, cmd_wz, grasp]`. **`grasp` es un estado LATCHEADO 0/1** derivado de los eventos `gripper/grasp`(→1)/`release`(→0) (`std_msgs/Empty` sin header → se usa el timestamp de recepción del bag).
+- Atributos raíz: `sim=True`, `rate_hz`, `robot`, `holonomic`, `include_xy`, `qpos_labels`, `action_labels`.
 
-Detalles de diseño:
-- **Re-muestreo a frecuencia fija** (`--rate`, def **15 Hz** = la de las cámaras) con **ZOH** (retención de orden cero: en cada instante, último mensaje recibido de cada tópico). Timeline en **timestamps de recepción del bag** (uniformes; independientes de header/sim-time), **acotado al solape cámara∩odom** para no extrapolar fotogramas.
-- Lee con `rosbag2_py` + `deserialize_message` (autodetecta storage mcap/sqlite3). **Decodifica `sensor_msgs/Image` a numpy a mano** (respeta `step`/padding, soporta rgb8/bgr8/rgba8/mono8) → sin `cv_bridge`. Deps mínimas: `rosbag2_py`, `numpy`, `h5py`.
-- Validado con un test sintético E2E (mensajes ROS en memoria, sin Gazebo): re-muestreo, decodificado de imagen, latch de agarre (4 s grasp→8 s release = 60 frames activos @15 Hz) y ancho de pinza (0→0.04) correctos.
+Decisiones de diseño (confirmadas inspeccionando el robot real):
+- **qpos EGOCÉNTRICO por defecto** (`--include_xy=False`): `x,y` de encoders derivan y son absolutos al mundo → frágiles para una política COMPARTIDA en N robots (cada uno arranca en distinto (x,y)); la política localiza la pieza por CÁMARA, no por odom global. `yaw`/IMU son relativos (no derivan en traslación) → siempre van. `--include_xy` solo si entrenas algo dependiente de la pose mundial.
+- **Acción HOLONÓMICA por defecto** (`--holonomic=True`): el Summit XLS usa **MecanumDrive** y la teleop PS5 comanda `linear.y` (strafe) → **`cmd_vy` es un DOF real, no ~0**; por eso NO se elimina. Para un robot skid-steer usar `--no-holonomic`. El conversor **mide `max|cmd_vy|` en el bag y AVISA** si el flag no cuadra con los datos (holonómico con vy≈0, o no-holonómico descartando strafe real).
+- **Frecuencia `--hz`** (def **15** = tasa de cámaras; alias `-r/--rate`) con **ZOH** (retención de orden cero). Timeline en **timestamps de recepción del bag** (uniformes; independientes de header/sim-time), **acotado al solape cámara∩odom**. ⚠️ El **grasp es de alta frecuencia**; 15 Hz puede quedarse corto → si el cierre de pinza sale errático, reconvertir a `--hz 30`.
+- Lee con `rosbag2_py` + `deserialize_message` (autodetecta storage mcap/sqlite3). **Detecta el tipo real de cada cámara** (`sensor_msgs/Image` raw vs `CompressedImage`, no lo asume) y **decodifica a numpy garantizando salida RGB** (raw: respeta `step`, `bgr*`→swap; compressed: cv2.imdecode BGR→RGB). El bridge gz de `<format>R8G8B8` entrega `rgb8` (ya RGB). Deps: `rosbag2_py`, `numpy`, `h5py` (+ `cv2`/`Pillow` para CompressedImage/dump).
+- **`--debug_dump_frames N`**: vuelca N frames PNG por cámara a `./debug_frames` para inspeccionar color/contenido a ojo antes de convertir en masa.
+- Validado con test sintético E2E (mensajes ROS en memoria, sin Gazebo, 6 casos): shapes 2/4-dim qpos, 3/4-dim action, latch de agarre (4 s grasp→8 s release = 60 frames @15 Hz), ancho de pinza (0→0.04), avisos de `cmd_vy`, CompressedImage→RGB y dump de PNG.
 ```bash
 pip install --user h5py    # única dep nueva (una vez)
-python3 scripts/bag_to_act_hdf5.py demo_143052 -o episode_0.hdf5
+python3 scripts/bag_to_act_hdf5.py demo_143052 -o episode_0.hdf5                 # defaults
+python3 scripts/bag_to_act_hdf5.py demo_143052 -o ep.hdf5 --debug_dump_frames 5  # verificar cámaras
+python3 scripts/bag_to_act_hdf5.py demo_143052 -o ep.hdf5 --hz 30 --include_xy   # variantes
 for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done   # lote
 ```
 
@@ -223,9 +228,9 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 
 #### ⭐ SIGUIENTE TAREA (prioritaria, 2026-06-30): grabar episodios y ENTRENAR el ACT
 Pipeline de datos (paso 3) **HECHO**. Lo que queda del objetivo Summit+gripper (ACT que recoge basura):
-1. ~~Espacio obs/acción~~ **DEFINIDO** (ver sección "Pipeline de datos para ACT" arriba: qpos 4-dim, action 4-dim, 2 cámaras, 15 Hz).
+1. ~~Espacio obs/acción~~ **DEFINIDO** (ver sección "Pipeline de datos para ACT" arriba: qpos def 2-dim `[yaw,gripper]` / action def 4-dim holonómico, 2 cámaras, 15 Hz; flags `--include_xy`/`--holonomic`/`--hz`).
 2. **Grabar demostraciones** (PENDIENTE de hacer en la máquina con el stack): teleop PS5 + `ros2 bag record` (DEMO 4) → recoger **varios episodios** (≥20-50 para ACT) de recoger basura. Convertir cada bag con `bag_to_act_hdf5.py`.
-3. ~~Pipeline rosbag → HDF5~~ **HECHO** (`scripts/bag_to_act_hdf5.py`, validado con test sintético; falta pasarlo por un bag REAL para confirmar tipos de mensaje y encoding de cámara en vivo).
+3. ~~Pipeline rosbag → HDF5~~ **HECHO** (`scripts/bag_to_act_hdf5.py`, validado con test sintético; falta pasarlo por un bag REAL y usar `--debug_dump_frames` para confirmar a ojo el color/contenido de las cámaras en vivo).
 4. **Entrenamiento e inferencia**: repo ACT original (Zhao et al., ACT/ALOHA) o `lerobot`; adaptar el data loader (nuestro HDF5 ya usa sus claves: `/observations/qpos`, `/observations/images/<cam>`, `/action`), entrenar, y **cerrar el lazo** publicando la acción inferida en `/summit0/cmd_vel` + grasp/release. Nodo de inferencia ROS aún por escribir.
 
 #### Instalar el stack en la nueva máquina y VALIDAR la migración en vivo

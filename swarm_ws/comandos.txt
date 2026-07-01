@@ -183,10 +183,16 @@ GRABAR demostraciones (entrenar ACT con odom + IMU + cámaras).
   CONVERTIR el bag a HDF5 (formato ACT, un archivo = un episodio):
   pip install --user h5py    # dependencia (una vez)
   python3 ~/swarmbots/swarm_ws/scripts/bag_to_act_hdf5.py demo_XXXXXX -o episode_0.hdf5
+      # verificar cámaras a ojo (vuelca PNG en ./debug_frames):
+      #   ... demo_XXXXXX -o ep.hdf5 --debug_dump_frames 5
       # lote:  for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done
-      # opciones:  -r 15 (Hz)  --robot summit0  --overhead-topic /overhead/image
-      # salida: /observations/qpos (x,y,yaw,gripper) + /observations/qvel + /imu +
-      #         /observations/images/{front,overhead} + /action (vx,vy,wz,grasp latcheado)
+      # salida (defaults, robot MECANUM):
+      #   /observations/qpos  [yaw, gripper]        (EGOCENTRICO; --include_xy anade x,y)
+      #   /observations/qvel  [vx, vy, wz]  + /imu (10)  + images/{front,overhead}
+      #   /action  [cmd_vx, cmd_vy, cmd_wz, grasp]  (grasp latcheado 0/1)
+      # flags:  --hz 30 (grasp a mas frecuencia)   --include_xy (pose mundial en qpos)
+      #         --no-holonomic (robot skid-steer -> action = [vx, wz, grasp])
+      #         --robot summit0   --overhead-topic /overhead/image
 
 
 --------------------------------------------------------------------------
