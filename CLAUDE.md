@@ -197,11 +197,38 @@ Se está dotando al Summit XLS del enjambre de un **manipulador y más sensores*
 - **Frame de control** (`frame`): `world` (def) = **orientado al campo** (el stick apunta a una dirección FIJA de pantalla; rota la velocidad mundo al frame del robot usando el yaw de `/summitN/odom`) con offset `view_yaw_deg` (0/90/180/-90) para alinear "arriba" con la cámara desde la que se conduce; `body` = en el morro del robot (intuitivo desde la cámara frontal `/summitN/camera`). El launch acepta args `frame`, `view_yaw_deg`, `invert_strafe`.
 - `ros2 launch swarm_behavior teleop_ps5.launch.py robot:=summit0 [frame:=body] [view_yaw_deg:=90]`. `ros-jazzy-joy`+`ros-jazzy-teleop-twist-joy` ya instalados.
 
-**Dirección del proyecto (2026-06-28):** el trabajo de enjambre pasa a ser **solo con el Summit + gripper** (drones aparcados para futuras demos; lanzar la sim con `n_drones:=0`). **Objetivo: entrenar un modelo ACT** (action chunking transformer, imitation learning) con **observación** = odom + IMU + cámara frontal (`/summitN/camera`) + cámara cenital (`/overhead/image`) y **acción** = `cmd_vel` + agarre/soltar. La teleop con PS5 es para grabar demostraciones (`ros2 bag record` de esos tópicos). **PENDIENTE: pipeline de grabación → HDF5 formato ACT** (aún por montar).
+**Dirección del proyecto (2026-06-28):** el trabajo de enjambre pasa a ser **solo con el Summit + gripper** (drones aparcados para futuras demos; lanzar la sim con `n_drones:=0`). **Objetivo: entrenar un modelo ACT** (action chunking transformer, imitation learning) con **observación** = odom + IMU + cámara frontal (`/summitN/camera`) + cámara cenital (`/overhead/image`) y **acción** = `cmd_vel` + agarre/soltar. La teleop con PS5 es para grabar demostraciones (`ros2 bag record` de esos tópicos).
+
+## Pipeline de datos para ACT: rosbag → HDF5 (HECHO a nivel de código 2026-06-30, validado con test sintético)
+
+`scripts/bag_to_act_hdf5.py` convierte **un rosbag2 de teleop (DEMO 4) → un HDF5 = un episodio** en el formato que espera ACT (Zhao et al./ALOHA) y que `lerobot` también ingiere. **Espacio obs/acción decidido:**
+- `/observations/qpos` (T, 4) = `[x, y, yaw, gripper_width]` (pose mundo del `OdometryPublisher` ground-truth + ancho de pinza del `finger_left_joint` de `joint_states`).
+- `/observations/qvel` (T, 3) = `[vx, vy, wz]` (twist del odom).
+- `/observations/imu` (T, 10) = `[qx,qy,qz,qw, wx,wy,wz, ax,ay,az]` (para fusión/EKF futura; ACT no lo usa por defecto).
+- `/observations/images/{front,overhead}` (T, H, W, 3) uint8 RGB — front 480×640, overhead 900×900, comprimidas gzip.
+- `/action` (T, 4) = `[cmd_vx, cmd_vy, cmd_wz, grasp]`. **`grasp` es un estado LATCHEADO 0/1** derivado de los eventos `gripper/grasp`(→1)/`release`(→0) (`std_msgs/Empty` sin header → se usa el timestamp de recepción del bag).
+- Atributo raíz `sim=True`.
+
+Detalles de diseño:
+- **Re-muestreo a frecuencia fija** (`--rate`, def **15 Hz** = la de las cámaras) con **ZOH** (retención de orden cero: en cada instante, último mensaje recibido de cada tópico). Timeline en **timestamps de recepción del bag** (uniformes; independientes de header/sim-time), **acotado al solape cámara∩odom** para no extrapolar fotogramas.
+- Lee con `rosbag2_py` + `deserialize_message` (autodetecta storage mcap/sqlite3). **Decodifica `sensor_msgs/Image` a numpy a mano** (respeta `step`/padding, soporta rgb8/bgr8/rgba8/mono8) → sin `cv_bridge`. Deps mínimas: `rosbag2_py`, `numpy`, `h5py`.
+- Validado con un test sintético E2E (mensajes ROS en memoria, sin Gazebo): re-muestreo, decodificado de imagen, latch de agarre (4 s grasp→8 s release = 60 frames activos @15 Hz) y ancho de pinza (0→0.04) correctos.
+```bash
+pip install --user h5py    # única dep nueva (una vez)
+python3 scripts/bag_to_act_hdf5.py demo_143052 -o episode_0.hdf5
+for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done   # lote
+```
 
 ### Próximos pasos
 
-#### ⭐ SIGUIENTE TAREA (prioritaria): instalar el stack en la nueva máquina y VALIDAR la migración en vivo
+#### ⭐ SIGUIENTE TAREA (prioritaria, 2026-06-30): grabar episodios y ENTRENAR el ACT
+Pipeline de datos (paso 3) **HECHO**. Lo que queda del objetivo Summit+gripper (ACT que recoge basura):
+1. ~~Espacio obs/acción~~ **DEFINIDO** (ver sección "Pipeline de datos para ACT" arriba: qpos 4-dim, action 4-dim, 2 cámaras, 15 Hz).
+2. **Grabar demostraciones** (PENDIENTE de hacer en la máquina con el stack): teleop PS5 + `ros2 bag record` (DEMO 4) → recoger **varios episodios** (≥20-50 para ACT) de recoger basura. Convertir cada bag con `bag_to_act_hdf5.py`.
+3. ~~Pipeline rosbag → HDF5~~ **HECHO** (`scripts/bag_to_act_hdf5.py`, validado con test sintético; falta pasarlo por un bag REAL para confirmar tipos de mensaje y encoding de cámara en vivo).
+4. **Entrenamiento e inferencia**: repo ACT original (Zhao et al., ACT/ALOHA) o `lerobot`; adaptar el data loader (nuestro HDF5 ya usa sus claves: `/observations/qpos`, `/observations/images/<cam>`, `/action`), entrenar, y **cerrar el lazo** publicando la acción inferida en `/summit0/cmd_vel` + grasp/release. Nodo de inferencia ROS aún por escribir.
+
+#### Instalar el stack en la nueva máquina y VALIDAR la migración en vivo
 La migración de **código** Humble/Fortress → Jazzy/Harmonic ya está hecha (2026-06-25, ver nota al inicio). Lo que queda:
 1. **Instalar** en la máquina: `sudo apt install gz-harmonic ros-jazzy-ros-gz ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-sim ros-jazzy-xacro ros-jazzy-robot-state-publisher ros-jazzy-rviz2 ros-jazzy-nav2-map-server ros-jazzy-nav2-lifecycle-manager ros-jazzy-topic-tools`.
 2. **Migrar la caché de Fuel** (modelos MovAi: shelf, cart, pallets, charging_station) de la ruta Fortress a la Harmonic: `mkdir -p ~/.gz/fuel && cp -r ~/.ignition/fuel/* ~/.gz/fuel/` (o dejar que Harmonic los re-descargue con internet en la 1ª ejecución). El edificio del warehouse ya está vendorizado.
