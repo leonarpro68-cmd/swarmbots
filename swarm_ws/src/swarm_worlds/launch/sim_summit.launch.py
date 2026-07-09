@@ -111,8 +111,9 @@ _TRASH_TYPES = [
 ]
 
 
-# Zona norte abierta del warehouse (x∈[-6,6] y∈[13,23]), lejos de estanterias.
-_SPAWN_BOX = (-6.0, 6.0, 13.0, 23.0)
+# Caja de aparición por defecto (fallback; en runtime la calcula _launch_setup
+# desde center_x/center_y y area_half). Warehouse vaciado => suelo abierto.
+_SPAWN_BOX = (-8.0, 8.0, -8.0, 8.0)
 
 
 def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
@@ -134,20 +135,31 @@ def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
     return placed
 
 
-def _trash_poses(n, seed, avoid):
+def _trash_poses(n, seed, avoid, box=_SPAWN_BOX):
     """[(name, x, y, type_idx)] de basuras. Mismo seed => mismas poses."""
-    pts = _random_poses(random.Random(seed), n, avoid)
+    pts = _random_poses(random.Random(seed + 101), n, avoid, box=box)
     return [(f"trash_{i}", x, y, i % len(_TRASH_TYPES))
             for i, (x, y) in enumerate(pts)]
 
 
-def _deposit_poses(n, seed, avoid):
+def _deposit_poses(n, seed, avoid, box=_SPAWN_BOX):
     """[(name, x, y)] de depositos. Stream de rng separado (seed+10007) pero
     reproducible con el mismo seed. Mas separados entre si (min_sep 2 m) y
     evitando robots + basuras (avoid)."""
-    pts = _random_poses(random.Random(seed + 10007), n, avoid,
+    pts = _random_poses(random.Random(seed + 10007), n, avoid, box=box,
                         min_sep=2.0, avoid_clear=1.0)
     return [(f"deposit_{i}", x, y) for i, (x, y) in enumerate(pts)]
+
+
+def _robot_specs_random(n, seed, box, avoid=(), min_sep=2.0):
+    """[(ns, x, y, yaw)] de robots en poses y yaw aleatorios (sembrados).
+    Stream de rng propio (seed+20011). Separados entre si (min_sep) y de
+    'avoid'. yaw uniforme en [-pi, pi]."""
+    rng = random.Random(seed + 20011)
+    pts = _random_poses(rng, n, list(avoid), box=box,
+                        min_sep=min_sep, avoid_clear=min_sep)
+    return [(f"summit{i}", x, y, rng.uniform(-math.pi, math.pi))
+            for i, (x, y) in enumerate(pts)]
 
 
 def _deposit_model_sdf(name, x, y, radius=0.5):
@@ -453,6 +465,7 @@ def _launch_setup(context, *args, **kwargs):
     gripper = LaunchConfiguration("gripper").perform(context).lower() in ("true", "1")
     n_trash = int(LaunchConfiguration("n_trash").perform(context))
     n_deposits = int(LaunchConfiguration("n_deposits").perform(context))
+    area_half = float(LaunchConfiguration("area_half").perform(context))
     seed = int(LaunchConfiguration("seed").perform(context))
     if seed < 0:
         seed = random.randrange(1 << 30)
@@ -467,33 +480,28 @@ def _launch_setup(context, *args, **kwargs):
     if models_dir not in prev.split(":"):
         os.environ["GZ_SIM_RESOURCE_PATH"] = f"{models_dir}:{prev}" if prev else models_dir
 
-    # Posiciones de los robots: círculo alrededor de (center_x, center_y) con
-    # separación mínima de ~1.5 m entre vecinos. El centro por defecto (0, 18)
-    # es la zona norte abierta del tugbot_warehouse (≥5.5 m a cart, pallets,
-    # estanterías y pared norte). OJO: spawnear un robot dentro de una colisión
-    # estática (p.ej. estantería) interpenetra el contacto y hunde el RTF de la
-    # sim entera a ~0.06. Se calculan ANTES de la basura para que ésta no caiga
-    # encima de un robot.
-    radius = 3.5
-    if n_robots > 2:
-        radius = max(3.5, 1.5 / (2.0 * math.sin(math.pi / n_robots)))
-    robot_specs = []  # (ns, x, y, yaw)
-    for i in range(n_robots):
-        ang = 2.0 * math.pi * i / max(n_robots, 1)
-        robot_specs.append((
-            f"summit{i}",
-            cx + radius * math.cos(ang),
-            cy + radius * math.sin(ang),
-            ang + math.pi,  # mirando al centro
-        ))
+    # Área de aparición: caja cuadrada centrada en (center_x, center_y) de
+    # semilado area_half. Con el warehouse VACIADO (sin estanterías/carros/
+    # pallets, solo edificio + paredes), todo el suelo interior está libre, así
+    # que robots/basura/depósitos pueden colocarse al azar sin riesgo de
+    # interpenetrar una colisión estática (lo que hundía el RTF a ~0.06). El
+    # margen a las paredes (±15 x, ±25 y) lo da area_half < 15.
+    box = (cx - area_half, cx + area_half, cy - area_half, cy + area_half)
 
-    # Basura aleatoria (semilla reproducible) en la zona norte abierta,
-    # evitando los spawns de los robots. Se INYECTA en el <world> (no se
-    # spawnea suelta) porque los DetachableJoint del gripper se enlazan a los
-    # modelos de basura al CARGAR el robot: la basura debe existir antes de que
-    # el robot spawnee (si no, el joint no se forma y no se puede agarrar).
+    # Robots: posiciones Y yaw aleatorios (sembrados), separados entre sí. Se
+    # calculan ANTES de basura/depósitos para que éstos los eviten.
+    robot_specs = _robot_specs_random(n_robots, seed, box, min_sep=2.0)
+    if len(robot_specs) < n_robots:
+        print(f"[sim_summit] AVISO: solo se colocaron {len(robot_specs)}/{n_robots} "
+              f"robots (zona saturada). Sube area_half o baja n_robots.")
+
+    # Basura aleatoria (semilla reproducible) en la misma caja, evitando los
+    # spawns de los robots. Se INYECTA en el <world> (no se spawnea suelta)
+    # porque los DetachableJoint del gripper se enlazan a los modelos de basura
+    # al CARGAR el robot: la basura debe existir antes de que el robot spawnee
+    # (si no, el joint no se forma y no se puede agarrar).
     avoid = [(x, y) for (_, x, y, _) in robot_specs]
-    trash = _trash_poses(n_trash, seed, avoid) if n_trash > 0 else []
+    trash = _trash_poses(n_trash, seed, avoid, box) if n_trash > 0 else []
     trash_names = [t[0] for t in trash]
     trash_list = " ".join(trash_names)
     if len(trash) < n_trash:
@@ -504,7 +512,7 @@ def _launch_setup(context, *args, **kwargs):
     # misma semilla y zona, evitando robots Y basuras (así el robot tiene que
     # transportar la basura hasta ellos). Stream de rng propio (reproducible).
     avoid_dep = avoid + [(x, y) for (_, x, y, _) in trash]
-    deposits = _deposit_poses(n_deposits, seed, avoid_dep) if n_deposits > 0 else []
+    deposits = _deposit_poses(n_deposits, seed, avoid_dep, box) if n_deposits > 0 else []
     if len(deposits) < n_deposits:
         print(f"[sim_summit] AVISO: solo se colocaron {len(deposits)}/{n_deposits} "
               f"depósitos (zona saturada). Sube el área o baja n_deposits.")
@@ -556,19 +564,19 @@ def _launch_setup(context, *args, **kwargs):
     for ns, x, y, yaw in robot_specs:
         actions += _spawn_for_robot(ns, x, y, yaw, gripper, trash_list, trash_names)
 
-    # Drones: spawnean en el suelo, 1 m por fuera del anillo de summits
-    # (despegar encima de uno acabaría aterrizándole en el techo), y la
-    # secuencia de despegue los deja en hover sobrevolando el enjambre.
+    # Drones (aparcados por defecto, n_drones=0): spawnean en el suelo en poses
+    # aleatorias de la misma caja, evitando robots/basura/depósitos. La
+    # secuencia de despegue los deja en hover. Stream de rng propio.
     n_drones = int(LaunchConfiguration("n_drones").perform(context))
     if n_drones < 0:
         n_drones = n_robots
-    drone_radius = radius + 1.0
-    for i in range(n_drones):
-        ang = 2.0 * math.pi * i / max(n_drones, 1)
-        x = cx + drone_radius * math.cos(ang)
-        y = cy + drone_radius * math.sin(ang)
-        yaw = ang + math.pi
-        actions += _spawn_for_drone(f"drone{i}", x, y, yaw)
+    if n_drones > 0:
+        avoid_drone = avoid + [(x, y) for (_, x, y, _) in trash] \
+            + [(x, y) for (_, x, y) in deposits]
+        drone_pts = _random_poses(random.Random(seed + 30013), n_drones,
+                                  avoid_drone, box=box, min_sep=1.5, avoid_clear=1.0)
+        for i, (x, y) in enumerate(drone_pts):
+            actions += _spawn_for_drone(f"drone{i}", x, y, 0.0)
 
     return actions
 
@@ -595,12 +603,13 @@ def generate_launch_description():
         DeclareLaunchArgument("n_robots", default_value="3", description="Number of Summit XLS to spawn"),
         DeclareLaunchArgument("n_drones", default_value="0", description="Number of X3 drones (0 = ninguno, -1 = same as n_robots)"),
         DeclareLaunchArgument("world", default_value="tugbot_warehouse", description="World file (sin .sdf) en swarm_worlds/worlds/"),
-        DeclareLaunchArgument("center_x", default_value="0.0", description="Spawn circle center X"),
-        DeclareLaunchArgument("center_y", default_value="18.0", description="Spawn circle center Y"),
+        DeclareLaunchArgument("center_x", default_value="0.0", description="Centro X del área de aparición aleatoria"),
+        DeclareLaunchArgument("center_y", default_value="0.0", description="Centro Y del área de aparición (0 = centro del almacén vaciado, bajo la cámara cenital)"),
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
         DeclareLaunchArgument("gripper", default_value="true", description="Anadir pinza + camara + controladores gz_ros2_control (default: enjambre Summit+gripper, sin drones)"),
         DeclareLaunchArgument("n_trash", default_value="6", description="Nº de basuras (poses aleatorias sembradas, inyectadas en el mundo)"),
         DeclareLaunchArgument("n_deposits", default_value="2", description="Nº de depósitos (discos planos atravesables, poses aleatorias sembradas)"),
+        DeclareLaunchArgument("area_half", default_value="8.0", description="Semilado (m) de la caja cuadrada de aparición centrada en (center_x, center_y). <15 para dejar margen a las paredes"),
         DeclareLaunchArgument("seed", default_value="42", description="Semilla de las poses aleatorias (reproducible; -1 = distinta cada vez)"),
         clock_bridge,
         overhead_cam_bridge,
