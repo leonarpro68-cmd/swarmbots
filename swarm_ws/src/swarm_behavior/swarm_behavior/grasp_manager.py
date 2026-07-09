@@ -44,6 +44,17 @@ class GraspManager(Node):
         self.grasp_radius = self.declare_parameter("grasp_radius", 0.45).value
         self.finger_open = self.declare_parameter("finger_open", 0.04).value
         self.finger_close = self.declare_parameter("finger_close", 0.0).value
+        # Pose FIJA de sujecion (frame cuerpo): al agarrar, la pieza se
+        # teleporta aqui (de pie, encajada en la pinza) antes de soldarla, para
+        # que el transporte sea identico y repetible (dataset). hold_forward =
+        # x delante del centro; hold_height = z (levantada, "sujeta").
+        # hold_forward > alcance de los dedos (~0.47 m) para NO teleportarla
+        # dentro de la colision del gripper (el contacto la expulsa/tumba).
+        # hold_height LEVANTADA (por encima del suelo) para que, soldada, viaje
+        # FLOTANDO sin arrastrar por el suelo (con la pieza apoyada, la friccion
+        # frena tanto al mecanum que casi no avanza).
+        self.hold_forward = self.declare_parameter("hold_forward", 0.60).value
+        self.hold_height = self.declare_parameter("hold_height", 0.13).value
 
         self.pose = None      # (x, y, yaw) del robot
         self.held = None      # nombre del objeto agarrado, o None
@@ -133,6 +144,18 @@ class GraspManager(Node):
             ["gz", "topic", "-t", topic, "-m", "gz.msgs.Empty", "-p", ""],
             capture_output=True, text=True, timeout=5)
 
+    def _gz_set_pose(self, name, x, y, z, yaw):
+        """Teleporta un modelo a (x,y,z) con orientacion vertical y el yaw dado
+        (servicio set_pose del mundo). Bloqueante -> aplica antes de soldar."""
+        qz, qw = math.sin(yaw / 2.0), math.cos(yaw / 2.0)
+        req = (f'name: "{name}", position: {{x: {x:.4f}, y: {y:.4f}, z: {z:.4f}}}, '
+               f'orientation: {{x: 0, y: 0, z: {qz:.5f}, w: {qw:.5f}}}')
+        subprocess.run(
+            ["gz", "service", "-s", f"/world/{self.world}/set_pose",
+             "--reqtype", "gz.msgs.Pose", "--reptype", "gz.msgs.Boolean",
+             "--timeout", "2000", "--req", req],
+            capture_output=True, text=True, timeout=5)
+
     # ---- callbacks ----
     def _grasp(self, _msg):
         if self.held is not None:
@@ -158,10 +181,18 @@ class GraspManager(Node):
                 f"Objeto mas cercano '{best}' a {best_d:.2f} m "
                 f"(> grasp_radius {self.grasp_radius:.2f}). Acerca el robot.")
             return
+        # Opcion B: teleportar la pieza a la pose FIJA de sujecion (de pie,
+        # encajada delante del robot) ANTES de soldar, para un transporte
+        # identico y repetible. set_pose es bloqueante -> se aplica antes del
+        # attach, que captura esa pose como la union rigida.
+        hx = rx + self.hold_forward * math.cos(yaw)
+        hy = ry + self.hold_forward * math.sin(yaw)
+        self._gz_set_pose(best, hx, hy, self.hold_height, yaw)
         self._move_fingers(self.finger_close)
         self._gz_empty(f"/{self.ns}/grasp/{best}/attach")
         self.held = best
-        self.get_logger().info(f"AGARRADO '{best}' (a {best_d:.2f} m de la pinza).")
+        self.get_logger().info(
+            f"AGARRADO '{best}' (a {best_d:.2f} m) -> sujeto de pie en la pinza.")
 
     def _release(self, _msg):
         self._move_fingers(self.finger_open)

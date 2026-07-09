@@ -99,15 +99,18 @@ def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False,
 
 
 # ---- Basura aleatoria (semilla reproducible) ----------------------------
-# 3 geometrias cicladas (cilindro + 2 prismas de colores). Todas 0.07 m de
-# ancho x 0.18 m de alto, 0.15 kg, mu=1.2 (caben en el gripper y son ligeras).
+# CUBOS de 0.10 m (alto = ancho), 0.3 kg. Al ser cubos (centro de masa bajo,
+# relacion alto/ancho = 1) NO vuelcan cuando el gripper se acerca/roza -> el
+# agarre es fiable y ademas siempre se ven "de pie" (cualquier cara es igual).
+# 3 colores para variedad visual. Inercia de cubo: I = (1/6)*m*s^2 por eje.
+_TRASH_H = 0.10  # lado del cubo (m); la pose z = _TRASH_H/2 (apoyado en suelo)
 _TRASH_TYPES = [
-    ("<cylinder><radius>0.035</radius><length>0.18</length></cylinder>",
-     "<ixx>4.51e-4</ixx><iyy>4.51e-4</iyy><izz>9.19e-5</izz>", "0.2 0.6 0.3"),
-    ("<box><size>0.07 0.07 0.18</size></box>",
-     "<ixx>4.66e-4</ixx><iyy>4.66e-4</iyy><izz>1.225e-4</izz>", "0.3 0.4 0.7"),
-    ("<box><size>0.07 0.07 0.18</size></box>",
-     "<ixx>4.66e-4</ixx><iyy>4.66e-4</iyy><izz>1.225e-4</izz>", "0.7 0.4 0.2"),
+    ("<box><size>0.10 0.10 0.10</size></box>",
+     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.2 0.6 0.3"),
+    ("<box><size>0.10 0.10 0.10</size></box>",
+     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.3 0.4 0.7"),
+    ("<box><size>0.10 0.10 0.10</size></box>",
+     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.7 0.4 0.2"),
 ]
 
 
@@ -183,12 +186,12 @@ def _trash_model_sdf(name, x, y, type_idx):
     geom, inertia, color = _TRASH_TYPES[type_idx]
     return f"""
     <model name="{name}">
-      <pose>{x:.3f} {y:.3f} 0.09 0 0 0</pose>
+      <pose>{x:.3f} {y:.3f} {_TRASH_H / 2:.3f} 0 0 0</pose>
       <link name="link">
-        <inertial><mass>0.15</mass>
+        <inertial><mass>0.3</mass>
           <inertia>{inertia}<ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia></inertial>
         <collision name="c"><geometry>{geom}</geometry>
-          <surface><friction><ode><mu>1.2</mu><mu2>1.2</mu2></ode></friction></surface></collision>
+          <surface><friction><ode><mu>0.4</mu><mu2>0.4</mu2></ode></friction></surface></collision>
         <visual name="v"><geometry>{geom}</geometry>
           <material><ambient>{color} 1</ambient><diffuse>{color} 1</diffuse></material></visual>
       </link>

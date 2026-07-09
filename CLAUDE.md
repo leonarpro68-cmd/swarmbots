@@ -88,6 +88,22 @@ ros2 launch swarm_worlds sim_summit.launch.py seed:=-1     # escenario distinto 
 - **`grasp_radius` 0.30 → 0.45 m** (`grasp_manager.py`): con 0.30, los prismas (se deslizan al empujarlos con la cara plana) quedaban justo fuera de alcance y no se agarraban; el `DetachableJoint` sujeta bien **cualquier forma** (verificado: prisma agarrado se mueve rígido y de pie). Sigue eligiendo el objeto más cercano (no coge el equivocado).
 - `swarm_description/CMakeLists.txt`: quitado `launch` del `install()` (dir inexistente cuyo install a medias **bloqueaba la compilación** de `swarm_worlds`).
 
+## Planner greedy + ciclo de recogida de basura (EN CURSO — 2026-07-09, ⚠️ TRANSPORTE POR ARREGLAR)
+
+Baseline **clásico** (sin ML) para que cada robot haga el ciclo **Ir → agarrar (por proximidad) → transportar → depositar → siguiente**, con el que luego se **grabarán episodios para el dataset ACT**. Piezas nuevas en `swarm_behavior`:
+
+- **`central_planner`** (nodo único, "cerebro" con vista cenital): asignación **greedy centralizada**. Lee poses **ground-truth** de Gazebo (`gz topic .../pose/info`, equivale a una cámara cenital perfecta — se decidió esto porque a 38 m una basura de <0.1 m es ~1 px, CV real inviable) + `/summitN/odom`. Asigna: robot libre → basura más cercana no reclamada; al llegar dispara `/summitN/gripper/grasp` y pasa a llevarla al depósito más cercano; al llegar dispara `/release` y marca la basura depositada. Publica una meta por robot en `/summitN/goal_pose`. **Métricas**: `makespan`, `colisiones` (pares robot-robot < `collision_dist`, con histéresis) y `piezas`. Params: `approach_offset` (0.35), `pickup_radius` (0.75), `collision_dist` (0.7).
+- **`swarm_collect.launch.py`**: monta el stack — por robot un `go_to_goal` (con **`n_robots:=1`** para que vaya al punto EXACTO, sin anillo, escuchando `/summitN/goal_pose`) + un `grasp_manager`; más un `central_planner`. Asume la sim ya corriendo. `ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=N`.
+
+**Lo que FUNCIONA (validado en vivo, 1 robot):**
+- Asignación greedy (basura/depósito más cercano), navegación a metas individuales, y **agarre por proximidad SIN embestir**: la meta se pone `approach_offset` m ANTES de la pieza (offset sobre la línea robot→basura) y el agarre dispara a ~0.7 m; como es soldadura `DetachableJoint`, no hace falta tocar la pieza. Un ciclo completo llegó a cerrarse: **2/2 piezas, makespan 74.8 s, 0 colisiones**.
+- Deadlock resuelto: `pickup_radius` DEBE ser > `approach_offset` + `goal_tol` de go_to_goal (si no, el robot se para en la meta-offset y el agarre nunca dispara).
+
+**Lo que FALTA ARREGLAR (⭐ SIGUIENTE TAREA, ver Próximos pasos): TRANSPORTE fiable de la basura al depósito.** Problemas encontrados:
+- **Arrastre / lentitud**: al soldar la pieza apoyada en el suelo, la fricción frena tanto al mecanum que casi no avanza (~0.015 m/s comandando 0.31) → no completa. Mitigaciones EN PRUEBA (sin validar aún): sujetar la pieza **levantada/flotando** (`grasp_manager` teleporta el objeto a una **pose fija delante del robot** — `hold_forward`/`hold_height` — y suelda ahí, "opción B", para un transporte limpio y **repetible**) + bajar `mu` de la basura (1.2 → 0.4).
+- **Vuelco de la pieza**: al acercarse/soldar, los objetos altos y finos se tumbaban. **Fix aplicado**: la basura pasó a ser **CUBOS de 0.10 m** (`_TRASH_TYPES` en `sim_summit.launch.py`) — al ser cubos (relación alto/ancho = 1) no vuelcan al rozarlos y siempre se ven "de pie". **Sin validar en vivo todavía** (la sesión se cerró justo antes de probar el ciclo completo con cubos + sujeción levantada).
+- **Higiene de test**: NUNCA dejar **dos servidores gz** a la vez — ambos publican el mismo `/world/world_demo/pose/info` y el planner ve basura fantasma (`trash_5` inexistente, bucle de re-agarre) + el RTF se hunde a ~0.02. Matar SIEMPRE a fondo entre pruebas (a veces `pkill -f "gz sim"` no los caza; matar por PID).
+
 ## Convenciones del minibot
 - Namespace por robot: `robot0`, `robot1`, … (asignado por el launch)
 - Tópicos ROS ya remapeados al namespace: `/<ns>/cmd_vel`, `/<ns>/odom`, `/<ns>/scan`, `/<ns>/joint_states`, `/<ns>/tf`
@@ -254,6 +270,13 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 ```
 
 ### Próximos pasos
+
+#### ⭐⭐ SIGUIENTE TAREA (prioritaria, 2026-07-09): ARREGLAR el TRANSPORTE del planner (llevar la basura a los depósitos)
+El ciclo del `central_planner` funciona salvo el **transporte fiable de la basura al depósito** (ver "Planner greedy + ciclo de recogida" arriba). Concretamente:
+1. **Validar en vivo el ciclo completo con CUBOS + sujeción levantada** (quedó a medio probar al cerrar la sesión): que el robot agarre, **transporte a velocidad normal** (sin el arrastre que lo frenaba a ~0.015 m/s) y **deposite**, con la pieza **de pie y estable** durante todo el trayecto. Ajustar `hold_forward`/`hold_height` (pose fija de sujeción en `grasp_manager`) y `mu` de la basura hasta que el transporte sea limpio y **repetible** (importante: es para grabar el dataset).
+2. Confirmar métricas (`makespan`, `colisiones`, `piezas`) en el ciclo completo y con **N>1 robots**.
+3. Recordar la higiene: **una sola sim gz a la vez** (dos servidores rompen el `pose/info` y el RTF).
+4. Sólo entonces seguir con **Fase C (evitación mutua ORCA/RVO en numpy)** y **Fase D (ceder paso/avanzar por prioridad)** — decididas pero sin empezar.
 
 #### ⭐ SIGUIENTE TAREA (prioritaria, 2026-06-30): grabar episodios y ENTRENAR el ACT
 Pipeline de datos (paso 3) **HECHO**. Lo que queda del objetivo Summit+gripper (ACT que recoge basura):
