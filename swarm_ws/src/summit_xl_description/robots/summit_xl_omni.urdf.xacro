@@ -17,6 +17,10 @@
   <xacro:property name="ns" value="$(arg robot_ns)"/>
   <xacro:arg name="prefix" default=""/>
   <xacro:arg name="gripper" default="false"/>
+  <!-- Nombres de las basuras (separados por espacio) para los DetachableJoint
+       del gripper. Los pasa el launch; deben coincidir con los modelos del
+       mundo. Vacío = sin DetachableJoint. -->
+  <xacro:arg name="trash_list" default=""/>
 
   <xacro:include filename="$(find summit_xl_description)/urdf/bases/summit_xls_base.urdf.xacro"/>
   <xacro:include filename="$(find summit_xl_description)/urdf/gripper.urdf.xacro"/>
@@ -95,7 +99,7 @@
 
   <!-- Pinza paralela al frente (solo si gripper:=true) -->
   <xacro:if value="$(arg gripper)">
-    <xacro:summit_gripper prefix="$(arg prefix)"/>
+    <xacro:summit_gripper prefix="$(arg prefix)" trash_list="$(arg trash_list)"/>
     <!-- gz_ros2_control: arranca un controller_manager por robot que actua
          sobre los dedos. Va en namespace ${ns} para alinearse con el
          robot_state_publisher namespaceado (de donde el plugin lee el

@@ -16,7 +16,7 @@
        en una fase posterior. Para verlo moverse en RViz basta el
        joint_state_publisher_gui (sliders sobre estos 2 joints). -->
 
-  <xacro:macro name="summit_gripper" params="prefix:=''">
+  <xacro:macro name="summit_gripper" params="prefix:='' trash_list:=''">
 
     <material name="gripper_dark"><color rgba="0.15 0.15 0.18 1"/></material>
     <material name="gripper_gray"><color rgba="0.5 0.5 0.55 1"/></material>
@@ -105,9 +105,9 @@
          adjunta el objeto mas cercano al recibir 'grasp' y lo suelta con
          'release'. parent_link = base_footprint (la palma se fusiona en el
          root al convertir URDF->SDF). child_link = 'link' (link de cada objeto
-         de basura). Los nombres deben coincidir con los del mundo. -->
-    <xacro:property name="trash_list"
-      value="trash_can_0 trash_can_1 trash_can_2 trash_crate_0 trash_crate_1 trash_block_0"/>
+         de basura). Los nombres (param trash_list del macro) los pasa el
+         launch y deben coincidir con los modelos de basura inyectados en el
+         mundo. Si trash_list viene vacío no se genera ningún DetachableJoint. -->
     <xacro:macro name="detach_plugin" params="obj">
       <gazebo>
         <plugin filename="gz-sim-detachable-joint-system"

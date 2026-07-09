@@ -20,6 +20,7 @@ Usage:
 """
 import math
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -43,13 +44,20 @@ _FDIR = {
 }
 
 
-def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False):
-    """xacro → URDF → SDF con fdir1 inyectado. Devuelve (urdf_str, sdf_path)."""
+def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False,
+                  trash_list: str = ""):
+    """xacro → URDF → SDF con fdir1 inyectado. Devuelve (urdf_str, sdf_path).
+
+    trash_list: nombres de los modelos de basura (separados por espacio) para
+    generar un DetachableJoint por objeto en el gripper. Deben coincidir con
+    los nombres de los modelos inyectados en el mundo.
+    """
     os.makedirs(GEN_DIR, exist_ok=True)
 
     xacro_cmd = ["xacro", xacro_path, f"robot_ns:={ns_str}"]
     if gripper:
         xacro_cmd.append("gripper:=true")
+        xacro_cmd.append(f"trash_list:={trash_list}")
     urdf_str = subprocess.run(
         xacro_cmd,
         check=True, capture_output=True, text=True,
@@ -88,6 +96,62 @@ def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False):
     with open(sdf_path, "w") as f:
         f.write(sdf_str)
     return urdf_str, sdf_path
+
+
+# ---- Basura aleatoria (semilla reproducible) ----------------------------
+# 3 geometrias cicladas (cilindro + 2 prismas de colores). Todas 0.07 m de
+# ancho x 0.18 m de alto, 0.15 kg, mu=1.2 (caben en el gripper y son ligeras).
+_TRASH_TYPES = [
+    ("<cylinder><radius>0.035</radius><length>0.18</length></cylinder>",
+     "<ixx>4.51e-4</ixx><iyy>4.51e-4</iyy><izz>9.19e-5</izz>", "0.2 0.6 0.3"),
+    ("<box><size>0.07 0.07 0.18</size></box>",
+     "<ixx>4.66e-4</ixx><iyy>4.66e-4</iyy><izz>1.225e-4</izz>", "0.3 0.4 0.7"),
+    ("<box><size>0.07 0.07 0.18</size></box>",
+     "<ixx>4.66e-4</ixx><iyy>4.66e-4</iyy><izz>1.225e-4</izz>", "0.7 0.4 0.2"),
+]
+
+
+def _trash_poses(n, seed, avoid, box=(-6.0, 6.0, 13.0, 23.0),
+                 min_sep=0.5, avoid_clear=0.8):
+    """Poses aleatorias sembradas para n basuras. Rejection sampling: separa
+    las basuras entre si (min_sep) y de las posiciones a evitar (avoid_clear,
+    p.ej. los spawns de los robots). Devuelve [(name, x, y, type_idx)].
+
+    Zona por defecto = norte abierta del warehouse (x∈[-6,6] y∈[13,23]),
+    lejos de estanterias. Mismo seed => mismas poses (reproducible)."""
+    rng = random.Random(seed)
+    xmin, xmax, ymin, ymax = box
+    placed = []
+    out = []
+    attempts = 0
+    while len(out) < n and attempts < n * 300 + 100:
+        attempts += 1
+        x = rng.uniform(xmin, xmax)
+        y = rng.uniform(ymin, ymax)
+        if any(math.hypot(x - ax, y - ay) < avoid_clear for ax, ay in avoid):
+            continue
+        if any(math.hypot(x - px, y - py) < min_sep for px, py in placed):
+            continue
+        placed.append((x, y))
+        out.append((f"trash_{len(out)}", x, y, len(out) % len(_TRASH_TYPES)))
+    return out
+
+
+def _trash_model_sdf(name, x, y, type_idx):
+    """SDF de un modelo de basura dinamico (para inyectar en el <world>)."""
+    geom, inertia, color = _TRASH_TYPES[type_idx]
+    return f"""
+    <model name="{name}">
+      <pose>{x:.3f} {y:.3f} 0.09 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.15</mass>
+          <inertia>{inertia}<ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia></inertial>
+        <collision name="c"><geometry>{geom}</geometry>
+          <surface><friction><ode><mu>1.2</mu><mu2>1.2</mu2></ode></friction></surface></collision>
+        <visual name="v"><geometry>{geom}</geometry>
+          <material><ambient>{color} 1</ambient><diffuse>{color} 1</diffuse></material></visual>
+      </link>
+    </model>"""
 
 
 _MOTOR_PLUGIN = """
@@ -226,10 +290,11 @@ def _spawn_for_drone(ns_str: str, x: float, y: float, yaw: float):
     ]
 
 
-def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool = False):
+def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool = False,
+                     trash_list: str = "", trash_names=None):
     desc_share = get_package_share_directory("summit_xl_description")
     xacro_path = os.path.join(desc_share, "robots", "summit_xl_omni.urdf.xacro")
-    urdf_str, sdf_path = _generate_sdf(ns_str, xacro_path, gripper)
+    urdf_str, sdf_path = _generate_sdf(ns_str, xacro_path, gripper, trash_list)
 
     bridge_args = [
         f"/model/{ns_str}/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
@@ -319,17 +384,16 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool 
         # al robot desde el spawn. Publicamos 'detach' a todos los objetos
         # (varias rondas, por si gz-transport pierde la 1a en el descubrimiento)
         # para soltarlos; el grasp_manager luego los re-adjunta al agarrar.
-        trash = ["trash_can_0", "trash_can_1", "trash_can_2",
-                 "trash_crate_0", "trash_crate_1", "trash_block_0"]
-        detach_cmds = " ; ".join(
-            f"gz topic -t /{ns_str}/grasp/{obj}/detach -m gz.msgs.Empty -p ''"
-            for obj in trash)
-        nodes.append(ExecuteProcess(
-            cmd=["bash", "-c",
-                 f"sleep 6; for i in 1 2 3; do {detach_cmds} ; sleep 1.5; done"],
-            name=f"detach_trash_{ns_str}",
-            output="screen",
-        ))
+        if trash_names:
+            detach_cmds = " ; ".join(
+                f"gz topic -t /{ns_str}/grasp/{obj}/detach -m gz.msgs.Empty -p ''"
+                for obj in trash_names)
+            nodes.append(ExecuteProcess(
+                cmd=["bash", "-c",
+                     f"sleep 6; for i in 1 2 3; do {detach_cmds} ; sleep 1.5; done"],
+                name=f"detach_trash_{ns_str}",
+                output="screen",
+            ))
 
     return nodes
 
@@ -358,6 +422,10 @@ def _launch_setup(context, *args, **kwargs):
     cx = float(LaunchConfiguration("center_x").perform(context))
     cy = float(LaunchConfiguration("center_y").perform(context))
     gripper = LaunchConfiguration("gripper").perform(context).lower() in ("true", "1")
+    n_trash = int(LaunchConfiguration("n_trash").perform(context))
+    seed = int(LaunchConfiguration("seed").perform(context))
+    if seed < 0:
+        seed = random.randrange(1 << 30)
 
     worlds_share = get_package_share_directory("swarm_worlds")
     world_path = os.path.join(worlds_share, "worlds", f"{world}.sdf")
@@ -368,6 +436,50 @@ def _launch_setup(context, *args, **kwargs):
     prev = os.environ.get("GZ_SIM_RESOURCE_PATH", "")
     if models_dir not in prev.split(":"):
         os.environ["GZ_SIM_RESOURCE_PATH"] = f"{models_dir}:{prev}" if prev else models_dir
+
+    # Posiciones de los robots: círculo alrededor de (center_x, center_y) con
+    # separación mínima de ~1.5 m entre vecinos. El centro por defecto (0, 18)
+    # es la zona norte abierta del tugbot_warehouse (≥5.5 m a cart, pallets,
+    # estanterías y pared norte). OJO: spawnear un robot dentro de una colisión
+    # estática (p.ej. estantería) interpenetra el contacto y hunde el RTF de la
+    # sim entera a ~0.06. Se calculan ANTES de la basura para que ésta no caiga
+    # encima de un robot.
+    radius = 3.5
+    if n_robots > 2:
+        radius = max(3.5, 1.5 / (2.0 * math.sin(math.pi / n_robots)))
+    robot_specs = []  # (ns, x, y, yaw)
+    for i in range(n_robots):
+        ang = 2.0 * math.pi * i / max(n_robots, 1)
+        robot_specs.append((
+            f"summit{i}",
+            cx + radius * math.cos(ang),
+            cy + radius * math.sin(ang),
+            ang + math.pi,  # mirando al centro
+        ))
+
+    # Basura aleatoria (semilla reproducible) en la zona norte abierta,
+    # evitando los spawns de los robots. Se INYECTA en el <world> (no se
+    # spawnea suelta) porque los DetachableJoint del gripper se enlazan a los
+    # modelos de basura al CARGAR el robot: la basura debe existir antes de que
+    # el robot spawnee (si no, el joint no se forma y no se puede agarrar).
+    avoid = [(x, y) for (_, x, y, _) in robot_specs]
+    trash = _trash_poses(n_trash, seed, avoid) if n_trash > 0 else []
+    trash_names = [t[0] for t in trash]
+    trash_list = " ".join(trash_names)
+    if len(trash) < n_trash:
+        print(f"[sim_summit] AVISO: solo se colocaron {len(trash)}/{n_trash} "
+              f"basuras (zona saturada). Sube el área o baja n_trash/min_sep.")
+
+    if trash:
+        with open(world_path) as f:
+            world_xml = f.read()
+        injection = "\n".join(_trash_model_sdf(*t) for t in trash)
+        head, sep, tail = world_xml.rpartition("</world>")
+        world_xml = head + injection + "\n  " + sep + tail
+        os.makedirs(GEN_DIR, exist_ok=True)
+        world_path = os.path.join(GEN_DIR, f"{world}_gen.sdf")
+        with open(world_path, "w") as f:
+            f.write(world_xml)
 
     # En portatiles Optimus (p.ej. RTX 4060 Laptop) con X en una GPU integrada,
     # glvnd intenta el vendor Mesa (dri2) para la PCI de la NVIDIA y falla
@@ -391,22 +503,8 @@ def _launch_setup(context, *args, **kwargs):
         ),
     ]
 
-    # Círculo alrededor de (center_x, center_y) con separación mínima de
-    # ~1.5 m entre vecinos. El centro por defecto (0, 18) es la zona norte
-    # abierta del tugbot_warehouse (≥5.5 m a cart, pallets, estanterías y
-    # pared norte). OJO: las cajas de colisión de las shelf_big miden
-    # 2.1x18x6 m (pasillos enteros, p.ej. shelf_big_3 cubre x∈[-1,1.1],
-    # y∈[-22,-4]); spawnear un robot dentro de una de ellas interpenetra el
-    # contacto y hunde el RTF de la sim entera a ~0.06.
-    radius = 3.5
-    if n_robots > 2:
-        radius = max(3.5, 1.5 / (2.0 * math.sin(math.pi / n_robots)))
-    for i in range(n_robots):
-        ang = 2.0 * math.pi * i / max(n_robots, 1)
-        x = cx + radius * math.cos(ang)
-        y = cy + radius * math.sin(ang)
-        yaw = ang + math.pi  # mirando al centro
-        actions += _spawn_for_robot(f"summit{i}", x, y, yaw, gripper)
+    for ns, x, y, yaw in robot_specs:
+        actions += _spawn_for_robot(ns, x, y, yaw, gripper, trash_list, trash_names)
 
     # Drones: spawnean en el suelo, 1 m por fuera del anillo de summits
     # (despegar encima de uno acabaría aterrizándole en el techo), y la
@@ -451,6 +549,8 @@ def generate_launch_description():
         DeclareLaunchArgument("center_y", default_value="18.0", description="Spawn circle center Y"),
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
         DeclareLaunchArgument("gripper", default_value="true", description="Anadir pinza + camara + controladores gz_ros2_control (default: enjambre Summit+gripper, sin drones)"),
+        DeclareLaunchArgument("n_trash", default_value="6", description="Nº de basuras (poses aleatorias sembradas, inyectadas en el mundo)"),
+        DeclareLaunchArgument("seed", default_value="42", description="Semilla de las poses aleatorias (reproducible; -1 = distinta cada vez)"),
         clock_bridge,
         overhead_cam_bridge,
         OpaqueFunction(function=_launch_setup),
