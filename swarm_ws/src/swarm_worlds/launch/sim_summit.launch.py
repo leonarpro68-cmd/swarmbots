@@ -13,9 +13,10 @@ summits. El controlador no actúa hasta recibir el primer Twist, por eso
 spawnean en el suelo y un proceso por dron manda subida y luego hover.
 
 Usage:
-    ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3            # 3+3
-    ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 n_drones:=1
-    ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 headless:=true
+    ros2 launch swarm_worlds sim_summit.launch.py                        # N Summit+gripper, sin drones (default)
+    ros2 launch swarm_worlds sim_summit.launch.py n_robots:=1            # 1 Summit+gripper
+    ros2 launch swarm_worlds sim_summit.launch.py n_drones:=3            # reactivar drones (aparcados por defecto)
+    ros2 launch swarm_worlds sim_summit.launch.py headless:=true
 """
 import math
 import os
@@ -296,13 +297,37 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool 
     # Pinza: spawner del gripper_controller contra el controller_manager
     # namespaceado por robot (/<ns>/controller_manager). El gz_ros2_control lo
     # arranca al cargar el modelo; el spawner reintenta hasta que esta listo.
+    # Timeouts largos: con el controller_manager inicializando el hardware al
+    # arrancar Gazebo, los defaults (5 s) expiran de forma intermitente y el
+    # controlador queda cargado pero sin configurar/activar (dedos sin
+    # responder). --controller-manager-timeout espera al CM; --switch-timeout
+    # da margen a la activacion.
     if gripper:
         nodes.append(Node(
             package="controller_manager",
             executable="spawner",
             name=f"spawn_gripper_{ns_str}",
             arguments=["gripper_controller",
-                       "--controller-manager", f"/{ns_str}/controller_manager"],
+                       "--controller-manager", f"/{ns_str}/controller_manager",
+                       "--controller-manager-timeout", "60",
+                       "--switch-timeout", "30"],
+            output="screen",
+        ))
+
+        # Detach inicial de la basura: los DetachableJoint del gripper NACEN
+        # ADJUNTADOS (limitacion de gz-sim), asi que la basura se mueve pegada
+        # al robot desde el spawn. Publicamos 'detach' a todos los objetos
+        # (varias rondas, por si gz-transport pierde la 1a en el descubrimiento)
+        # para soltarlos; el grasp_manager luego los re-adjunta al agarrar.
+        trash = ["trash_can_0", "trash_can_1", "trash_can_2",
+                 "trash_crate_0", "trash_crate_1", "trash_block_0"]
+        detach_cmds = " ; ".join(
+            f"gz topic -t /{ns_str}/grasp/{obj}/detach -m gz.msgs.Empty -p ''"
+            for obj in trash)
+        nodes.append(ExecuteProcess(
+            cmd=["bash", "-c",
+                 f"sleep 6; for i in 1 2 3; do {detach_cmds} ; sleep 1.5; done"],
+            name=f"detach_trash_{ns_str}",
             output="screen",
         ))
 
@@ -420,12 +445,12 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument("n_robots", default_value="3", description="Number of Summit XLS to spawn"),
-        DeclareLaunchArgument("n_drones", default_value="-1", description="Number of X3 drones (-1 = same as n_robots)"),
+        DeclareLaunchArgument("n_drones", default_value="0", description="Number of X3 drones (0 = ninguno, -1 = same as n_robots)"),
         DeclareLaunchArgument("world", default_value="tugbot_warehouse", description="World file (sin .sdf) en swarm_worlds/worlds/"),
         DeclareLaunchArgument("center_x", default_value="0.0", description="Spawn circle center X"),
         DeclareLaunchArgument("center_y", default_value="18.0", description="Spawn circle center Y"),
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
-        DeclareLaunchArgument("gripper", default_value="false", description="Anadir pinza + camara + controladores gz_ros2_control (probar con n_robots:=1)"),
+        DeclareLaunchArgument("gripper", default_value="true", description="Anadir pinza + camara + controladores gz_ros2_control (default: enjambre Summit+gripper, sin drones)"),
         clock_bridge,
         overhead_cam_bridge,
         OpaqueFunction(function=_launch_setup),

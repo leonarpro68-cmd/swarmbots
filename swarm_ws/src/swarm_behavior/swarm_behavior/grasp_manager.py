@@ -37,7 +37,11 @@ class GraspManager(Node):
         self.trash_prefix = self.declare_parameter("trash_prefix", "trash_").value
         # offset desde el centro del robot hasta la zona de los dedos (frame robot)
         self.palm_forward = self.declare_parameter("palm_forward", 0.45).value
-        self.grasp_radius = self.declare_parameter("grasp_radius", 0.30).value
+        # Radio de agarre generoso: en teleop el objeto (sobre todo los prismas,
+        # que se deslizan al empujarlos) rara vez queda a <0.30 m del tip. Con
+        # 0.45 m el agarre es tolerante y, al elegir siempre el objeto MAS
+        # cercano al tip, no coge el equivocado. Afinable por parametro.
+        self.grasp_radius = self.declare_parameter("grasp_radius", 0.45).value
         self.finger_open = self.declare_parameter("finger_open", 0.04).value
         self.finger_close = self.declare_parameter("finger_close", 0.0).value
 
