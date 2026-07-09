@@ -111,20 +111,18 @@ _TRASH_TYPES = [
 ]
 
 
-def _trash_poses(n, seed, avoid, box=(-6.0, 6.0, 13.0, 23.0),
-                 min_sep=0.5, avoid_clear=0.8):
-    """Poses aleatorias sembradas para n basuras. Rejection sampling: separa
-    las basuras entre si (min_sep) y de las posiciones a evitar (avoid_clear,
-    p.ej. los spawns de los robots). Devuelve [(name, x, y, type_idx)].
+# Zona norte abierta del warehouse (x∈[-6,6] y∈[13,23]), lejos de estanterias.
+_SPAWN_BOX = (-6.0, 6.0, 13.0, 23.0)
 
-    Zona por defecto = norte abierta del warehouse (x∈[-6,6] y∈[13,23]),
-    lejos de estanterias. Mismo seed => mismas poses (reproducible)."""
-    rng = random.Random(seed)
+
+def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
+    """n poses (x,y) por rejection sampling: separadas entre si (min_sep) y de
+    las posiciones a evitar (avoid_clear). rng es un random.Random ya sembrado
+    => reproducible. Devuelve [(x, y)] (puede ser <n si la zona se satura)."""
     xmin, xmax, ymin, ymax = box
     placed = []
-    out = []
     attempts = 0
-    while len(out) < n and attempts < n * 300 + 100:
+    while len(placed) < n and attempts < n * 300 + 100:
         attempts += 1
         x = rng.uniform(xmin, xmax)
         y = rng.uniform(ymin, ymax)
@@ -133,8 +131,39 @@ def _trash_poses(n, seed, avoid, box=(-6.0, 6.0, 13.0, 23.0),
         if any(math.hypot(x - px, y - py) < min_sep for px, py in placed):
             continue
         placed.append((x, y))
-        out.append((f"trash_{len(out)}", x, y, len(out) % len(_TRASH_TYPES)))
-    return out
+    return placed
+
+
+def _trash_poses(n, seed, avoid):
+    """[(name, x, y, type_idx)] de basuras. Mismo seed => mismas poses."""
+    pts = _random_poses(random.Random(seed), n, avoid)
+    return [(f"trash_{i}", x, y, i % len(_TRASH_TYPES))
+            for i, (x, y) in enumerate(pts)]
+
+
+def _deposit_poses(n, seed, avoid):
+    """[(name, x, y)] de depositos. Stream de rng separado (seed+10007) pero
+    reproducible con el mismo seed. Mas separados entre si (min_sep 2 m) y
+    evitando robots + basuras (avoid)."""
+    pts = _random_poses(random.Random(seed + 10007), n, avoid,
+                        min_sep=2.0, avoid_clear=1.0)
+    return [(f"deposit_{i}", x, y) for i, (x, y) in enumerate(pts)]
+
+
+def _deposit_model_sdf(name, x, y, radius=0.5):
+    """SDF de un deposito: disco plano visual, ESTATICO y SIN colision (el
+    robot lo atraviesa; solo marca la zona de descarga)."""
+    return f"""
+    <model name="{name}">
+      <static>true</static>
+      <pose>{x:.3f} {y:.3f} 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><cylinder><radius>{radius}</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>0.9 0.25 0.2 0.5</ambient><diffuse>0.9 0.25 0.2 0.5</diffuse></material>
+        </visual>
+      </link>
+    </model>"""
 
 
 def _trash_model_sdf(name, x, y, type_idx):
@@ -423,6 +452,7 @@ def _launch_setup(context, *args, **kwargs):
     cy = float(LaunchConfiguration("center_y").perform(context))
     gripper = LaunchConfiguration("gripper").perform(context).lower() in ("true", "1")
     n_trash = int(LaunchConfiguration("n_trash").perform(context))
+    n_deposits = int(LaunchConfiguration("n_deposits").perform(context))
     seed = int(LaunchConfiguration("seed").perform(context))
     if seed < 0:
         seed = random.randrange(1 << 30)
@@ -470,10 +500,30 @@ def _launch_setup(context, *args, **kwargs):
         print(f"[sim_summit] AVISO: solo se colocaron {len(trash)}/{n_trash} "
               f"basuras (zona saturada). Sube el área o baja n_trash/min_sep.")
 
-    if trash:
+    # Depositos aleatorios: discos planos atravesables (visual, sin colisión),
+    # misma semilla y zona, evitando robots Y basuras (así el robot tiene que
+    # transportar la basura hasta ellos). Stream de rng propio (reproducible).
+    avoid_dep = avoid + [(x, y) for (_, x, y, _) in trash]
+    deposits = _deposit_poses(n_deposits, seed, avoid_dep) if n_deposits > 0 else []
+    if len(deposits) < n_deposits:
+        print(f"[sim_summit] AVISO: solo se colocaron {len(deposits)}/{n_deposits} "
+              f"depósitos (zona saturada). Sube el área o baja n_deposits.")
+    if deposits:
+        print("[sim_summit] depósitos: " +
+              ", ".join(f"{n}=({x:.1f},{y:.1f})" for n, x, y in deposits))
+
+    # Inyectar basura + depósitos en el <world> (no se spawnean sueltos):
+    # los DetachableJoint del gripper se enlazan a los modelos de basura al
+    # CARGAR el robot, así que la basura debe existir antes de spawnear el
+    # robot (si no, el joint no se forma y no se puede agarrar). Los depósitos
+    # van igual por consistencia.
+    injection = "".join(
+        [_trash_model_sdf(*t) for t in trash]
+        + [_deposit_model_sdf(*d) for d in deposits]
+    )
+    if injection:
         with open(world_path) as f:
             world_xml = f.read()
-        injection = "\n".join(_trash_model_sdf(*t) for t in trash)
         head, sep, tail = world_xml.rpartition("</world>")
         world_xml = head + injection + "\n  " + sep + tail
         os.makedirs(GEN_DIR, exist_ok=True)
@@ -550,6 +600,7 @@ def generate_launch_description():
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
         DeclareLaunchArgument("gripper", default_value="true", description="Anadir pinza + camara + controladores gz_ros2_control (default: enjambre Summit+gripper, sin drones)"),
         DeclareLaunchArgument("n_trash", default_value="6", description="Nº de basuras (poses aleatorias sembradas, inyectadas en el mundo)"),
+        DeclareLaunchArgument("n_deposits", default_value="2", description="Nº de depósitos (discos planos atravesables, poses aleatorias sembradas)"),
         DeclareLaunchArgument("seed", default_value="42", description="Semilla de las poses aleatorias (reproducible; -1 = distinta cada vez)"),
         clock_bridge,
         overhead_cam_bridge,
