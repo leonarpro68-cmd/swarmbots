@@ -47,12 +47,25 @@ class CentralPlanner(Node):
         # dispara nunca (deadlock). El agarre es por soldadura y la pinza
         # alcanza ~0.9 m (tip 0.45 + grasp_radius 0.45), asi que 0.75 es seguro.
         self.pickup_radius = self.declare_parameter("pickup_radius", 0.75).value
-        self.deposit_radius = self.declare_parameter("deposit_radius", 0.5).value
+        # deposit_radius GENEROSO (> distancia a la que N robots se amontonan por
+        # repulsion LiDAR ~0.6-0.7 m): sin evitacion mutua (Fase C/D), varios
+        # robots hacia el MISMO deposito se bloqueaban a ~0.6-1.0 m del centro,
+        # justo fuera de un radio pequeno -> nunca soltaban (deadlock). Al soltar,
+        # la pieza cae hold_forward (~0.6 m) DELANTE del robot, hacia el deposito,
+        # asi que aunque suelte a 0.85 m del centro la pieza aterriza dentro del
+        # disco (radio 0.5). Rompe el deadlock y deposita bien.
+        self.deposit_radius = self.declare_parameter("deposit_radius", 0.85).value
         self.rate = self.declare_parameter("rate", 2.0).value
         # colision robot-robot: por debajo de collision_dist cuenta como choque
         # (con histeresis collision_clear para no recontar el mismo evento).
         self.collision_dist = self.declare_parameter("collision_dist", 0.7).value
         self.collision_clear = self.declare_parameter("collision_clear", 0.9).value
+        # Un robot IDLE (sin basura que buscar) parado sobre un deposito bloquea
+        # a otro que va a depositar (aun no hay evitacion mutua: Fase C/D). Como
+        # stopgap, un robot idle a < retreat_clear de un deposito se RETIRA a
+        # retreat_dist de el (hacia afuera) para vaciar la zona.
+        self.retreat_clear = self.declare_parameter("retreat_clear", 1.4).value
+        self.retreat_dist = self.declare_parameter("retreat_dist", 2.2).value
 
         self.robots = [f"summit{i}" for i in range(self.n_robots)]
         # estado por robot
@@ -176,8 +189,15 @@ class CentralPlanner(Node):
         self._tick_n = getattr(self, "_tick_n", 0) + 1
 
         objs = self._gz_poses((self.trash_prefix, self.deposit_prefix))
+        # Una pieza que un robot ya lleva (carried) sigue existiendo en el mundo
+        # (flota delante de su robot) y aun NO esta en done_trash -> hay que
+        # excluirla del pool o OTRO robot en SEEK la perseguiria y la
+        # "depositaria" tambien (doble-agarre: un mismo trash transportado 2
+        # veces, viaje desperdiciado).
+        carried_set = {self.carried[r] for r in self.robots if self.carried[r]}
         trash = {n: xy for n, xy in objs.items()
-                 if n.startswith(self.trash_prefix) and n not in self.done_trash}
+                 if n.startswith(self.trash_prefix)
+                 and n not in self.done_trash and n not in carried_set}
         deposits = {n: xy for n, xy in objs.items()
                     if n.startswith(self.deposit_prefix)}
         if not deposits:
@@ -259,6 +279,20 @@ class CentralPlanner(Node):
             elif self.state[r] == "idle":
                 if trash:
                     self.state[r] = "seek"
+                else:
+                    # sin tareas: retirarse de la zona de depositos si esta encima
+                    # (un idle parado ahi bloquea a los que aun depositan).
+                    dname = min(deposits,
+                                key=lambda n: math.hypot(deposits[n][0] - rxy[0],
+                                                         deposits[n][1] - rxy[1]))
+                    dxy = deposits[dname]
+                    dist = math.hypot(dxy[0] - rxy[0], dxy[1] - rxy[1])
+                    if dist < self.retreat_clear:
+                        ux = (rxy[0] - dxy[0]) / (dist or 1.0)
+                        uy = (rxy[1] - dxy[1]) / (dist or 1.0)
+                        park = (dxy[0] + self.retreat_dist * ux,
+                                dxy[1] + self.retreat_dist * uy)
+                        self._send_goal(r, "park", dname, park)
 
         # ---- metricas ----
         pieces = len(self.done_trash)

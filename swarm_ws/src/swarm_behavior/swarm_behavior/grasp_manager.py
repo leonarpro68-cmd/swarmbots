@@ -1,20 +1,30 @@
-"""grasp_manager: agarre fiable de la pinza del Summit con DetachableJoint.
+"""grasp_manager: agarre fiable de la pinza del Summit por TRANSPORTE CINEMATICO.
 
 El gripper del Summit "solo abre/cierra" (sin fisica de agarre real, que en
-DART es poco fiable). Para sujetar objetos de verdad se usan plugins
-DetachableJoint (uno por objeto de basura, definidos en gripper.urdf.xacro,
-que NACEN sueltos). Este nodo decide CUANDO y QUE objeto adjuntar:
+DART es poco fiable). Se probo sujetar la basura con DetachableJoint (soldadura
+rigida), pero soldar un objeto que toca el suelo lo ARRASTRA y con la pieza
+0.6 m por delante actua de "pata" que descarga las ruedas -> el mecanum se
+CONGELA. Soldarlo "en el aire" es imposible de forma repetible: `set_pose`
+tarda ~0.3 s (CLI) y el cubo cae al suelo en <0.3 s -> la soldadura captura
+una altura no determinista (malo para el dataset).
 
-  /<robot>/gripper/grasp   (std_msgs/Empty) -> cierra los dedos y adjunta el
-                            objeto de basura mas cercano a la pinza (si hay uno
-                            dentro de grasp_radius).
-  /<robot>/gripper/release (std_msgs/Empty) -> abre los dedos y suelta el
-                            objeto que tuviera agarrado.
+Solucion: TRANSPORTE CINEMATICO. Mientras lleva la pieza, el nodo la teleporta
+a ~30 Hz a una pose FIJA flotando delante del robot (hold_forward/hold_height,
+en frame cuerpo). Asi la pieza va SIEMPRE en el mismo sitio (repetible), NUNCA
+toca el suelo (sin arrastre) y sigue al robot con exactitud. No se usa la
+soldadura para el transporte (fightearia con el teleport). El `set_pose` se
+hace por los bindings Python de gz-transport (gz.transport13), que tras el
+discovery inicial responde en ~1-5 ms (el CLI `gz service` costaba ~0.3 s).
+
+  /<robot>/gripper/grasp   (std_msgs/Empty) -> cierra los dedos y "coge" el
+                            objeto mas cercano dentro de grasp_radius; empieza a
+                            transportarlo (teleport a la pose fija de sujecion).
+  /<robot>/gripper/release (std_msgs/Empty) -> abre los dedos, deja de
+                            transportar y suelta la pieza (cae al suelo donde
+                            este = deposito).
 
 Posiciones: la del robot se lee de /<robot>/odom (pose mundo). Las de los
-objetos se obtienen con una instantanea de gz topic .../pose/info (on-demand,
-mismo patron que la secuencia de despegue de los drones). El attach/detach se
-dispara publicando gz.msgs.Empty en los topicos gz del DetachableJoint.
+objetos se obtienen con una instantanea de gz topic .../pose/info (on-demand).
 
   ros2 run swarm_behavior grasp_manager --ros-args -p robot:=summit0 -p world:=world_demo
 """
@@ -27,6 +37,10 @@ from rclpy.node import Node
 from std_msgs.msg import Empty
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+from gz.transport13 import Node as GzNode
+from gz.msgs10.pose_pb2 import Pose as GzPose
+from gz.msgs10.boolean_pb2 import Boolean as GzBoolean
 
 
 class GraspManager(Node):
@@ -44,26 +58,34 @@ class GraspManager(Node):
         self.grasp_radius = self.declare_parameter("grasp_radius", 0.45).value
         self.finger_open = self.declare_parameter("finger_open", 0.04).value
         self.finger_close = self.declare_parameter("finger_close", 0.0).value
-        # Pose FIJA de sujecion (frame cuerpo): al agarrar, la pieza se
-        # teleporta aqui (de pie, encajada en la pinza) antes de soldarla, para
-        # que el transporte sea identico y repetible (dataset). hold_forward =
-        # x delante del centro; hold_height = z (levantada, "sujeta").
-        # hold_forward > alcance de los dedos (~0.47 m) para NO teleportarla
-        # dentro de la colision del gripper (el contacto la expulsa/tumba).
-        # hold_height LEVANTADA (por encima del suelo) para que, soldada, viaje
-        # FLOTANDO sin arrastrar por el suelo (con la pieza apoyada, la friccion
-        # frena tanto al mecanum que casi no avanza).
+        # Pose FIJA de sujecion (frame cuerpo): mientras transporta, la pieza se
+        # teleporta AQUI cada tick para que el transporte sea identico y
+        # repetible (dataset). hold_forward = x delante del centro (> alcance de
+        # los dedos ~0.47 m para NO solaparse con la colision del gripper);
+        # hold_height = z LEVANTADA para que viaje FLOTANDO (nunca toca el suelo
+        # -> sin arrastre; con la pieza apoyada la friccion congela el mecanum).
         self.hold_forward = self.declare_parameter("hold_forward", 0.60).value
         self.hold_height = self.declare_parameter("hold_height", 0.13).value
+        self.trash_half = self.declare_parameter("trash_half", 0.05).value
+        self.carry_hz = self.declare_parameter("carry_hz", 30.0).value
 
         self.pose = None      # (x, y, yaw) del robot
         self.held = None      # nombre del objeto agarrado, o None
+
+        # Cliente gz-transport para teleport rapido (set_pose). El CLI cuesta
+        # ~0.3 s/llamada -> inutil a 30 Hz; estos bindings ~1-5 ms tras warmup.
+        self.gz = GzNode()
+        self.set_pose_srv = f"/world/{self.world}/set_pose"
 
         self.create_subscription(Odometry, f"/{self.ns}/odom", self._odom, 10)
         self.create_subscription(Empty, f"/{self.ns}/gripper/grasp", self._grasp, 10)
         self.create_subscription(Empty, f"/{self.ns}/gripper/release", self._release, 10)
         self.traj_pub = self.create_publisher(
             JointTrajectory, f"/{self.ns}/gripper_controller/joint_trajectory", 10)
+
+        # Timer de transporte cinematico: teleporta la pieza agarrada a la pose
+        # fija de sujecion (no-op cuando no lleva nada).
+        self.create_timer(1.0 / max(self.carry_hz, 1.0), self._carry)
 
         # El DetachableJoint de gz-sim8 NACE ADJUNTADO -> los objetos siguen al
         # robot desde el inicio. Soltarlos todos al arrancar (reintenta hasta
@@ -145,16 +167,35 @@ class GraspManager(Node):
             capture_output=True, text=True, timeout=5)
 
     def _gz_set_pose(self, name, x, y, z, yaw):
-        """Teleporta un modelo a (x,y,z) con orientacion vertical y el yaw dado
-        (servicio set_pose del mundo). Bloqueante -> aplica antes de soldar."""
-        qz, qw = math.sin(yaw / 2.0), math.cos(yaw / 2.0)
-        req = (f'name: "{name}", position: {{x: {x:.4f}, y: {y:.4f}, z: {z:.4f}}}, '
-               f'orientation: {{x: 0, y: 0, z: {qz:.5f}, w: {qw:.5f}}}')
-        subprocess.run(
-            ["gz", "service", "-s", f"/world/{self.world}/set_pose",
-             "--reqtype", "gz.msgs.Pose", "--reptype", "gz.msgs.Boolean",
-             "--timeout", "2000", "--req", req],
-            capture_output=True, text=True, timeout=5)
+        """Teleporta un modelo a (x,y,z) con orientacion vertical y el yaw dado,
+        via bindings Python de gz-transport (rapido, ~1-5 ms tras discovery).
+        Devuelve True si el servicio aplico la pose."""
+        req = GzPose()
+        req.name = name
+        req.position.x = float(x)
+        req.position.y = float(y)
+        req.position.z = float(z)
+        req.orientation.z = math.sin(yaw / 2.0)
+        req.orientation.w = math.cos(yaw / 2.0)
+        # timeout amplio en la 1a llamada (discovery); luego responde al instante
+        ok, res = self.gz.request(self.set_pose_srv, req, GzPose, GzBoolean, 1000)
+        return ok and res.data
+
+    def _hold_pose(self):
+        """(x, y, z, yaw) de la pose fija de sujecion, en frame mundo, a partir
+        de la odom actual del robot."""
+        rx, ry, yaw = self.pose
+        hx = rx + self.hold_forward * math.cos(yaw)
+        hy = ry + self.hold_forward * math.sin(yaw)
+        return hx, hy, self.hold_height, yaw
+
+    def _carry(self):
+        """Transporte cinematico: teleporta la pieza agarrada a la pose fija de
+        sujecion (flotando delante del robot). No-op si no lleva nada."""
+        if self.held is None or self.pose is None:
+            return
+        hx, hy, hz, yaw = self._hold_pose()
+        self._gz_set_pose(self.held, hx, hy, hz, yaw)
 
     # ---- callbacks ----
     def _grasp(self, _msg):
@@ -181,27 +222,33 @@ class GraspManager(Node):
                 f"Objeto mas cercano '{best}' a {best_d:.2f} m "
                 f"(> grasp_radius {self.grasp_radius:.2f}). Acerca el robot.")
             return
-        # Opcion B: teleportar la pieza a la pose FIJA de sujecion (de pie,
-        # encajada delante del robot) ANTES de soldar, para un transporte
-        # identico y repetible. set_pose es bloqueante -> se aplica antes del
-        # attach, que captura esa pose como la union rigida.
-        hx = rx + self.hold_forward * math.cos(yaw)
-        hy = ry + self.hold_forward * math.sin(yaw)
-        self._gz_set_pose(best, hx, hy, self.hold_height, yaw)
+        # Transporte cinematico: cerrar dedos y empezar a teleportar la pieza a
+        # la pose fija de sujecion (el timer _carry lo hace a carry_hz). NO se
+        # suelda (fightearia con el teleport). Un primer teleport aqui la coloca
+        # ya en su sitio sin esperar al siguiente tick.
         self._move_fingers(self.finger_close)
-        self._gz_empty(f"/{self.ns}/grasp/{best}/attach")
         self.held = best
+        self._carry()
         self.get_logger().info(
-            f"AGARRADO '{best}' (a {best_d:.2f} m) -> sujeto de pie en la pinza.")
+            f"AGARRADO '{best}' (a {best_d:.2f} m) -> transporte cinematico "
+            "(flotando delante del robot).")
 
     def _release(self, _msg):
         self._move_fingers(self.finger_open)
         if self.held is None:
             self.get_logger().info("Pinza abierta (no tenia nada agarrado).")
             return
-        self._gz_empty(f"/{self.ns}/grasp/{self.held}/detach")
-        self.get_logger().info(f"SOLTADO '{self.held}'.")
+        # Dejar de transportar y soltar: la pieza cae al suelo donde este (sobre
+        # el deposito). Un ultimo teleport la baja a ras de suelo delante del
+        # robot para que caiga limpia (no desde la altura de sujecion).
+        dropped = self.held
         self.held = None
+        if self.pose is not None:
+            rx, ry, yaw = self.pose
+            dx = rx + self.hold_forward * math.cos(yaw)
+            dy = ry + self.hold_forward * math.sin(yaw)
+            self._gz_set_pose(dropped, dx, dy, self.trash_half, yaw)
+        self.get_logger().info(f"SOLTADO '{dropped}'.")
 
 
 def main():
