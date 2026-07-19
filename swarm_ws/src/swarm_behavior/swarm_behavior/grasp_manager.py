@@ -58,13 +58,12 @@ class GraspManager(Node):
         self.grasp_radius = self.declare_parameter("grasp_radius", 0.45).value
         self.finger_open = self.declare_parameter("finger_open", 0.04).value
         self.finger_close = self.declare_parameter("finger_close", 0.0).value
-        # Posicion de los dedos al AGARRAR (gesto de cierre). La caja actual
-        # (0.20 ancho) es MAS ancha que el hueco maximo del gripper (0.14), asi
-        # que los dedos NO la abrazan: viaja delante de la boca (hold_forward).
-        # v=0.025 -> hueco 0.11 (cierre parcial), sin contacto con la caja (que
-        # va por delante en x) -> sin jitter. Con piezas <=0.10 ancho si pinzaria
-        # al ancho (hueco = 0.06 + 2*v; cara interna a ±(0.03+v)).
-        self.finger_grip = self.declare_parameter("finger_grip", 0.025).value
+        # Posicion de los dedos al AGARRAR: se pinzan al ancho de la caja (0.12).
+        # Hueco = 0.06 + 2*v, cara interna a ±(0.03+v); v=0.035 -> caras a ±0.065
+        # (5 mm de holgura sobre la caja ±0.06) -> los dedos la abrazan sin
+        # solaparla (sin jitter). Da aspecto de agarre real (la caja va DENTRO de
+        # la boca del gripper porque 0.12 < hueco maximo 0.14).
+        self.finger_grip = self.declare_parameter("finger_grip", 0.035).value
         # Pose FIJA de sujecion (frame cuerpo): mientras transporta, la pieza se
         # teleporta AQUI cada tick para que el transporte sea identico y
         # repetible (dataset). hold_forward = x delante del centro (> alcance de
@@ -72,22 +71,21 @@ class GraspManager(Node):
         # hold_height = z LEVANTADA para que viaje FLOTANDO (nunca toca el suelo
         # -> sin arrastre; con la pieza apoyada la friccion congela el mecanum).
         # Pose de sujecion para un AGARRE NATURAL (la pieza NO flota): la caja
-        # (0.20x0.20 base x 0.30 alto) se lleva de pie A RAS DE SUELO justo
-        # delante de la boca del gripper. Es mas ancha que el hueco de los dedos
-        # (max 0.14) -> no va literalmente entre ellos, viaja delante.
-        # hold_forward=0.60 deja la cara trasera ~x=0.50 (2.5 cm por delante de
-        # las puntas de los dedos ~0.475) -> sin chocar con dedos/palma (palma
-        # acaba en x=0.385). hold_height=0.15 = altura de reposo (=_TRASH_H/2;
-        # centro a media altura, fondo ~ras de suelo) -> el teleport no pelea con
-        # la gravedad, la caja va estable sin flotar ni dar botes. Como el
-        # transporte es cinematico (teleport, sin union rigida al robot), que la
-        # pieza toque el suelo NO reintroduce arrastre (robot ~0.5 m/s con pieza).
-        self.hold_forward = self.declare_parameter("hold_forward", 0.60).value
-        self.hold_height = self.declare_parameter("hold_height", 0.15).value
+        # (0.12x0.12 base x 0.20 alto) se lleva de pie A RAS DE SUELO DENTRO de
+        # la boca del gripper (0.12 < hueco max 0.14, va entre los dedos).
+        # hold_forward=0.47 la coloca en los dedos (x 0.385-0.475) con la cara
+        # trasera ~x=0.41 libre de la palma (acaba en 0.385). hold_height=0.11 =
+        # altura de reposo (~_TRASH_H/2; centro a media altura, fondo ~ras de
+        # suelo) -> el teleport no pelea con la gravedad, la caja va estable sin
+        # flotar ni dar botes. Como el transporte es cinematico (teleport, sin
+        # union rigida al robot), que la pieza toque el suelo NO reintroduce
+        # arrastre (robot ~0.5 m/s con pieza).
+        self.hold_forward = self.declare_parameter("hold_forward", 0.47).value
+        self.hold_height = self.declare_parameter("hold_height", 0.11).value
         # media ALTURA de la pieza (m): al soltar se baja a z=trash_half para
         # que caiga a ras de suelo sin penetrar. Debe casar con _TRASH_H/2 del
-        # launch (pieza 0.30 alto -> 0.15).
-        self.trash_half = self.declare_parameter("trash_half", 0.15).value
+        # launch (pieza 0.20 alto -> 0.10).
+        self.trash_half = self.declare_parameter("trash_half", 0.10).value
         self.carry_hz = self.declare_parameter("carry_hz", 30.0).value
 
         self.pose = None      # (x, y, yaw) del robot
