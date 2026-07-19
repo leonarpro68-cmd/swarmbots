@@ -99,18 +99,23 @@ def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False,
 
 
 # ---- Basura aleatoria (semilla reproducible) ----------------------------
-# CUBOS de 0.10 m (alto = ancho), 0.3 kg. Al ser cubos (centro de masa bajo,
-# relacion alto/ancho = 1) NO vuelcan cuando el gripper se acerca/roza -> el
-# agarre es fiable y ademas siempre se ven "de pie" (cualquier cara es igual).
-# 3 colores para variedad visual. Inercia de cubo: I = (1/6)*m*s^2 por eje.
-_TRASH_H = 0.10  # lado del cubo (m); la pose z = _TRASH_H/2 (apoyado en suelo)
+# PRISMAS 0.10 x 0.10 base x 0.20 ALTO, 0.3 kg. La pinza del Summit va a la
+# altura del chasis (dedos en z ~= 0.10-0.16; centro del hueco z ~= 0.127
+# porque base_link cuelga a wheel_radius=0.127); un cubo de 0.10 en el suelo
+# solo llegaba a z=0.10 y la pinza pasaba por encima. Con 0.20 de alto la pieza
+# llega al hueco de los dedos y se ve agarrada. El transporte es cinematico
+# (grasp_manager teleporta la pieza flotando de pie), asi que la mayor relacion
+# alto/ancho (2:1) no la hace volcar en marcha; el agarre por proximidad
+# (approach_offset) no la toca al acercarse. 3 colores para variedad visual.
+# Inercia caja HxWxD: Ixx=Iyy=(1/12)m(0.10^2+0.20^2), Izz=(1/12)m(0.10^2+0.10^2).
+_TRASH_H = 0.20  # ALTO de la pieza (m); la pose z = _TRASH_H/2 (apoyado en suelo)
 _TRASH_TYPES = [
-    ("<box><size>0.10 0.10 0.10</size></box>",
-     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.2 0.6 0.3"),
-    ("<box><size>0.10 0.10 0.10</size></box>",
-     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.3 0.4 0.7"),
-    ("<box><size>0.10 0.10 0.10</size></box>",
-     "<ixx>5.0e-4</ixx><iyy>5.0e-4</iyy><izz>5.0e-4</izz>", "0.7 0.4 0.2"),
+    ("<box><size>0.10 0.10 0.20</size></box>",
+     "<ixx>1.25e-3</ixx><iyy>1.25e-3</iyy><izz>5.0e-4</izz>", "0.2 0.6 0.3"),
+    ("<box><size>0.10 0.10 0.20</size></box>",
+     "<ixx>1.25e-3</ixx><iyy>1.25e-3</iyy><izz>5.0e-4</izz>", "0.3 0.4 0.7"),
+    ("<box><size>0.10 0.10 0.20</size></box>",
+     "<ixx>1.25e-3</ixx><iyy>1.25e-3</iyy><izz>5.0e-4</izz>", "0.7 0.4 0.2"),
 ]
 
 

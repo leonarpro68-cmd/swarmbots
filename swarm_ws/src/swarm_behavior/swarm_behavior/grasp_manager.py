@@ -65,8 +65,14 @@ class GraspManager(Node):
         # hold_height = z LEVANTADA para que viaje FLOTANDO (nunca toca el suelo
         # -> sin arrastre; con la pieza apoyada la friccion congela el mecanum).
         self.hold_forward = self.declare_parameter("hold_forward", 0.60).value
-        self.hold_height = self.declare_parameter("hold_height", 0.13).value
-        self.trash_half = self.declare_parameter("trash_half", 0.05).value
+        # centro z de la pieza al transportarla. Con pieza de 0.20 alto, 0.18
+        # deja el fondo a z~=0.08 (flota ~8 cm) -> aguanta las caidas entre ticks
+        # del carry sin rozar el suelo, y la pieza queda a la altura de los dedos.
+        self.hold_height = self.declare_parameter("hold_height", 0.18).value
+        # media ALTURA de la pieza (m): al soltar se baja a z=trash_half para
+        # que caiga a ras de suelo sin penetrar. Debe casar con _TRASH_H/2 del
+        # launch (pieza 0.20 alto -> 0.10).
+        self.trash_half = self.declare_parameter("trash_half", 0.10).value
         self.carry_hz = self.declare_parameter("carry_hz", 30.0).value
 
         self.pose = None      # (x, y, yaw) del robot
