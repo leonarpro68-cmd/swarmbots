@@ -64,12 +64,6 @@ class GraspManager(Node):
         # solaparla (sin jitter). Da aspecto de agarre real (la caja va DENTRO de
         # la boca del gripper porque 0.12 < hueco maximo 0.14).
         self.finger_grip = self.declare_parameter("finger_grip", 0.035).value
-        # Pose FIJA de sujecion (frame cuerpo): mientras transporta, la pieza se
-        # teleporta AQUI cada tick para que el transporte sea identico y
-        # repetible (dataset). hold_forward = x delante del centro (> alcance de
-        # los dedos ~0.47 m para NO solaparse con la colision del gripper);
-        # hold_height = z LEVANTADA para que viaje FLOTANDO (nunca toca el suelo
-        # -> sin arrastre; con la pieza apoyada la friccion congela el mecanum).
         # Pose de sujecion para un AGARRE NATURAL (la pieza NO flota): la caja
         # (0.12x0.12 base x 0.20 alto) se lleva de pie A RAS DE SUELO DENTRO de
         # la boca del gripper (0.12 < hueco max 0.14, va entre los dedos).
@@ -87,9 +81,15 @@ class GraspManager(Node):
         # launch (pieza 0.20 alto -> 0.10).
         self.trash_half = self.declare_parameter("trash_half", 0.10).value
         self.carry_hz = self.declare_parameter("carry_hz", 30.0).value
+        # Transicion de agarre (opcion D): al agarrar, la caja se DESLIZA desde
+        # su sitio en el suelo hasta la pose de sujecion en este tiempo (s), en
+        # vez de saltar de golpe al centro del gripper -> agarre natural.
+        self.grasp_transition = self.declare_parameter("grasp_transition", 0.5).value
 
         self.pose = None      # (x, y, yaw) del robot
         self.held = None      # nombre del objeto agarrado, o None
+        self._grab_start = None   # (x,y) mundo de la caja al agarrar (transicion)
+        self._grab_t0 = None      # instante (sim) del agarre, o None si sin transicion
 
         # Cliente gz-transport para teleport rapido (set_pose). El CLI cuesta
         # ~0.3 s/llamada -> inutil a 30 Hz; estos bindings ~1-5 ms tras warmup.
@@ -210,10 +210,23 @@ class GraspManager(Node):
 
     def _carry(self):
         """Transporte cinematico: teleporta la pieza agarrada a la pose fija de
-        sujecion (flotando delante del robot). No-op si no lleva nada."""
+        sujecion. No-op si no lleva nada. Justo tras el agarre (opcion D),
+        durante grasp_transition s, la pieza NO salta de golpe: se INTERPOLA
+        (smoothstep) desde su sitio en el suelo hasta la pose de sujecion, para
+        que entre al gripper de forma natural en vez de teleportarse al centro."""
         if self.held is None or self.pose is None:
             return
         hx, hy, hz, yaw = self._hold_pose()
+        if self._grab_t0 is not None:
+            elapsed = (self.get_clock().now() - self._grab_t0).nanoseconds / 1e9
+            if elapsed < self.grasp_transition and self._grab_start is not None:
+                a = elapsed / self.grasp_transition
+                a = a * a * (3.0 - 2.0 * a)  # smoothstep (ease-in-out)
+                sx, sy = self._grab_start
+                hx = (1.0 - a) * sx + a * hx
+                hy = (1.0 - a) * sy + a * hy
+            else:
+                self._grab_t0 = None  # transicion terminada -> sujecion fija
         self._gz_set_pose(self.held, hx, hy, hz, yaw)
 
     # ---- callbacks ----
@@ -242,15 +255,17 @@ class GraspManager(Node):
                 f"(> grasp_radius {self.grasp_radius:.2f}). Acerca el robot.")
             return
         # Transporte cinematico: pinzar los dedos al ancho de la pieza (agarre
-        # natural) y empezar a teleportar la pieza a la pose fija de sujecion (el
-        # timer _carry lo hace a carry_hz). NO se suelda (fightearia con el
-        # teleport). Un primer teleport aqui la coloca ya en su sitio.
+        # natural) y empezar la TRANSICION (opcion D): registrar la pose actual
+        # de la caja en el suelo; el timer _carry la desliza suavemente hasta la
+        # pose de sujecion en grasp_transition s (no salta al centro). NO se
+        # suelda (fightearia con el teleport).
         self._move_fingers(self.finger_grip)
         self.held = best
-        self._carry()
+        self._grab_start = objs[best]
+        self._grab_t0 = self.get_clock().now()
         self.get_logger().info(
-            f"AGARRADO '{best}' (a {best_d:.2f} m) -> transporte cinematico "
-            "(flotando delante del robot).")
+            f"AGARRADO '{best}' (a {best_d:.2f} m) -> entra al gripper "
+            f"(transicion {self.grasp_transition:.2f}s).")
 
     def _release(self, _msg):
         self._move_fingers(self.finger_open)
@@ -262,6 +277,8 @@ class GraspManager(Node):
         # robot para que caiga limpia (no desde la altura de sujecion).
         dropped = self.held
         self.held = None
+        self._grab_t0 = None
+        self._grab_start = None
         if self.pose is not None:
             rx, ry, yaw = self.pose
             dx = rx + self.hold_forward * math.cos(yaw)

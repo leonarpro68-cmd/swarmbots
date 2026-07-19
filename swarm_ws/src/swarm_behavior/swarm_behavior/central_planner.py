@@ -39,14 +39,16 @@ class CentralPlanner(Node):
         self.trash_prefix = self.declare_parameter("trash_prefix", "trash_").value
         self.deposit_prefix = self.declare_parameter("deposit_prefix", "deposit_").value
         # La meta de la basura se pone approach_offset m ANTES de la pieza
-        # (sobre la linea robot->basura) para que el chasis no la embista/tumbe;
-        # el agarre es por soldadura (DetachableJoint), no hace falta tocarla.
-        self.approach_offset = self.declare_parameter("approach_offset", 0.35).value
+        # (sobre la linea robot->basura) para que el chasis no la embista/tumbe.
+        self.approach_offset = self.declare_parameter("approach_offset", 0.30).value
         # pickup_radius DEBE ser > approach_offset + goal_tol de go_to_goal
-        # (~0.35+0.3): si no, el robot se para en la meta-offset y el agarre no
-        # dispara nunca (deadlock). El agarre es por soldadura y la pinza
-        # alcanza ~0.9 m (tip 0.45 + grasp_radius 0.45), asi que 0.75 es seguro.
-        self.pickup_radius = self.declare_parameter("pickup_radius", 0.75).value
+        # (~0.30+0.3=0.60): si no, el robot se para en la meta-offset y el agarre
+        # no dispara nunca (deadlock). Ademas el agarre dispara a dist=pickup_
+        # radius (mientras se acerca), asi que este valor = a que distancia se
+        # coge la caja: mas pequeno = se coge mas cerca del gripper => la
+        # transicion suave del grasp_manager (opcion D) desliza menos = mas
+        # natural. 0.65 (> 0.60) coge la caja a ~0.65 m y la desliza ~0.18 m.
+        self.pickup_radius = self.declare_parameter("pickup_radius", 0.65).value
         # deposit_radius GENEROSO (> distancia a la que N robots se amontonan por
         # repulsion LiDAR ~0.6-0.7 m): sin evitacion mutua (Fase C/D), varios
         # robots hacia el MISMO deposito se bloqueaban a ~0.6-1.0 m del centro,
