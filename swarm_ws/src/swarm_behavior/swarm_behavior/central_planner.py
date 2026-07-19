@@ -89,10 +89,14 @@ class CentralPlanner(Node):
         self.goal_pub = {}
         self.grasp_pub = {}
         self.release_pub = {}
+        self.retreat_pub = {}
         for r in self.robots:
             self.goal_pub[r] = self.create_publisher(PoseStamped, f"/{r}/goal_pose", 10)
             self.grasp_pub[r] = self.create_publisher(Empty, f"/{r}/gripper/grasp", 10)
             self.release_pub[r] = self.create_publisher(Empty, f"/{r}/gripper/release", 10)
+            # Orden de reverso recto tras soltar (aparta el gripper de la pieza
+            # dejada para que el giro hacia la siguiente basura no la empuje).
+            self.retreat_pub[r] = self.create_publisher(Empty, f"/{r}/retreat", 10)
             self.create_subscription(
                 Odometry, f"/{r}/odom",
                 lambda msg, rr=r: self._on_odom(rr, msg), 10)
@@ -270,10 +274,14 @@ class CentralPlanner(Node):
                 self._send_goal(r, "deposit", dname, dxy)
                 if math.hypot(dxy[0] - rxy[0], dxy[1] - rxy[1]) < self.deposit_radius:
                     self.release_pub[r].publish(Empty())
+                    # Reverso recto: aparta el gripper de la pieza recien dejada
+                    # antes de girar hacia la siguiente (si no, el arco del giro
+                    # la empuja fuera del deposito).
+                    self.retreat_pub[r].publish(Empty())
                     if self.carried[r]:
                         self.done_trash.add(self.carried[r])
                     self.get_logger().info(
-                        f"{r}: SUELTA {self.carried[r]} en {dname} -> SEEK")
+                        f"{r}: SUELTA {self.carried[r]} en {dname} -> retrocede -> SEEK")
                     self.carried[r] = None
                     self.state[r] = "seek"
                     self.target[r] = None

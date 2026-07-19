@@ -37,6 +37,7 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Empty
 
 
 def _yaw_from_quat(q) -> float:
@@ -120,6 +121,16 @@ class GoToGoal(Node):
         self.yield_speed = self.get_parameter("yield_speed").value
         self.yield_speed_aside = self.get_parameter("yield_speed_aside").value
 
+        # Retroceso puntual (al soltar en el deposito): un reverso RECTO de
+        # retreat_dist m manteniendo el rumbo (vx<0, wz=0, sin girar). Aparta el
+        # gripper de la pieza recien dejada para que, al girar hacia la siguiente
+        # basura, no la barra/empuje fuera del deposito. Se dispara publicando en
+        # /<ns>/retreat (el central_planner lo hace tras el release).
+        self.declare_parameter("retreat_dist", 0.15)
+        self.declare_parameter("retreat_speed", 0.2)
+        self.retreat_dist = self.get_parameter("retreat_dist").value
+        self.retreat_speed = self.get_parameter("retreat_speed").value
+
         # --- Estado ---
         self.pose = None          # (x, y, yaw) propio en frame mundo
         self.scan = None          # ultimo LaserScan
@@ -128,6 +139,8 @@ class GoToGoal(Node):
         self.arrived = False      # latch: parado en el slot hasta que el goal se mueva
         self.peer_state = {}      # ns -> (x, y, speed) de peers prioritarios
         self._yield_logged = False
+        self.retreating = False   # en medio de un reverso puntual
+        self.retreat_start = None # (x, y) donde empezo el reverso
 
         # --- I/O (el nodo corre dentro del namespace del robot) ---
         sensor_qos = QoSProfile(
@@ -149,6 +162,9 @@ class GoToGoal(Node):
         if self.get_parameter("use_goal_topic").value:
             goal_topic = self.get_parameter("goal_topic").value
             self.create_subscription(PoseStamped, goal_topic, self._on_goal, 10)
+
+        # Orden de retroceso puntual (reverso recto) tras soltar en el deposito.
+        self.create_subscription(Empty, "retreat", self._on_retreat, 10)
 
         # Suscripcion a la odom de cada peer prioritario (para cederle el paso).
         for peer in self.yield_peers:
@@ -202,11 +218,31 @@ class GoToGoal(Node):
             f"nuevo goal: ({self.goal_x:.2f}, {self.goal_y:.2f}) [{msg.header.frame_id}]"
         )
 
+    def _on_retreat(self, _msg: Empty):
+        # Iniciar (o reiniciar) un reverso recto de retreat_dist m desde aqui.
+        if self.pose is not None:
+            self.retreating = True
+            self.retreat_start = (self.pose[0], self.pose[1])
+
     # --- Bucle de control ---
     def _control_step(self):
         if self.pose is None:
             return
         x, y, yaw = self.pose
+
+        # Retroceso puntual: reverso RECTO (vx<0 en frame cuerpo, wz=0 -> sin
+        # girar) hasta recorrer retreat_dist. Preempta todo (goal, cesion) para
+        # apartar el gripper de la pieza recien soltada antes de girar hacia la
+        # siguiente. Al terminar, la nav normal retoma (rumbo intacto).
+        if self.retreating and self.retreat_start is not None:
+            moved = math.hypot(x - self.retreat_start[0], y - self.retreat_start[1])
+            if moved < self.retreat_dist:
+                cmd = Twist()
+                cmd.linear.x = -self.retreat_speed
+                self.cmd_pub.publish(cmd)
+                return
+            self.retreating = False
+            self.cmd_pub.publish(Twist())  # frenar al acabar el reverso
 
         # Cesion de paso: si un grupo prioritario pasa cerca, APARTARSE de su
         # linea (no solo frenar: frenar en medio del pasillo bloquea al
