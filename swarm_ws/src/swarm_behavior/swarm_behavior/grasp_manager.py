@@ -1,24 +1,13 @@
-"""grasp_manager: agarre fiable de la pinza del Summit por TRANSPORTE CINEMATICO.
+"""Agarre de la pinza del Summit mediante una union fisica DetachableJoint.
 
-El gripper del Summit "solo abre/cierra" (sin fisica de agarre real, que en
-DART es poco fiable). Se probo sujetar la basura con DetachableJoint (soldadura
-rigida), pero soldar un objeto que toca el suelo lo ARRASTRA y con la pieza
-0.6 m por delante actua de "pata" que descarga las ruedas -> el mecanum se
-CONGELA. Soldarlo "en el aire" es imposible de forma repetible: `set_pose`
-tarda ~0.3 s (CLI) y el cubo cae al suelo en <0.3 s -> la soldadura captura
-una altura no determinista (malo para el dataset).
-
-Solucion: TRANSPORTE CINEMATICO. Mientras lleva la pieza, el nodo la teleporta
-a ~30 Hz a una pose FIJA flotando delante del robot (hold_forward/hold_height,
-en frame cuerpo). Asi la pieza va SIEMPRE en el mismo sitio (repetible), NUNCA
-toca el suelo (sin arrastre) y sigue al robot con exactitud. No se usa la
-soldadura para el transporte (fightearia con el teleport). El `set_pose` se
-hace por los bindings Python de gz-transport (gz.transport13), que tras el
-discovery inicial responde en ~1-5 ms (el CLI `gz service` costaba ~0.3 s).
+La aproximacion deja la pieza dentro de la boca de la pinza. Al agarrar se
+crea una union fija en la pose que la pieza ya ocupa: no se cambia su pose ni
+se mueve artificialmente durante el transporte. Al soltar se elimina la union
+y Gazebo vuelve a simular la pieza libremente.
 
   /<robot>/gripper/grasp   (std_msgs/Empty) -> cierra los dedos y "coge" el
-                            objeto mas cercano dentro de grasp_radius; empieza a
-                            transportarlo (teleport a la pose fija de sujecion).
+                            objeto mas cercano dentro de grasp_radius y lo une
+                            al robot en su pose actual.
   /<robot>/gripper/release (std_msgs/Empty) -> abre los dedos, deja de
                             transportar y suelta la pieza (cae al suelo donde
                             este = deposito).
@@ -35,13 +24,11 @@ import subprocess
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty
+from std_msgs.msg import Int8
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-
 from gz.transport13 import Node as GzNode
-from gz.msgs10.pose_pb2 import Pose as GzPose
-from gz.msgs10.boolean_pb2 import Boolean as GzBoolean
-
+from gz.msgs10.stringmsg_pb2 import StringMsg
 
 class GraspManager(Node):
     def __init__(self):
@@ -59,72 +46,45 @@ class GraspManager(Node):
         self.finger_open = self.declare_parameter("finger_open", 0.04).value
         self.finger_close = self.declare_parameter("finger_close", 0.0).value
         # Posicion de los dedos al AGARRAR: se pinzan al ancho de la caja (0.12).
-        # Hueco = 0.06 + 2*v, cara interna a ±(0.03+v); v=0.035 -> caras a ±0.065
-        # (5 mm de holgura sobre la caja ±0.06) -> los dedos la abrazan sin
-        # solaparla (sin jitter). Da aspecto de agarre real (la caja va DENTRO de
-        # la boca del gripper porque 0.12 < hueco maximo 0.14).
-        self.finger_grip = self.declare_parameter("finger_grip", 0.035).value
-        # Pose de sujecion para un AGARRE NATURAL (la pieza NO flota): la caja
-        # (0.12x0.12 base x 0.20 alto) se lleva de pie A RAS DE SUELO DENTRO de
-        # la boca del gripper (0.12 < hueco max 0.14, va entre los dedos).
-        # hold_forward=0.47 la coloca en los dedos (x 0.385-0.475) con la cara
-        # trasera ~x=0.41 libre de la palma (acaba en 0.385). hold_height=0.11 =
-        # altura de reposo (~_TRASH_H/2; centro a media altura, fondo ~ras de
-        # suelo) -> el teleport no pelea con la gravedad, la caja va estable sin
-        # flotar ni dar botes. Como el transporte es cinematico (teleport, sin
-        # union rigida al robot), que la pieza toque el suelo NO reintroduce
-        # arrastre (robot ~0.5 m/s con pieza).
-        self.hold_forward = self.declare_parameter("hold_forward", 0.47).value
-        self.hold_height = self.declare_parameter("hold_height", 0.11).value
-        # media ALTURA de la pieza (m): al soltar se baja a z=trash_half para
-        # que caiga a ras de suelo sin penetrar. Debe casar con _TRASH_H/2 del
-        # launch (pieza 0.20 alto -> 0.10).
-        self.trash_half = self.declare_parameter("trash_half", 0.10).value
-        self.carry_hz = self.declare_parameter("carry_hz", 30.0).value
-        # Transicion de agarre (opcion D): al agarrar, la caja se DESLIZA desde
-        # su sitio en el suelo hasta la pose de sujecion en este tiempo (s), en
-        # vez de saltar de golpe al centro del gripper -> agarre natural.
-        self.grasp_transition = self.declare_parameter("grasp_transition", 0.5).value
-
+        # Hueco geometrico = 0.06 + 2*v. v=0.028 manda 0.116 m para una caja de
+        # 0.120 m: los 2 mm por lado generan contacto/presion visible y el joint
+        # se confirma despues, antes de que el solver pueda expulsarla.
+        self.finger_grip = self.declare_parameter("finger_grip", 0.028).value
+        self.close_delay = self.declare_parameter("close_delay", 0.8).value
+        self.attach_timeout = self.declare_parameter("attach_timeout", 2.5).value
+        self.attach_retry = self.declare_parameter("attach_retry", 0.35).value
         self.pose = None      # (x, y, yaw) del robot
         self.held = None      # nombre del objeto agarrado, o None
-        self._grab_start = None   # (x,y) mundo de la caja al agarrar (transicion)
-        self._grab_t0 = None      # instante (sim) del agarre, o None si sin transicion
-
-        # Cliente gz-transport para teleport rapido (set_pose). El CLI cuesta
-        # ~0.3 s/llamada -> inutil a 30 Hz; estos bindings ~1-5 ms tras warmup.
+        self.pending = None   # objeto durante cierre + confirmacion del joint
+        self._grasp_t0 = None
+        self._last_attach = None
+        self.release_pending = None
+        self._release_t0 = None
+        self._last_detach = None
+        self._joint_state = None
         self.gz = GzNode()
-        self.set_pose_srv = f"/world/{self.world}/set_pose"
+        # El joint URDF arranca en 0.0 (cerrado). Repetir la orden abierta
+        # mientras el robot esta libre tambien cubre el arranque tardio del
+        # gripper_controller: la caja puede entrar antes de empezar a cerrar.
+        self._keep_open = True
+        self._open_logged = False
 
         self.create_subscription(Odometry, f"/{self.ns}/odom", self._odom, 10)
         self.create_subscription(Empty, f"/{self.ns}/gripper/grasp", self._grasp, 10)
         self.create_subscription(Empty, f"/{self.ns}/gripper/release", self._release, 10)
         self.traj_pub = self.create_publisher(
             JointTrajectory, f"/{self.ns}/gripper_controller/joint_trajectory", 10)
-
-        # Timer de transporte cinematico: teleporta la pieza agarrada a la pose
-        # fija de sujecion (no-op cuando no lleva nada).
-        self.create_timer(1.0 / max(self.carry_hz, 1.0), self._carry)
-
-        # El DetachableJoint de gz-sim8 NACE ADJUNTADO -> los objetos siguen al
-        # robot desde el inicio. Soltarlos todos al arrancar (reintenta hasta
-        # que la sim publica poses). Timer one-shot que se autocancela.
-        self._init_timer = self.create_timer(2.0, self._startup_detach)
+        self.result_pub = self.create_publisher(
+            Int8, f"/{self.ns}/gripper/result", 10)
+        self.release_result_pub = self.create_publisher(
+            Int8, f"/{self.ns}/gripper/release_result", 10)
+        self.create_timer(0.05, self._grasp_step)
+        self.create_timer(0.05, self._release_step)
+        self.create_timer(1.0, self._ensure_open)
 
         self.get_logger().info(
             f"grasp_manager listo. Agarrar: /{self.ns}/gripper/grasp  |  "
             f"Soltar: /{self.ns}/gripper/release")
-
-    def _startup_detach(self):
-        objs = self._object_positions()
-        if not objs:
-            self.get_logger().warn("Arranque: aun no veo objetos, reintento...")
-            return  # el timer vuelve a disparar en 2 s
-        for name in objs:
-            self._gz_empty(f"/{self.ns}/grasp/{name}/detach")
-        self.get_logger().info(
-            f"Soltados {len(objs)} objetos al inicio (nacen pegados al robot).")
-        self._init_timer.cancel()
 
     # ---- estado del robot ----
     def _odom(self, msg):
@@ -143,6 +103,16 @@ class GraspManager(Node):
         pt.time_from_start.sec = 1
         jt.points = [pt]
         self.traj_pub.publish(jt)
+
+    def _ensure_open(self):
+        """Mantiene la boca abierta hasta que comienza un agarre real."""
+        if not self._keep_open or self.held is not None or self.pending is not None:
+            return
+        self._move_fingers(self.finger_open)
+        if not self._open_logged:
+            self.get_logger().info(
+                f"Pinza abierta para aproximacion ({self.finger_open:.3f} m).")
+            self._open_logged = True
 
     # ---- poses de los objetos (instantanea gz) ----
     def _object_positions(self):
@@ -181,57 +151,91 @@ class GraspManager(Node):
         return objs
 
     def _gz_empty(self, topic):
-        subprocess.run(
+        result = subprocess.run(
             ["gz", "topic", "-t", topic, "-m", "gz.msgs.Empty", "-p", ""],
             capture_output=True, text=True, timeout=5)
+        return result.returncode == 0
 
-    def _gz_set_pose(self, name, x, y, z, yaw):
-        """Teleporta un modelo a (x,y,z) con orientacion vertical y el yaw dado,
-        via bindings Python de gz-transport (rapido, ~1-5 ms tras discovery).
-        Devuelve True si el servicio aplico la pose."""
-        req = GzPose()
-        req.name = name
-        req.position.x = float(x)
-        req.position.y = float(y)
-        req.position.z = float(z)
-        req.orientation.z = math.sin(yaw / 2.0)
-        req.orientation.w = math.cos(yaw / 2.0)
-        # timeout amplio en la 1a llamada (discovery); luego responde al instante
-        ok, res = self.gz.request(self.set_pose_srv, req, GzPose, GzBoolean, 1000)
-        return ok and res.data
+    def _joint_state_cb(self, msg: StringMsg):
+        self._joint_state = msg.data
 
-    def _hold_pose(self):
-        """(x, y, z, yaw) de la pose fija de sujecion, en frame mundo, a partir
-        de la odom actual del robot."""
-        rx, ry, yaw = self.pose
-        hx = rx + self.hold_forward * math.cos(yaw)
-        hy = ry + self.hold_forward * math.sin(yaw)
-        return hx, hy, self.hold_height, yaw
+    def _finish_pending(self, success):
+        name = self.pending
+        if name is not None:
+            self.gz.unsubscribe(f"/{self.ns}/grasp/{name}/state")
+        self.pending = None
+        self._grasp_t0 = None
+        self._last_attach = None
+        self._joint_state = None
+        if not success:
+            self._keep_open = True
+        self.result_pub.publish(Int8(data=1 if success else -1))
 
-    def _carry(self):
-        """Transporte cinematico: teleporta la pieza agarrada a la pose fija de
-        sujecion. No-op si no lleva nada. Justo tras el agarre (opcion D),
-        durante grasp_transition s, la pieza NO salta de golpe: se INTERPOLA
-        (smoothstep) desde su sitio en el suelo hasta la pose de sujecion, para
-        que entre al gripper de forma natural en vez de teleportarse al centro."""
-        if self.held is None or self.pose is None:
+    def _grasp_step(self):
+        """Cierra primero y adjunta despues; no autoriza transporte sin ACK."""
+        if self.pending is None or self._grasp_t0 is None:
             return
-        hx, hy, hz, yaw = self._hold_pose()
-        if self._grab_t0 is not None:
-            elapsed = (self.get_clock().now() - self._grab_t0).nanoseconds / 1e9
-            if elapsed < self.grasp_transition and self._grab_start is not None:
-                a = elapsed / self.grasp_transition
-                a = a * a * (3.0 - 2.0 * a)  # smoothstep (ease-in-out)
-                sx, sy = self._grab_start
-                hx = (1.0 - a) * sx + a * hx
-                hy = (1.0 - a) * sy + a * hy
-            else:
-                self._grab_t0 = None  # transicion terminada -> sujecion fija
-        self._gz_set_pose(self.held, hx, hy, hz, yaw)
+        now = self.get_clock().now()
+        elapsed = (now - self._grasp_t0).nanoseconds / 1e9
+        if self._joint_state == "attached":
+            self.held = self.pending
+            self.get_logger().info(f"JOINT CONFIRMADO para '{self.held}'.")
+            self._finish_pending(True)
+            return
+        if elapsed > self.attach_timeout:
+            failed = self.pending
+            self._move_fingers(self.finger_open)
+            self.get_logger().error(
+                f"Gazebo no confirmo el agarre de '{failed}'; se reintentara.")
+            self._finish_pending(False)
+            return
+        if elapsed < self.close_delay:
+            return
+        since_last = float("inf") if self._last_attach is None else \
+            (now - self._last_attach).nanoseconds / 1e9
+        if since_last >= self.attach_retry:
+            self._gz_empty(f"/{self.ns}/grasp/{self.pending}/attach")
+            self._last_attach = now
+
+    def _finish_release(self, success):
+        name = self.release_pending
+        if name is not None:
+            self.gz.unsubscribe(f"/{self.ns}/grasp/{name}/state")
+        if success:
+            self.held = None
+        self.release_pending = None
+        self._release_t0 = None
+        self._last_detach = None
+        self._joint_state = None
+        self.release_result_pub.publish(Int8(data=1 if success else -1))
+
+    def _release_step(self):
+        """Repite detach y no libera el estado local hasta recibir `detached`."""
+        if self.release_pending is None or self._release_t0 is None:
+            return
+        now = self.get_clock().now()
+        elapsed = (now - self._release_t0).nanoseconds / 1e9
+        if self._joint_state == "detached":
+            dropped = self.release_pending
+            self.get_logger().info(
+                f"DETACH CONFIRMADO para '{dropped}'; pieza libre en deposito.")
+            self._finish_release(True)
+            return
+        if elapsed > self.attach_timeout:
+            name = self.release_pending
+            self.get_logger().error(
+                f"Gazebo no confirmo la suelta de '{name}'; robot seguira parado.")
+            self._finish_release(False)
+            return
+        since_last = float("inf") if self._last_detach is None else \
+            (now - self._last_detach).nanoseconds / 1e9
+        if since_last >= self.attach_retry:
+            self._gz_empty(f"/{self.ns}/grasp/{self.release_pending}/detach")
+            self._last_detach = now
 
     # ---- callbacks ----
     def _grasp(self, _msg):
-        if self.held is not None:
+        if self.held is not None or self.pending is not None:
             self.get_logger().warn(f"Ya tengo agarrado '{self.held}'. Suelta antes.")
             return
         if self.pose is None:
@@ -254,37 +258,40 @@ class GraspManager(Node):
                 f"Objeto mas cercano '{best}' a {best_d:.2f} m "
                 f"(> grasp_radius {self.grasp_radius:.2f}). Acerca el robot.")
             return
-        # Transporte cinematico: pinzar los dedos al ancho de la pieza (agarre
-        # natural) y empezar la TRANSICION (opcion D): registrar la pose actual
-        # de la caja en el suelo; el timer _carry la desliza suavemente hasta la
-        # pose de sujecion en grasp_transition s (no salta al centro). NO se
-        # suelda (fightearia con el teleport).
+        # La pieza ya fue colocada por la aproximacion visual. Primero se cierran
+        # los dedos hasta tocarla; despues se crea y confirma la union en esa
+        # misma pose, sin mover artificialmente el objeto.
+        self._joint_state = None
+        state_topic = f"/{self.ns}/grasp/{best}/state"
+        self.gz.subscribe(StringMsg, state_topic, self._joint_state_cb)
+        self._keep_open = False
         self._move_fingers(self.finger_grip)
-        self.held = best
-        self._grab_start = objs[best]
-        self._grab_t0 = self.get_clock().now()
+        self.pending = best
+        self._grasp_t0 = self.get_clock().now()
+        self._last_attach = None
         self.get_logger().info(
-            f"AGARRADO '{best}' (a {best_d:.2f} m) -> entra al gripper "
-            f"(transicion {self.grasp_transition:.2f}s).")
+            f"CERRANDO sobre '{best}' (a {best_d:.2f} m); esperando joint.")
 
     def _release(self, _msg):
+        self._keep_open = True
         self._move_fingers(self.finger_open)
+        if self.release_pending is not None:
+            self.get_logger().info("La confirmacion de suelta ya esta en curso.")
+            return
+        if self.pending is not None:
+            self._finish_pending(False)
         if self.held is None:
             self.get_logger().info("Pinza abierta (no tenia nada agarrado).")
+            self.release_result_pub.publish(Int8(data=1))
             return
-        # Dejar de transportar y soltar: la pieza cae al suelo donde este (sobre
-        # el deposito). Un ultimo teleport la baja a ras de suelo delante del
-        # robot para que caiga limpia (no desde la altura de sujecion).
-        dropped = self.held
-        self.held = None
-        self._grab_t0 = None
-        self._grab_start = None
-        if self.pose is not None:
-            rx, ry, yaw = self.pose
-            dx = rx + self.hold_forward * math.cos(yaw)
-            dy = ry + self.hold_forward * math.sin(yaw)
-            self._gz_set_pose(dropped, dx, dy, self.trash_half, yaw)
-        self.get_logger().info(f"SOLTADO '{dropped}'.")
+        self.release_pending = self.held
+        self._joint_state = None
+        state_topic = f"/{self.ns}/grasp/{self.release_pending}/state"
+        self.gz.subscribe(StringMsg, state_topic, self._joint_state_cb)
+        self._release_t0 = self.get_clock().now()
+        self._last_detach = None
+        self.get_logger().info(
+            f"ABRIENDO y soltando '{self.release_pending}'; esperando confirmacion.")
 
 
 def main():

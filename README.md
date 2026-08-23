@@ -69,6 +69,48 @@ ros2 launch swarm_behavior rviz.launch.py n_robots:=3
 
 En RViz pulsa **"2D Goal Pose"** y clica en el mapa para fijar el destino del enjambre en vivo. El mapa estático se genera sin simular con `python3 swarm_ws/scripts/make_warehouse_map.py` (rasteriza las colisiones del mundo a un occupancy grid).
 
+## Recogida autónoma de basura
+
+La simulación puede generar cajas de basura y equipar cada Summit con pinza y
+cámara RGB-D. El ciclo de recogida usa navegación global con LiDAR, aproximación
+visual final y un `DetachableJoint` oficial de Gazebo para transportar la pieza
+sin llamadas a `set_pose` ni teletransporte.
+
+```bash
+# Terminal 1: mundo con tres Summit, pinzas, basura y depósitos
+source install/setup.bash
+ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
+
+# Terminal 2: asignación, navegación, alineación RGB-D y agarre
+source install/setup.bash
+ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=3
+```
+
+Secuencia de seguridad por pieza:
+
+1. La pinza permanece completamente abierta durante la aproximación.
+2. La cámara de profundidad centra e introduce la caja lentamente entre los dedos.
+3. Los dedos cierran primero y el joint se adjunta conservando la pose física actual.
+4. El planner no inicia el transporte hasta recibir la confirmación `attached`.
+5. En el depósito el robot se detiene, abre la pinza y repite `detach` hasta recibir
+   `detached`; solo entonces retrocede y acepta una tarea nueva.
+
+Mensajes esperados en una recogida correcta:
+
+```text
+Pieza centrada por RGB-D
+CERRANDO sobre 'trash_N'
+JOINT CONFIRMADO para 'trash_N'
+DETACH CONFIRMADO para 'trash_N'; pieza libre en deposito
+```
+
+Para probar manualmente el mecanismo:
+
+```bash
+ros2 topic pub --once /summit0/gripper/grasp std_msgs/msg/Empty '{}'
+ros2 topic pub --once /summit0/gripper/release std_msgs/msg/Empty '{}'
+```
+
 ### Grupos {Summit + dron} a metas aleatorias (con cesión de paso)
 
 **N grupos** (`n_groups`), cada uno con **n pares** Summit+dron (`pairs_per_group`), cada grupo a su **propia meta aleatoria**. Dentro de un grupo los Summits forman un anillo alrededor de la meta y los drones la sobrevuelan en capas; si las rutas de dos grupos se cruzan, el de menor prioridad **se aparta** para ceder el paso. **La sim debe tener `n_robots = n_groups × pairs_per_group`.**
@@ -95,7 +137,7 @@ swarm_ws/
 ├── scripts/                     # sim_native.sh (primario), make_warehouse_map.py, build/run/sim.sh (Docker)
 └── src/
     ├── swarm_worlds/            # mundos, launches del enjambre, mapas, modelos vendorizados (X3, warehouse)
-    ├── swarm_behavior/          # go-to-goal summits (LiDAR) + drones (3D) + RViz
+    ├── swarm_behavior/          # navegación, recogida RGB-D, pinza, drones y RViz
     ├── swarm_description/       # minibot diff-drive
     ├── summit_xl_description/   # Summit portado a Harmonic (omni + skid-steer)
     └── robotnik_*/              # paquetes externos Robotnik

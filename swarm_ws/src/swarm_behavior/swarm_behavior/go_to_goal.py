@@ -37,7 +37,7 @@ from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Empty
+from std_msgs.msg import Bool, Empty
 
 
 def _yaw_from_quat(q) -> float:
@@ -141,6 +141,18 @@ class GoToGoal(Node):
         self._yield_logged = False
         self.retreating = False   # en medio de un reverso puntual
         self.retreat_start = None # (x, y) donde empezo el reverso
+        self.align_active = False
+        self.align_cmd = Twist()
+        self.align_cmd_time = None
+        self.declare_parameter("align_cmd_timeout", 0.35)
+        # Durante la alineacion el objeto objetivo debe entrar en la pinza. Un
+        # clearance normal (0.55 m) lo interpretaba como obstaculo y hacia
+        # imposible llegar a desired_depth=0.065 m. La camara confirma el blanco
+        # y la velocidad final esta limitada a 0.05 m/s. Este umbral queda por
+        # debajo de la cara objetivo para permitir completar la insercion.
+        self.declare_parameter("align_safety_dist", 0.045)
+        self.align_cmd_timeout = self.get_parameter("align_cmd_timeout").value
+        self.align_safety_dist = self.get_parameter("align_safety_dist").value
 
         # --- I/O (el nodo corre dentro del namespace del robot) ---
         sensor_qos = QoSProfile(
@@ -165,6 +177,8 @@ class GoToGoal(Node):
 
         # Orden de retroceso puntual (reverso recto) tras soltar en el deposito.
         self.create_subscription(Empty, "retreat", self._on_retreat, 10)
+        self.create_subscription(Bool, "visual_grasp/active", self._on_align_active, 10)
+        self.create_subscription(Twist, "visual_grasp/cmd_vel", self._on_align_cmd, 10)
 
         # Suscripcion a la odom de cada peer prioritario (para cederle el paso).
         for peer in self.yield_peers:
@@ -224,6 +238,15 @@ class GoToGoal(Node):
             self.retreating = True
             self.retreat_start = (self.pose[0], self.pose[1])
 
+    def _on_align_active(self, msg: Bool):
+        self.align_active = msg.data
+        if not msg.data:
+            self.align_cmd = Twist()
+
+    def _on_align_cmd(self, msg: Twist):
+        self.align_cmd = msg
+        self.align_cmd_time = self.get_clock().now()
+
     # --- Bucle de control ---
     def _control_step(self):
         if self.pose is None:
@@ -243,6 +266,26 @@ class GoToGoal(Node):
                 return
             self.retreating = False
             self.cmd_pub.publish(Twist())  # frenar al acabar el reverso
+
+        # La alineacion RGB-D preempta la navegacion global, pero go_to_goal
+        # sigue siendo el UNICO publicador efectivo de cmd_vel. Un comando
+        # vencido o un obstaculo LiDAR en la direccion de movimiento => STOP.
+        if self.align_active:
+            if self.align_cmd_time is None or (
+                    self.get_clock().now() - self.align_cmd_time).nanoseconds / 1e9 \
+                    > self.align_cmd_timeout:
+                self.cmd_pub.publish(Twist())
+                return
+            cmd = Twist()
+            cmd.linear.x = self.align_cmd.linear.x
+            cmd.linear.y = self.align_cmd.linear.y
+            cmd.angular.z = self.align_cmd.angular.z
+            if not self._direction_clear(cmd.linear.x, cmd.linear.y,
+                                         self.align_safety_dist):
+                self.cmd_pub.publish(Twist())
+                return
+            self.cmd_pub.publish(cmd)
+            return
 
         # Cesion de paso: si un grupo prioritario pasa cerca, APARTARSE de su
         # linea (no solo frenar: frenar en medio del pasillo bloquea al
@@ -376,6 +419,27 @@ class GoToGoal(Node):
             rep_x -= w * math.cos(a)
             rep_y -= w * math.sin(a)
         return rep_x, rep_y, min_front
+
+    def _direction_clear(self, vx, vy, clearance):
+        """Comprueba el sector hacia el que se movera el mecanum.
+
+        A diferencia del chequeo frontal normal, cubre tambien strafe. Los
+        rayos invalidos nunca autorizan movimiento: si aun no hay scan, para.
+        """
+        if self.scan is None or math.hypot(vx, vy) < 1e-4:
+            return self.scan is not None
+        direction = math.atan2(vy, vx)
+        half_sector = math.radians(28.0)
+        angle = self.scan.angle_min
+        seen = False
+        for distance in self.scan.ranges:
+            if abs(_wrap(angle - direction)) <= half_sector:
+                if math.isfinite(distance) and distance >= self.scan.range_min:
+                    seen = True
+                    if distance < clearance:
+                        return False
+            angle += self.scan.angle_increment
+        return seen
 
 
 def main():

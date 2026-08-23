@@ -48,6 +48,13 @@ def _setup(context, *args, **kwargs):
             name=f"grasp_manager_{ns}", output="screen",
             parameters=[{"use_sim_time": True, "robot": ns, "world": world}],
         ))
+        # Aproximacion final RGB-D. Solo propone comandos; go_to_goal conserva
+        # la autoria unica de cmd_vel y aplica la parada de seguridad LiDAR.
+        nodes.append(Node(
+            package="swarm_behavior", executable="visual_grasp",
+            namespace=ns, name="visual_grasp", output="screen",
+            parameters=[{"use_sim_time": True}],
+        ))
 
     # Cerebro central: asignacion greedy + metricas.
     nodes.append(Node(

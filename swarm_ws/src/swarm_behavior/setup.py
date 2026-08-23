@@ -27,6 +27,7 @@ setup(
             "drone_go_to_goal = swarm_behavior.drone_go_to_goal:main",
             "grasp_manager = swarm_behavior.grasp_manager:main",
             "central_planner = swarm_behavior.central_planner:main",
+            "visual_grasp = swarm_behavior.visual_grasp:main",
             "ps5_teleop = swarm_behavior.ps5_teleop:main",
         ],
     },

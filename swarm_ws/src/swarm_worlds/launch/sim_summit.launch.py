@@ -100,10 +100,9 @@ def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False,
 
 # ---- Basura aleatoria (semilla reproducible) ----------------------------
 # CAJAS 0.12 largo x 0.12 ancho x 0.20 ALTO, 0.3 kg. La pieza (0.12 ancho) CABE
-# en el hueco del gripper (max 0.14) -> va ENTRE los dedos: el transporte es
-# cinematico (grasp_manager teleporta la caja de pie A RAS DE SUELO dentro de la
-# boca del gripper, hold_forward=0.47, y los dedos la pinzan). El agarre por
-# proximidad (approach_offset) no la toca al acercarse. 3 colores para variedad.
+# en el hueco del gripper (max 0.14) -> va ENTRE los dedos. La aproximacion RGB-D
+# la centra y DetachableJoint la fija en esa misma pose, sin teletransporte. El
+# approach_offset evita tocarla durante la navegacion global. 3 colores.
 # Inercia caja LxWxH (0.12x0.12x0.20): Ixx=Iyy=(1/12)m(0.12^2+0.20^2)=1.36e-3,
 # Izz=(1/12)m(0.12^2+0.12^2)=7.2e-4.
 _TRASH_H = 0.20  # ALTO de la pieza (m); la pose z = _TRASH_H/2 (apoyado en suelo)
@@ -369,7 +368,10 @@ def _spawn_for_robot(ns_str: str, x: float, y: float, yaw: float, gripper: bool 
     if gripper:
         bridge_args.append(
             f"/model/{ns_str}/camera@sensor_msgs/msg/Image[gz.msgs.Image")
+        bridge_args.append(
+            f"/model/{ns_str}/camera/depth@sensor_msgs/msg/Image[gz.msgs.Image")
         bridge_remaps.append((f"/model/{ns_str}/camera", "camera"))
+        bridge_remaps.append((f"/model/{ns_str}/camera/depth", "camera/depth"))
 
     nodes = [
         Node(

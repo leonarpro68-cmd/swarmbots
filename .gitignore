@@ -3,6 +3,12 @@ swarm_ws/build/
 swarm_ws/install/
 swarm_ws/log/
 
+# Artefactos equivalentes creados accidentalmente desde la raíz
+build/
+install/
+log/
+summit_robot_export/
+
 # Python
 __pycache__/
 *.pyc

@@ -5,8 +5,8 @@ poses ground-truth de Gazebo (equivale a una camara cenital perfecta) y asigna
 tareas de forma greedy:
 
   - robot LIBRE  -> basura mas cercana no reclamada (estado SEEK).
-  - al llegar a la basura (< pickup_radius) dispara el agarre
-    (/summitN/gripper/grasp) y pasa a DELIVER, con meta = deposito mas cercano.
+  - cerca de la basura delega la aproximacion final a RGB-D; solo cuando queda
+    centrada dispara el agarre y pasa a DELIVER.
   - al llegar al deposito (< deposit_radius) dispara la suelta
     (/summitN/gripper/release), marca esa basura como DEPOSITADA y vuelve a SEEK.
 
@@ -26,7 +26,7 @@ import subprocess
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Int8
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 
@@ -41,21 +41,12 @@ class CentralPlanner(Node):
         # La meta de la basura se pone approach_offset m ANTES de la pieza
         # (sobre la linea robot->basura) para que el chasis no la embista/tumbe.
         self.approach_offset = self.declare_parameter("approach_offset", 0.30).value
-        # pickup_radius DEBE ser > approach_offset + goal_tol de go_to_goal
-        # (~0.30+0.3=0.60): si no, el robot se para en la meta-offset y el agarre
-        # no dispara nunca (deadlock). Ademas el agarre dispara a dist=pickup_
-        # radius (mientras se acerca), asi que este valor = a que distancia se
-        # coge la caja: mas pequeno = se coge mas cerca del gripper => la
-        # transicion suave del grasp_manager (opcion D) desliza menos = mas
-        # natural. 0.65 (> 0.60) coge la caja a ~0.65 m y la desliza ~0.18 m.
-        self.pickup_radius = self.declare_parameter("pickup_radius", 0.65).value
         # deposit_radius GENEROSO (> distancia a la que N robots se amontonan por
         # repulsion LiDAR ~0.6-0.7 m): sin evitacion mutua (Fase C/D), varios
         # robots hacia el MISMO deposito se bloqueaban a ~0.6-1.0 m del centro,
         # justo fuera de un radio pequeno -> nunca soltaban (deadlock). Al soltar,
-        # la pieza cae hold_forward (~0.6 m) DELANTE del robot, hacia el deposito,
-        # asi que aunque suelte a 0.85 m del centro la pieza aterriza dentro del
-        # disco (radio 0.5). Rompe el deadlock y deposita bien.
+        # la pieza queda delante del robot, dentro de la pinza, por lo que al
+        # soltar cerca del centro cae dentro del disco. Rompe el deadlock.
         self.deposit_radius = self.declare_parameter("deposit_radius", 0.85).value
         self.rate = self.declare_parameter("rate", 2.0).value
         # colision robot-robot: por debajo de collision_dist cuenta como choque
@@ -68,15 +59,21 @@ class CentralPlanner(Node):
         # retreat_dist de el (hacia afuera) para vaciar la zona.
         self.retreat_clear = self.declare_parameter("retreat_clear", 1.4).value
         self.retreat_dist = self.declare_parameter("retreat_dist", 2.2).value
+        self.visual_start_radius = self.declare_parameter(
+            "visual_start_radius", 0.95).value
 
         self.robots = [f"summit{i}" for i in range(self.n_robots)]
         # estado por robot
-        self.state = {r: "seek" for r in self.robots}     # seek | deliver | idle
+        # seek | align | grasp | deliver | release | idle
+        self.state = {r: "seek" for r in self.robots}
         self.target = {r: None for r in self.robots}       # (kind, name) o None
         self.carried = {r: None for r in self.robots}      # nombre de la basura agarrada
         self.done_trash = set()                            # basuras ya depositadas
         self.robot_xy = {r: None for r in self.robots}     # de odom
         self.last_goal = {r: None for r in self.robots}    # (kind, name) ya publicado
+        self.align_result = {r: 0 for r in self.robots}    # 0 esperando, 1 listo, -1 aborto
+        self.grasp_result = {r: 0 for r in self.robots}    # ACK real de DetachableJoint
+        self.release_result = {r: 0 for r in self.robots}  # ACK `detached`
 
         # --- metricas ---
         self.t_start = None            # 1er tick con basura visible
@@ -90,6 +87,7 @@ class CentralPlanner(Node):
         self.grasp_pub = {}
         self.release_pub = {}
         self.retreat_pub = {}
+        self.align_target_pub = {}
         for r in self.robots:
             self.goal_pub[r] = self.create_publisher(PoseStamped, f"/{r}/goal_pose", 10)
             self.grasp_pub[r] = self.create_publisher(Empty, f"/{r}/gripper/grasp", 10)
@@ -97,9 +95,20 @@ class CentralPlanner(Node):
             # Orden de reverso recto tras soltar (aparta el gripper de la pieza
             # dejada para que el giro hacia la siguiente basura no la empuje).
             self.retreat_pub[r] = self.create_publisher(Empty, f"/{r}/retreat", 10)
+            self.align_target_pub[r] = self.create_publisher(
+                PoseStamped, f"/{r}/visual_grasp/target", 10)
             self.create_subscription(
                 Odometry, f"/{r}/odom",
                 lambda msg, rr=r: self._on_odom(rr, msg), 10)
+            self.create_subscription(
+                Int8, f"/{r}/visual_grasp/result",
+                lambda msg, rr=r: self._on_align_result(rr, msg), 10)
+            self.create_subscription(
+                Int8, f"/{r}/gripper/result",
+                lambda msg, rr=r: self._on_grasp_result(rr, msg), 10)
+            self.create_subscription(
+                Int8, f"/{r}/gripper/release_result",
+                lambda msg, rr=r: self._on_release_result(rr, msg), 10)
 
         self.timer = self.create_timer(1.0 / max(self.rate, 0.1), self._tick)
         self.get_logger().info(
@@ -110,6 +119,15 @@ class CentralPlanner(Node):
     def _on_odom(self, robot, msg):
         p = msg.pose.pose.position
         self.robot_xy[robot] = (p.x, p.y)
+
+    def _on_align_result(self, robot, msg):
+        self.align_result[robot] = int(msg.data)
+
+    def _on_grasp_result(self, robot, msg):
+        self.grasp_result[robot] = int(msg.data)
+
+    def _on_release_result(self, robot, msg):
+        self.release_result[robot] = int(msg.data)
 
     def _gz_poses(self, prefixes):
         """{name: (x,y)} de los modelos cuyo nombre empieza por algun prefijo."""
@@ -217,8 +235,9 @@ class CentralPlanner(Node):
 
         # basuras ya reclamadas por otro robot en SEEK (para no perseguir la misma)
         claimed = {self.target[r][1] for r in self.robots
-                   if self.state[r] == "seek" and self.target[r]
+                   if self.state[r] in ("seek", "align", "grasp") and self.target[r]
                    and self.target[r][0] == "trash"}
+        claimed.update(name for name in self.carried.values() if name is not None)
 
         for r in self.robots:
             rxy = self.robot_xy[r]
@@ -252,8 +271,47 @@ class CentralPlanner(Node):
                 goal = (txy[0] + self.approach_offset * dx / d,
                         txy[1] + self.approach_offset * dy / d)
                 self._send_goal(r, "trash", name, goal)
-                if math.hypot(txy[0] - rxy[0], txy[1] - rxy[1]) < self.pickup_radius:
+                if math.hypot(txy[0] - rxy[0], txy[1] - rxy[1]) < self.visual_start_radius:
+                    target_msg = PoseStamped()
+                    target_msg.header.frame_id = "map"
+                    target_msg.header.stamp = self.get_clock().now().to_msg()
+                    target_msg.pose.position.x = float(txy[0])
+                    target_msg.pose.position.y = float(txy[1])
+                    target_msg.pose.orientation.w = 1.0
+                    self.align_result[r] = 0
+                    self.align_target_pub[r].publish(target_msg)
+                    self.state[r] = "align"
+                    self.get_logger().info(f"{r}: ALINEA con RGB-D -> {name}")
+
+            elif self.state[r] == "align":
+                name = self.target[r][1]
+                if self.align_result[r] < 0:
+                    # Reintentar desde navegacion global. No se agarra si la
+                    # profundidad se perdio o aparecio un obstaculo.
+                    self.align_result[r] = 0
+                    self.state[r] = "seek"
+                    self.last_goal[r] = None
+                    self.get_logger().warn(f"{r}: alineacion abortada; reaproxima")
+                    continue
+                if self.align_result[r] > 0:
+                    self.grasp_result[r] = 0
                     self.grasp_pub[r].publish(Empty())
+                    self.state[r] = "grasp"
+                    self.get_logger().info(
+                        f"{r}: pieza alineada; espera confirmacion del joint")
+
+            elif self.state[r] == "grasp":
+                name = self.target[r][1]
+                if self.grasp_result[r] < 0:
+                    self.grasp_result[r] = 0
+                    self.align_result[r] = 0
+                    self.state[r] = "seek"
+                    self.last_goal[r] = None
+                    self.get_logger().warn(
+                        f"{r}: agarre de {name} no confirmado; reaproxima")
+                    continue
+                if self.grasp_result[r] > 0:
+                    self.grasp_result[r] = 0
                     self.carried[r] = name
                     # deposito mas cercano
                     dname = min(deposits,
@@ -262,7 +320,7 @@ class CentralPlanner(Node):
                     self.target[r] = ("deposit", dname)
                     self.state[r] = "deliver"
                     self.get_logger().info(
-                        f"{r}: AGARRA {name} -> DELIVER a {dname}")
+                        f"{r}: JOINT confirmado para {name} -> DELIVER a {dname}")
 
             elif self.state[r] == "deliver":
                 dname = self.target[r][1]
@@ -273,15 +331,34 @@ class CentralPlanner(Node):
                     continue
                 self._send_goal(r, "deposit", dname, dxy)
                 if math.hypot(dxy[0] - rxy[0], dxy[1] - rxy[1]) < self.deposit_radius:
+                    # Congelar la navegacion en la pose actual antes de abrir.
+                    # Sin esto go_to_goal seguiria avanzando hacia el centro del
+                    # deposito durante la espera del ACK de Gazebo.
+                    self._send_goal(r, "hold_release", self.carried[r], rxy)
+                    self.release_result[r] = 0
                     self.release_pub[r].publish(Empty())
-                    # Reverso recto: aparta el gripper de la pieza recien dejada
-                    # antes de girar hacia la siguiente (si no, el arco del giro
-                    # la empuja fuera del deposito).
+                    self.state[r] = "release"
+                    self.get_logger().info(
+                        f"{r}: espera confirmacion de suelta de {self.carried[r]}")
+
+            elif self.state[r] == "release":
+                if self.release_result[r] < 0:
+                    # No moverse: si el primer detach se perdio, la pieza puede
+                    # seguir unida. grasp_manager conserva su estado y reintenta.
+                    self.release_result[r] = 0
+                    self.release_pub[r].publish(Empty())
+                    self.get_logger().warn(
+                        f"{r}: suelta no confirmada; reintenta sin moverse")
+                    continue
+                if self.release_result[r] > 0:
+                    self.release_result[r] = 0
+                    # Solo ahora apartar el gripper; el objeto ya es libre.
                     self.retreat_pub[r].publish(Empty())
                     if self.carried[r]:
                         self.done_trash.add(self.carried[r])
                     self.get_logger().info(
-                        f"{r}: SUELTA {self.carried[r]} en {dname} -> retrocede -> SEEK")
+                        f"{r}: DETACH confirmado para {self.carried[r]} "
+                        "-> retrocede -> SEEK")
                     self.carried[r] = None
                     self.state[r] = "seek"
                     self.target[r] = None
