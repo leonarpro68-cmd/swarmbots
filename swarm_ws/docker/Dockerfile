@@ -19,14 +19,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-ros-gz-bridge \
         ros-jazzy-ros-gz-sim \
         ros-jazzy-ros-gz-image \
+        ros-jazzy-gz-ros2-control \
+        ros-jazzy-ros2-control \
+        ros-jazzy-ros2-controllers \
+        ros-jazzy-ros2controlcli \
         ros-jazzy-xacro \
         ros-jazzy-robot-state-publisher \
         ros-jazzy-joint-state-publisher \
         ros-jazzy-rviz2 \
+        ros-jazzy-topic-tools \
+        ros-jazzy-nav2-map-server \
+        ros-jazzy-nav2-lifecycle-manager \
         python3-colcon-common-extensions \
         python3-rosdep \
         python3-vcstool \
-        build-essential git \
+        build-essential \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 # NVIDIA GLVND hints (consumed when runtime=nvidia)
@@ -38,13 +46,37 @@ ENV NVIDIA_VISIBLE_DEVICES=all \
 ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=1000
-RUN groupadd --gid ${USER_GID} ${USERNAME} \
-    && useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} \
-    && apt-get update && apt-get install -y --no-install-recommends sudo \
-    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
-    && chmod 0440 /etc/sudoers.d/${USERNAME} \
-    && rm -rf /var/lib/apt/lists/*
 
+RUN set -eux; \
+    EXISTING_USER="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)"; \
+    EXISTING_GROUP="$(getent group "${USER_GID}" | cut -d: -f1 || true)"; \
+    \
+    if [ -n "${EXISTING_GROUP}" ] && [ "${EXISTING_GROUP}" != "${USERNAME}" ]; then \
+        groupmod -n "${USERNAME}" "${EXISTING_GROUP}"; \
+    elif [ -z "${EXISTING_GROUP}" ]; then \
+        groupadd --gid "${USER_GID}" "${USERNAME}"; \
+    fi; \
+    \
+    if [ -n "${EXISTING_USER}" ] && [ "${EXISTING_USER}" != "${USERNAME}" ]; then \
+        usermod -l "${USERNAME}" \
+                -d "/home/${USERNAME}" \
+                -m \
+                -s /bin/bash \
+                "${EXISTING_USER}"; \
+        usermod -g "${USERNAME}" "${USERNAME}"; \
+    elif [ -z "${EXISTING_USER}" ]; then \
+        useradd --uid "${USER_UID}" \
+                --gid "${USER_GID}" \
+                -m \
+                -s /bin/bash \
+                "${USERNAME}"; \
+    fi; \
+    \
+    apt-get update; \
+    apt-get install -y --no-install-recommends sudo; \
+    echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}"; \
+    chmod 0440 "/etc/sudoers.d/${USERNAME}"; \
+    rm -rf /var/lib/apt/lists/*
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}/swarm_ws
 
