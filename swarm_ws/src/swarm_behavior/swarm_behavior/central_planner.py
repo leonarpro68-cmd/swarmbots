@@ -35,7 +35,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Empty, Int8
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, PoseArray, PoseStamped
 
 
 class CentralPlanner(Node):
@@ -68,6 +68,15 @@ class CentralPlanner(Node):
         self.retreat_dist = self.declare_parameter("retreat_dist", 2.2).value
         self.visual_start_radius = self.declare_parameter(
             "visual_start_radius", 0.95).value
+        # ---- Evitar ARRASTRAR otras piezas mientras se transporta una ----
+        # El LiDAR va a z=0.557 m y las cajas miden 0.20 m: son INVISIBLES al
+        # scan, asi que go_to_goal no puede esquivarlas por su cuenta. El
+        # planner (que si las ve por ground-truth) le publica las posiciones a
+        # evitar en /<ns>/avoid_points mientras el robot lleva una pieza.
+        # Las piezas que ya estan EN el deposito destino se excluyen: repelerse
+        # de ellas impediria acercarse a soltar (deadlock del deposito).
+        self.deposit_avoid_clear = self.declare_parameter(
+            "deposit_avoid_clear", 1.0).value
 
         self.robots = [f"summit{i}" for i in range(self.n_robots)]
         # estado por robot
@@ -97,6 +106,7 @@ class CentralPlanner(Node):
         self.release_pub = {}
         self.retreat_pub = {}
         self.align_target_pub = {}
+        self.avoid_pub = {}
         for r in self.robots:
             self.goal_pub[r] = self.create_publisher(PoseStamped, f"/{r}/goal_pose", 10)
             self.grasp_pub[r] = self.create_publisher(Empty, f"/{r}/gripper/grasp", 10)
@@ -106,6 +116,8 @@ class CentralPlanner(Node):
             self.retreat_pub[r] = self.create_publisher(Empty, f"/{r}/retreat", 10)
             self.align_target_pub[r] = self.create_publisher(
                 PoseStamped, f"/{r}/visual_grasp/target", 10)
+            self.avoid_pub[r] = self.create_publisher(
+                PoseArray, f"/{r}/avoid_points", 10)
             self.create_subscription(
                 Odometry, f"/{r}/odom",
                 lambda msg, rr=r: self._on_odom(rr, msg), 10)
@@ -216,6 +228,36 @@ class CentralPlanner(Node):
         if moved or self._keepalive:
             self.last_goal[robot] = (kind, name, xy[0], xy[1])
             self._publish_goal(robot, xy)
+
+    def _publish_avoid_points(self, robot, objs, deposits):
+        """Publica en /<ns>/avoid_points las piezas que este robot NO debe
+        barrer con la que lleva. Vacio si no transporta nada (desactiva la
+        repulsion virtual en go_to_goal)."""
+        msg = PoseArray()
+        msg.header.frame_id = "map"
+        msg.header.stamp = self.get_clock().now().to_msg()
+        held = self.carried[robot]
+        if held is not None:
+            # La pieza que va en la pinza no se esquiva a si misma; las que
+            # llevan otros robots tampoco (se mueven con ellos y el robot SI es
+            # visible al LiDAR, que ya las evita por el chasis).
+            skip = {n for n in self.carried.values() if n is not None}
+            # Zona de descarga: no repelerse de lo ya depositado en el deposito
+            # destino, o el robot no podria acercarse a soltar.
+            tgt = self.target[robot]
+            dxy = deposits.get(tgt[1]) if tgt and tgt[0] == "deposit" else None
+            for name, xy in objs.items():
+                if not name.startswith(self.trash_prefix) or name in skip:
+                    continue
+                if dxy is not None and math.hypot(xy[0] - dxy[0],
+                                                  xy[1] - dxy[1]) < self.deposit_avoid_clear:
+                    continue
+                pt = Pose()
+                pt.position.x = float(xy[0])
+                pt.position.y = float(xy[1])
+                pt.orientation.w = 1.0
+                msg.poses.append(pt)
+        self.avoid_pub[robot].publish(msg)
 
     def _count_collisions(self):
         """Cuenta eventos de choque robot-robot (flanco de subida, con
@@ -421,6 +463,13 @@ class CentralPlanner(Node):
                         park = (dxy[0] + self.retreat_dist * ux,
                                 dxy[1] + self.retreat_dist * uy)
                         self._send_goal(r, "park", dname, park)
+
+        # ---- piezas a esquivar mientras se transporta (anti-arrastre) ----
+        # `objs` trae TODAS las basuras fisicas del mundo, incluidas las ya
+        # depositadas (siguen ahi) y las que otro robot lleva. Se publica la
+        # lista solo a los robots que cargan; a los demas, lista vacia (= off).
+        for r in self.robots:
+            self._publish_avoid_points(r, objs, deposits)
 
         # ---- metricas ----
         pieces = len(self.done_trash)

@@ -32,7 +32,7 @@ n_robots==1 el radio es 0 (va al punto exacto).
 import math
 
 import rclpy
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseArray, PoseStamped, Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
@@ -125,6 +125,25 @@ class GoToGoal(Node):
         self.yield_speed = self.get_parameter("yield_speed").value
         self.yield_speed_aside = self.get_parameter("yield_speed_aside").value
 
+        # --- Anti-arrastre: piezas invisibles al LiDAR ---
+        # El scan va a z=0.557 m y las cajas de basura miden 0.20 m: el LiDAR NO
+        # las ve. Mientras el robot transporta una pieza (soldada ~0.48 m por
+        # delante, a ras de suelo) barreria las demas. El central_planner, que
+        # si las ve por ground-truth, las publica en `avoid_points` (frame
+        # mundo) y aqui se convierten en repulsores VIRTUALES. Lista vacia (el
+        # robot no carga nada) => cero efecto, navegacion como siempre.
+        self.declare_parameter("k_avoid", 0.35)        # ganancia
+        self.declare_parameter("avoid_radius", 1.0)    # m: alcance del campo
+        self.declare_parameter("avoid_min_dist", 0.30) # m: satura por debajo
+        # Punto de la pieza transportada (frame cuerpo). La distancia se mide al
+        # SEGMENTO centro_robot -> pieza, que es el volumen que realmente barre.
+        self.declare_parameter("carry_forward", 0.48)
+        # Componente TANGENCIAL: sin ella, un repulsor justo enfrente empuja
+        # hacia atras y el robot se para en seco contra la meta. Con ella el
+        # campo circula alrededor de la pieza y el mecanum la RODEA de lado.
+        self.declare_parameter("avoid_swirl", 1.2)
+        self.declare_parameter("max_avoid", 0.45)      # m/s: tope del termino
+
         # Retroceso puntual (al soltar en el deposito): un reverso RECTO de
         # retreat_dist m manteniendo el rumbo (vx<0, wz=0, sin girar). Aparta el
         # gripper de la pieza recien dejada para que, al girar hacia la siguiente
@@ -132,6 +151,13 @@ class GoToGoal(Node):
         # /<ns>/retreat (el central_planner lo hace tras el release).
         self.declare_parameter("retreat_dist", 0.15)
         self.declare_parameter("retreat_speed", 0.2)
+        self.k_avoid = self.get_parameter("k_avoid").value
+        self.avoid_radius = self.get_parameter("avoid_radius").value
+        self.avoid_min_dist = self.get_parameter("avoid_min_dist").value
+        self.carry_forward = self.get_parameter("carry_forward").value
+        self.avoid_swirl = self.get_parameter("avoid_swirl").value
+        self.max_avoid = self.get_parameter("max_avoid").value
+        self.avoid_points = []    # [(x, y)] en frame mundo; vacio = inactivo
         self.retreat_dist = self.get_parameter("retreat_dist").value
         self.retreat_speed = self.get_parameter("retreat_speed").value
 
@@ -181,6 +207,7 @@ class GoToGoal(Node):
 
         # Orden de retroceso puntual (reverso recto) tras soltar en el deposito.
         self.create_subscription(Empty, "retreat", self._on_retreat, 10)
+        self.create_subscription(PoseArray, "avoid_points", self._on_avoid_points, 10)
         self.create_subscription(Bool, "visual_grasp/active", self._on_align_active, 10)
         self.create_subscription(Twist, "visual_grasp/cmd_vel", self._on_align_cmd, 10)
 
@@ -241,6 +268,9 @@ class GoToGoal(Node):
         if self.pose is not None:
             self.retreating = True
             self.retreat_start = (self.pose[0], self.pose[1])
+
+    def _on_avoid_points(self, msg: PoseArray):
+        self.avoid_points = [(p.position.x, p.position.y) for p in msg.poses]
 
     def _on_align_active(self, msg: Bool):
         self.align_active = msg.data
@@ -370,8 +400,12 @@ class GoToGoal(Node):
         att_bx = cos_y * att_wx + sin_y * att_wy
         att_by = -sin_y * att_wx + cos_y * att_wy
 
-        vx = att_bx + rep_bx
-        vy = att_by + rep_by
+        # Repulsion virtual de las piezas que no hay que barrer (solo mientras
+        # se transporta: si la lista esta vacia devuelve 0,0).
+        avo_bx, avo_by = self._virtual_repulsion(x, y, yaw, att_bx, att_by)
+
+        vx = att_bx + rep_bx + avo_bx
+        vy = att_by + rep_by + avo_by
 
         # Limitar modulo a max_lin.
         speed = math.hypot(vx, vy)
@@ -446,6 +480,48 @@ class GoToGoal(Node):
             rep_x -= w * math.cos(a)
             rep_y -= w * math.sin(a)
         return rep_x, rep_y, min_front, front_angle
+
+    def _virtual_repulsion(self, x, y, yaw, att_bx, att_by):
+        """Repulsion (frame cuerpo) de los `avoid_points` del planner.
+
+        La distancia se mide al SEGMENTO centro_robot -> pieza transportada
+        (carry_forward por delante), que es el volumen que de verdad barre el
+        robot: una caja a 0.5 m del centro puede estar a 0 m de la pieza que
+        lleva. Al termino radial se le suma uno TANGENCIAL (swirl) para rodear
+        en vez de frenar; el lado se elige para no ir contra la meta.
+        """
+        if not self.avoid_points:
+            return 0.0, 0.0
+        cos_y, sin_y = math.cos(yaw), math.sin(yaw)
+        rep_x = rep_y = 0.0
+        for (px, py) in self.avoid_points:
+            # Punto en frame cuerpo.
+            dx, dy = px - x, py - y
+            bx = cos_y * dx + sin_y * dy
+            by = -sin_y * dx + cos_y * dy
+            # Distancia al segmento [0,0] -> [carry_forward, 0] (eje X cuerpo).
+            t = min(max(bx, 0.0), self.carry_forward)
+            ex, ey = bx - t, by
+            d = math.hypot(ex, ey)
+            if d >= self.avoid_radius:
+                continue
+            d_eff = max(d, self.avoid_min_dist)
+            w = self.k_avoid * (1.0 / d_eff - 1.0 / self.avoid_radius)
+            # Unitario del robot HACIA la pieza (desde el punto mas cercano).
+            ux, uy = (ex / d, ey / d) if d > 1e-6 else (1.0, 0.0)
+            # Radial: alejarse. Tangencial: rodear por el lado que no pelea con
+            # la atraccion (si la pieza queda a la izquierda del avance, se
+            # esquiva por la derecha).
+            cross = att_bx * uy - att_by * ux
+            sgn = -1.0 if cross > 0.0 else 1.0
+            tx, ty = -uy * sgn, ux * sgn
+            rep_x += w * (-ux + self.avoid_swirl * tx)
+            rep_y += w * (-uy + self.avoid_swirl * ty)
+        mag = math.hypot(rep_x, rep_y)
+        if mag > self.max_avoid:
+            rep_x *= self.max_avoid / mag
+            rep_y *= self.max_avoid / mag
+        return rep_x, rep_y
 
     def _direction_clear(self, vx, vy, clearance):
         """Comprueba el sector hacia el que se movera el mecanum.

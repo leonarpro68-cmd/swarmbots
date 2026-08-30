@@ -82,6 +82,23 @@ ros2 launch swarm_worlds sim_summit.launch.py seed:=-1     # escenario distinto 
 
 **Warehouse VACIADO** (`tugbot_warehouse.sdf`): se quitaron los 19 obstáculos (estación de carga, carro, 12 estanterías, 5 pallets). Queda **edificio (suelo + 4 paredes que acotan), sol, física/sensores y cámara cenital** → todo el suelo interior libre, la colocación aleatoria no interpenetra colisiones (RTF ~1.0). ⚠️ El **mapa estático `warehouse.pgm`** quedó DESACTUALIZADO (mostraba estanterías); no se usa en el flujo ACT/teleop, pero si se retoma RViz/`swarm_behavior` hay que regenerarlo (`make_warehouse_map.py`).
 
+### Anti-arrastre: no barrer otras piezas mientras se transporta (2026-08-30)
+
+**Causa raíz medida**: el LiDAR está a **z = 0.557 m** (`lidar_joint` en `xyz=0.25 0 0.43` sobre `base_link`, que cuelga 0.127 m) y las cajas miden **0.20 m** → **el `scan` NO las ve**. Por eso `go_to_goal` nunca las esquivaba y el robot, con la pieza soldada ~0.48 m por delante a ras de suelo, barría las demás de camino al depósito. (Es también la razón de que la pieza transportada no dispare la parada de seguridad.)
+
+**Solución: repulsores VIRTUALES desde el ground-truth del planner**, activos solo mientras se transporta.
+- **`central_planner._publish_avoid_points`** → publica `/summitN/avoid_points` (`geometry_msgs/PoseArray`, frame mundo) a la tasa del planner (2 Hz). Contenido: **todas** las basuras físicas del mundo (incluidas las ya depositadas) **menos** (a) la que lleva el propio robot, (b) las que llevan otros robots (se mueven con ellos y el chasis del peer **sí** es visible al LiDAR) y (c) las que están a < `deposit_avoid_clear` (1.0 m) del **depósito destino** — si no, el robot no podría acercarse a soltar (reintroduciría el deadlock del depósito). **Si el robot no carga nada se publica lista vacía = mecanismo desactivado.**
+- **`go_to_goal._virtual_repulsion`** → convierte esos puntos en un campo repulsivo en frame cuerpo que se suma al potencial existente. Dos detalles que lo hacen funcionar:
+  - **Distancia al SEGMENTO** `centro_robot → pieza transportada` (`carry_forward=0.48`), no al centro del robot: una caja a 0.5 m del centro puede estar a 0 m de la pieza que lleva. Es el volumen que de verdad barre.
+  - **Componente TANGENCIAL** (`avoid_swirl=1.2`): un repulsor puramente radial justo enfrente empuja hacia atrás y el robot se para contra la meta. Con el swirl el campo circula alrededor de la pieza y el mecanum **la rodea de lado**. El lado se elige con el signo de `att × u` para no ir contra la meta.
+  - Params: `k_avoid` (0.35), `avoid_radius` (1.0 m), `avoid_min_dist` (0.30 m, satura), `max_avoid` (0.45 m/s, tope del término).
+
+**Verificado**:
+- Simulación offline del controlador — pieza justo en la línea recta: sin evitación holgura **0.000 m** (arrastre seguro), con evitación **0.594 m** y llega igual (+0.5 s). Pasillo de 0.9 m entre dos piezas: pasa por el medio sin desviarse. Casos límite (hueco imposible de 0.5 m, pieza pegada a la meta, 6 piezas dispersas): **llega siempre, sin contacto**.
+- En vivo (1 robot, headless): tópico con 1 pub / 1 sub a 1.92 Hz, **vacío mientras busca** y **5 piezas mientras transporta** (6 − la que lleva). Ciclo completo sin excepciones: `JOINT confirmado para trash_5_naranja -> DELIVER a deposit_2_naranja` → `DETACH confirmado -> retrocede -> SEEK`, `[metricas] piezas 1/6 color OK 1/1 colisiones 0`.
+
+**Límite conocido**: el campo protege el corredor de la **pieza transportada**; el chasis (semiancho 0.248 m) puede rozar una caja si la geometría obliga (en el caso artificial del hueco de 0.5 m la holgura bajó a 0.25 m). En situaciones normales da ~0.59 m. Si se nota, subir `avoid_radius`/`k_avoid`.
+
 ### Clasificación por color: cada pieza a su depósito (2026-08-29) — pendiente de validar en vivo
 
 Cada basura se lleva al depósito **de su mismo color**. Manda el color de la **PIEZA**, no el del robot: cualquier robot puede coger cualquier basura (funciona con cualquier `n_robots`).

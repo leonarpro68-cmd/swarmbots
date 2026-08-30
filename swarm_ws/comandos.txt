@@ -256,6 +256,19 @@ al insertar) y esquive que DESLIZA en vez de clavarse.
   ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=3 \
       max_lin_vel:=0.7 yaw_damp:=1.0 k_rep:=0.30 \
       far_forward:=0.30 slow_depth:=0.18 min_forward:=0.03 align_timeout:=15.0
+      # (k_avoid / avoid_radius / avoid_swirl aún no son args del launch: se
+      #  tocan en go_to_goal.py o lanzando el nodo suelto con -p)
+
+  ANTI-ARRASTRE mientras transporta (go_to_goal)                    (default)
+    El LiDAR (z=0.557 m) NO ve las cajas (0.20 m): el planner le pasa sus
+    posiciones al robot en /summitN/avoid_points y se esquivan como
+    repulsores virtuales. Vacío cuando el robot no lleva nada.
+    k_avoid       ganancia del campo virtual                          0.35
+    avoid_radius  m: a partir de aquí empieza a desviarse             1.0
+    avoid_swirl   componente tangencial (rodear en vez de frenar)     1.2
+    max_avoid     m/s: tope del término (no ahoga la atracción)       0.45
+      # ver qué está esquivando:  ros2 topic echo /summit0/avoid_points
+      # desactivarlo del todo:    k_avoid:=0.0
 
   ESQUIVE (go_to_goal)                                              (default)
     max_lin_vel   velocidad de crucero de la navegación               0.5
