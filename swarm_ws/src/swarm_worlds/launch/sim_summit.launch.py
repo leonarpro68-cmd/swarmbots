@@ -106,13 +106,18 @@ def _generate_sdf(ns_str: str, xacro_path: str, gripper: bool = False,
 # Inercia caja LxWxH (0.12x0.12x0.20): Ixx=Iyy=(1/12)m(0.12^2+0.20^2)=1.36e-3,
 # Izz=(1/12)m(0.12^2+0.12^2)=7.2e-4.
 _TRASH_H = 0.20  # ALTO de la pieza (m); la pose z = _TRASH_H/2 (apoyado en suelo)
+# CLASIFICACION POR COLOR: cada tipo lleva (geometria, inercia, RGB, NOMBRE).
+# El nombre del color es el TOKEN FINAL del nombre del modelo (trash_0_verde,
+# deposit_0_verde) y es la UNICA via por la que el central_planner sabe de que
+# color es cada cosa: el planner solo ve nombres via `gz topic .../pose/info`,
+# nunca el material del SDF. El deposito se pinta con el MISMO RGB que su basura.
 _TRASH_TYPES = [
     ("<box><size>0.12 0.12 0.20</size></box>",
-     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.2 0.6 0.3"),
+     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.2 0.6 0.3", "verde"),
     ("<box><size>0.12 0.12 0.20</size></box>",
-     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.3 0.4 0.7"),
+     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.3 0.4 0.7", "azul"),
     ("<box><size>0.12 0.12 0.20</size></box>",
-     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.7 0.4 0.2"),
+     "<ixx>1.36e-3</ixx><iyy>1.36e-3</iyy><izz>7.2e-4</izz>", "0.7 0.4 0.2", "naranja"),
 ]
 
 
@@ -140,20 +145,35 @@ def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
     return placed
 
 
-def _trash_poses(n, seed, avoid, box=_SPAWN_BOX):
-    """[(name, x, y, type_idx)] de basuras. Mismo seed => mismas poses."""
+def _n_colors(n_deposits):
+    """Colores en juego = min(3, n_deposits). Basura y depositos ciclan sobre
+    el MISMO numero, asi que jamas hay una pieza de un color sin deposito al
+    que llevarla (con n_deposits=2 solo se usan 2 colores; con 6, dos depositos
+    por color y el planner elige el mas cercano DE SU COLOR)."""
+    if n_deposits <= 0:
+        return len(_TRASH_TYPES)
+    return max(1, min(len(_TRASH_TYPES), n_deposits))
+
+
+def _trash_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None):
+    """[(name, x, y, type_idx)] de basuras. Mismo seed => mismas poses.
+    El nombre lleva el color al final: trash_3_azul."""
+    nc = len(_TRASH_TYPES) if n_colors is None else n_colors
     pts = _random_poses(random.Random(seed + 101), n, avoid, box=box)
-    return [(f"trash_{i}", x, y, i % len(_TRASH_TYPES))
+    return [(f"trash_{i}_{_TRASH_TYPES[i % nc][3]}", x, y, i % nc)
             for i, (x, y) in enumerate(pts)]
 
 
-def _deposit_poses(n, seed, avoid, box=_SPAWN_BOX):
-    """[(name, x, y)] de depositos. Stream de rng separado (seed+10007) pero
-    reproducible con el mismo seed. Mas separados entre si (min_sep 2 m) y
-    evitando robots + basuras (avoid)."""
+def _deposit_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None):
+    """[(name, x, y, type_idx)] de depositos. Stream de rng separado
+    (seed+10007) pero reproducible con el mismo seed. Mas separados entre si
+    (min_sep 2 m) y evitando robots + basuras (avoid). El nombre lleva el color
+    al final (deposit_1_azul) y el disco se pinta de ese color."""
+    nc = len(_TRASH_TYPES) if n_colors is None else n_colors
     pts = _random_poses(random.Random(seed + 10007), n, avoid, box=box,
                         min_sep=2.0, avoid_clear=1.0)
-    return [(f"deposit_{i}", x, y) for i, (x, y) in enumerate(pts)]
+    return [(f"deposit_{i}_{_TRASH_TYPES[i % nc][3]}", x, y, i % nc)
+            for i, (x, y) in enumerate(pts)]
 
 
 def _robot_specs_random(n, seed, box, avoid=(), min_sep=2.0):
@@ -167,9 +187,12 @@ def _robot_specs_random(n, seed, box, avoid=(), min_sep=2.0):
             for i, (x, y) in enumerate(pts)]
 
 
-def _deposit_model_sdf(name, x, y, radius=0.5):
+def _deposit_model_sdf(name, x, y, type_idx=0, radius=0.5):
     """SDF de un deposito: disco plano visual, ESTATICO y SIN colision (el
-    robot lo atraviesa; solo marca la zona de descarga)."""
+    robot lo atraviesa; solo marca la zona de descarga). Se pinta con el MISMO
+    RGB que la basura de su color (alpha 0.45) para que la correspondencia
+    pieza<->deposito se vea a simple vista y en las camaras (util para ACT)."""
+    color = _TRASH_TYPES[type_idx % len(_TRASH_TYPES)][2]
     return f"""
     <model name="{name}">
       <static>true</static>
@@ -177,7 +200,7 @@ def _deposit_model_sdf(name, x, y, radius=0.5):
       <link name="link">
         <visual name="v">
           <geometry><cylinder><radius>{radius}</radius><length>0.02</length></cylinder></geometry>
-          <material><ambient>0.9 0.25 0.2 0.5</ambient><diffuse>0.9 0.25 0.2 0.5</diffuse></material>
+          <material><ambient>{color} 0.45</ambient><diffuse>{color} 0.45</diffuse></material>
         </visual>
       </link>
     </model>"""
@@ -185,7 +208,7 @@ def _deposit_model_sdf(name, x, y, radius=0.5):
 
 def _trash_model_sdf(name, x, y, type_idx):
     """SDF de un modelo de basura dinamico (para inyectar en el <world>)."""
-    geom, inertia, color = _TRASH_TYPES[type_idx]
+    geom, inertia, color, _cname = _TRASH_TYPES[type_idx]
     return f"""
     <model name="{name}">
       <pose>{x:.3f} {y:.3f} {_TRASH_H / 2:.3f} 0 0 0</pose>
@@ -509,7 +532,8 @@ def _launch_setup(context, *args, **kwargs):
     # al CARGAR el robot: la basura debe existir antes de que el robot spawnee
     # (si no, el joint no se forma y no se puede agarrar).
     avoid = [(x, y) for (_, x, y, _) in robot_specs]
-    trash = _trash_poses(n_trash, seed, avoid, box) if n_trash > 0 else []
+    n_colors = _n_colors(n_deposits)
+    trash = _trash_poses(n_trash, seed, avoid, box, n_colors) if n_trash > 0 else []
     trash_names = [t[0] for t in trash]
     trash_list = " ".join(trash_names)
     if len(trash) < n_trash:
@@ -520,13 +544,17 @@ def _launch_setup(context, *args, **kwargs):
     # misma semilla y zona, evitando robots Y basuras (así el robot tiene que
     # transportar la basura hasta ellos). Stream de rng propio (reproducible).
     avoid_dep = avoid + [(x, y) for (_, x, y, _) in trash]
-    deposits = _deposit_poses(n_deposits, seed, avoid_dep, box) if n_deposits > 0 else []
+    deposits = _deposit_poses(n_deposits, seed, avoid_dep, box, n_colors) \
+        if n_deposits > 0 else []
     if len(deposits) < n_deposits:
         print(f"[sim_summit] AVISO: solo se colocaron {len(deposits)}/{n_deposits} "
               f"depósitos (zona saturada). Sube el área o baja n_deposits.")
     if deposits:
+        print(f"[sim_summit] clasificación por color: {n_colors} colores "
+              f"({', '.join(t[3] for t in _TRASH_TYPES[:n_colors])}); "
+              "cada pieza va al depósito de SU color.")
         print("[sim_summit] depósitos: " +
-              ", ".join(f"{n}=({x:.1f},{y:.1f})" for n, x, y in deposits))
+              ", ".join(f"{n}=({x:.1f},{y:.1f})" for n, x, y, _ in deposits))
 
     # Inyectar basura + depósitos en el <world> (no se spawnean sueltos):
     # los DetachableJoint del gripper se enlazan a los modelos de basura al
@@ -616,7 +644,7 @@ def generate_launch_description():
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),
         DeclareLaunchArgument("gripper", default_value="true", description="Anadir pinza + camara + controladores gz_ros2_control (default: enjambre Summit+gripper, sin drones)"),
         DeclareLaunchArgument("n_trash", default_value="6", description="Nº de basuras (poses aleatorias sembradas, inyectadas en el mundo)"),
-        DeclareLaunchArgument("n_deposits", default_value="2", description="Nº de depósitos (discos planos atravesables, poses aleatorias sembradas)"),
+        DeclareLaunchArgument("n_deposits", default_value="3", description="Nº de depósitos (discos planos atravesables, poses aleatorias sembradas). Se colorean ciclando los colores de la basura: 3 = uno por color; 6 = dos por color"),
         DeclareLaunchArgument("area_half", default_value="8.0", description="Semilado (m) de la caja cuadrada de aparición centrada en (center_x, center_y). <15 para dejar margen a las paredes"),
         DeclareLaunchArgument("seed", default_value="42", description="Semilla de las poses aleatorias (reproducible; -1 = distinta cada vez)"),
         clock_bridge,

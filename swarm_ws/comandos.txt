@@ -201,14 +201,18 @@ GRABAR demostraciones (entrenar ACT con odom + IMU + cámaras).
 --------------------------------------------------------------------------
 Sin mando y sin ML: cada robot hace el ciclo completo por su cuenta
   Ir -> alinear con la cámara de profundidad -> agarrar -> llevar -> depositar.
-El central_planner asigna tareas (basura/depósito más cercano) y mide
-makespan, piezas y colisiones. La sim debe ir con gripper (default: true).
+CLASIFICA POR COLOR: cada caja va al depósito de SU MISMO color (verde, azul o
+naranja). Cualquier robot coge cualquier caja; manda el color de la PIEZA.
+El central_planner asigna tareas y mide makespan, piezas, color correcto y
+colisiones. La sim debe ir con gripper (default: true).
 
   # Terminal 1 — simulación (3 Summit + pinza + basura + depósitos)
   ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
       # empezar por 1 robot para ver la secuencia limpia:  ... n_robots:=1
       # escenario reproducible:  ... seed:=42     distinto cada vez:  ... seed:=-1
-      # más piezas:  ... n_trash:=10 n_deposits:=3 area_half:=10
+      # más piezas:  ... n_trash:=12 area_half:=10
+      # depósitos (def 3 = uno por color):  ... n_deposits:=6   (dos por color,
+      #   reparte la congestión)   ... n_deposits:=2  (solo 2 colores en juego)
       # si la GUI va lenta:  ... headless:=true
 
   # Terminal 2 — ciclo de recogida (planner + navegación + RGB-D + agarre)
@@ -217,9 +221,12 @@ makespan, piezas y colisiones. La sim debe ir con gripper (default: true).
 
   >> SECUENCIA CORRECTA por pieza (los 4 mensajes que deben salir en orden):
        Pieza centrada por RGB-D
-       CERRANDO sobre 'trash_N'
-       JOINT CONFIRMADO para 'trash_N'
-       DETACH CONFIRMADO para 'trash_N'; pieza libre en deposito
+       CERRANDO sobre 'trash_3_azul'
+       JOINT CONFIRMADO para 'trash_3_azul'
+       summit0: JOINT confirmado para trash_3_azul -> DELIVER a deposit_1_azul (color azul)
+       DETACH CONFIRMADO para 'trash_3_azul'; pieza libre en deposito
+     Métrica en marcha (color OK = piezas en el depósito de su color):
+       [metricas] piezas 4/6  color OK 4/4  colisiones 0  t 62.3s
      Durante la aproximación final el visual_grasp traza:
        Alineando: lateral=+12.3px profundidad=0.184m confirmacion=0/2
 

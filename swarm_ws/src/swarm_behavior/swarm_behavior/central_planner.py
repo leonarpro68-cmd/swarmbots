@@ -10,6 +10,13 @@ tareas de forma greedy:
   - al llegar al deposito (< deposit_radius) dispara la suelta
     (/summitN/gripper/release), marca esa basura como DEPOSITADA y vuelve a SEEK.
 
+CLASIFICACION POR COLOR: cada pieza va al deposito de SU MISMO COLOR. El color
+viaja en el TOKEN FINAL del nombre del modelo (trash_2_azul -> deposit_1_azul),
+que es lo unico que el planner ve de Gazebo. Cualquier robot puede coger
+cualquier pieza (manda el color de la PIEZA, no el del robot). Si un color no
+tiene deposito (o el nombre no lleva color, p.ej. un mundo antiguo), se cae al
+deposito MAS CERCANO: nunca se bloquea por esto.
+
 Publica una meta por robot en /summitN/goal_pose (PoseStamped, frame 'map') que
 la capa de navegacion (go_to_goal, Fase B) sigue. Requiere un grasp_manager por
 robot corriendo para que el agarre/suelta sea efectivo.
@@ -69,6 +76,8 @@ class CentralPlanner(Node):
         self.target = {r: None for r in self.robots}       # (kind, name) o None
         self.carried = {r: None for r in self.robots}      # nombre de la basura agarrada
         self.done_trash = set()                            # basuras ya depositadas
+        self.n_right_color = 0                             # piezas en su deposito
+        self.n_wrong_color = 0                             # piezas por fallback
         self.robot_xy = {r: None for r in self.robots}     # de odom
         self.last_goal = {r: None for r in self.robots}    # (kind, name) ya publicado
         self.align_result = {r: 0 for r in self.robots}    # 0 esperando, 1 listo, -1 aborto
@@ -119,6 +128,28 @@ class CentralPlanner(Node):
     def _on_odom(self, robot, msg):
         p = msg.pose.pose.position
         self.robot_xy[robot] = (p.x, p.y)
+
+    @staticmethod
+    def _color(name):
+        """Color de un modelo = ultimo token del nombre (trash_2_azul -> azul).
+
+        Devuelve None si el nombre no lleva color (nombres antiguos tipo
+        'trash_2'), en cuyo caso el emparejamiento se desactiva y se usa el
+        deposito mas cercano, como antes."""
+        tail = name.rsplit("_", 1)[-1]
+        return tail if tail and not tail.isdigit() else None
+
+    def _best_deposit(self, deposits, rxy, trash_name):
+        """Deposito mas cercano DEL COLOR de la pieza; si no hay ninguno de ese
+        color, el mas cercano a secas (fallback: mejor depositar en el sitio
+        equivocado que quedarse con la pieza para siempre)."""
+        want = self._color(trash_name) if trash_name else None
+        same = {n: xy for n, xy in deposits.items() if self._color(n) == want} \
+            if want else {}
+        pool = same or deposits
+        best = min(pool, key=lambda n: math.hypot(pool[n][0] - rxy[0],
+                                                  pool[n][1] - rxy[1]))
+        return best, bool(same)
 
     def _on_align_result(self, robot, msg):
         self.align_result[robot] = int(msg.data)
@@ -313,14 +344,19 @@ class CentralPlanner(Node):
                 if self.grasp_result[r] > 0:
                     self.grasp_result[r] = 0
                     self.carried[r] = name
-                    # deposito mas cercano
-                    dname = min(deposits,
-                                key=lambda n: math.hypot(deposits[n][0] - rxy[0],
-                                                         deposits[n][1] - rxy[1]))
+                    # Deposito del MISMO COLOR que la pieza (fallback: el mas
+                    # cercano, para no quedarse con la pieza si falta ese color).
+                    dname, matched = self._best_deposit(deposits, rxy, name)
                     self.target[r] = ("deposit", dname)
                     self.state[r] = "deliver"
-                    self.get_logger().info(
-                        f"{r}: JOINT confirmado para {name} -> DELIVER a {dname}")
+                    if matched:
+                        self.get_logger().info(
+                            f"{r}: JOINT confirmado para {name} -> DELIVER a "
+                            f"{dname} (color {self._color(name)})")
+                    else:
+                        self.get_logger().warn(
+                            f"{r}: sin deposito del color de {name}; "
+                            f"fallback al mas cercano ({dname})")
 
             elif self.state[r] == "deliver":
                 dname = self.target[r][1]
@@ -356,6 +392,11 @@ class CentralPlanner(Node):
                     self.retreat_pub[r].publish(Empty())
                     if self.carried[r]:
                         self.done_trash.add(self.carried[r])
+                        dep = self.target[r][1] if self.target[r] else ""
+                        if self._color(self.carried[r]) == self._color(dep):
+                            self.n_right_color += 1
+                        else:
+                            self.n_wrong_color += 1
                     self.get_logger().info(
                         f"{r}: DETACH confirmado para {self.carried[r]} "
                         "-> retrocede -> SEEK")
@@ -387,6 +428,7 @@ class CentralPlanner(Node):
             if self.t_start else 0.0
         self.get_logger().info(
             f"[metricas] piezas {pieces}/{self.total_trash}  "
+            f"color OK {self.n_right_color}/{pieces}  "
             f"colisiones {self.n_collisions}  t {elapsed:.1f}s",
             throttle_duration_sec=3.0)
 
@@ -399,6 +441,8 @@ class CentralPlanner(Node):
             self.get_logger().info(
                 "==== TAREA COMPLETA ====\n"
                 f"  piezas depositadas : {pieces}/{self.total_trash}\n"
+                f"  color correcto     : {self.n_right_color}/{pieces}"
+                f" (mal: {self.n_wrong_color})\n"
                 f"  makespan           : {self.makespan:.1f} s\n"
                 f"  colisiones         : {self.n_collisions}")
 

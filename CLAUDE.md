@@ -67,12 +67,12 @@ ros2 topic pub /robot0/cmd_vel geometry_msgs/Twist '{linear: {x: 0.2}, angular: 
 `sim_summit.launch.py` coloca robots, basura y depósitos en **posiciones aleatorias con semilla reproducible** sobre el **warehouse vaciado**. Todo se hace en el launch (`_launch_setup`), en este orden (cada elemento evita los anteriores):
 
 1. **Robots** (`_robot_specs_random`, stream `random.Random(seed+20011)`): posición **y yaw aleatorios**, separados ≥2 m. Reemplaza el viejo anillo fijo.
-2. **Basura** (`_trash_poses`, stream `seed+101`): N objetos (`trash_0..N-1`), **cajas 0.12 × 0.12 × 0.20 alto**, 0.3 kg, μ=0.4, en 3 colores cíclicos (`_TRASH_H`/`_TRASH_TYPES`). Evita robots.
-3. **Depósitos** (`_deposit_poses`, stream `seed+10007`): K discos planos **atravesables** (visual estático, SIN colisión, radio 0.5 m, rojo semitransparente en z=0.01), separados ≥2 m, evitan robots+basura.
+2. **Basura** (`_trash_poses`, stream `seed+101`): N objetos, **cajas 0.12 × 0.12 × 0.20 alto**, 0.3 kg, μ=0.4, en 3 colores cíclicos (`_TRASH_H`/`_TRASH_TYPES`). El nombre lleva el color al final: **`trash_<i>_<color>`** (`trash_0_verde`, `trash_1_azul`, `trash_2_naranja`, …). Evita robots.
+3. **Depósitos** (`_deposit_poses`, stream `seed+10007`): K discos planos **atravesables** (visual estático, SIN colisión, radio 0.5 m, z=0.01), separados ≥2 m, evitan robots+basura. **Coloreados con el MISMO RGB que la basura de su color** (alpha 0.45) y nombrados **`deposit_<i>_<color>`** — ver "Clasificación por color" abajo.
 
 **Todo se INYECTA en el `<world>`** (no se spawnea suelto) porque los `DetachableJoint` del gripper se enlazan a los modelos de basura al **CARGAR** el robot: la basura debe existir antes de spawnear el robot o el joint no se forma (no se puede agarrar). Se escribe un mundo generado en `/tmp/swarm_summit/<world>_gen.sdf` (inyección antes de `</world>` con `rpartition`). Muestreo compartido: `_random_poses(rng, n, avoid, box, min_sep, avoid_clear)` (rejection sampling).
 
-**Args nuevos**: `n_trash` (def 6), `n_deposits` (def 2), `area_half` (def 8 = semilado de la caja cuadrada centrada en `center_x/center_y`), `seed` (def 42; **-1 = distinta cada vez**). `center` por defecto **(0,0)** = centro del almacén vaciado, bajo la cámara cenital. Los DetachableJoint se generan según `trash_list` (arg del xacro que pasa el launch; vacío = ninguno) — ya NO están hardcodeados en el mundo ni en el xacro.
+**Args nuevos**: `n_trash` (def 6), `n_deposits` (def 3 = uno por color; 6 = dos por color), `area_half` (def 8 = semilado de la caja cuadrada centrada en `center_x/center_y`), `seed` (def 42; **-1 = distinta cada vez**). `center` por defecto **(0,0)** = centro del almacén vaciado, bajo la cámara cenital. Los DetachableJoint se generan según `trash_list` (arg del xacro que pasa el launch; vacío = ninguno) — ya NO están hardcodeados en el mundo ni en el xacro.
 
 ```bash
 ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3 seed:=42
@@ -81,6 +81,18 @@ ros2 launch swarm_worlds sim_summit.launch.py seed:=-1     # escenario distinto 
 ```
 
 **Warehouse VACIADO** (`tugbot_warehouse.sdf`): se quitaron los 19 obstáculos (estación de carga, carro, 12 estanterías, 5 pallets). Queda **edificio (suelo + 4 paredes que acotan), sol, física/sensores y cámara cenital** → todo el suelo interior libre, la colocación aleatoria no interpenetra colisiones (RTF ~1.0). ⚠️ El **mapa estático `warehouse.pgm`** quedó DESACTUALIZADO (mostraba estanterías); no se usa en el flujo ACT/teleop, pero si se retoma RViz/`swarm_behavior` hay que regenerarlo (`make_warehouse_map.py`).
+
+### Clasificación por color: cada pieza a su depósito (2026-08-29) — pendiente de validar en vivo
+
+Cada basura se lleva al depósito **de su mismo color**. Manda el color de la **PIEZA**, no el del robot: cualquier robot puede coger cualquier basura (funciona con cualquier `n_robots`).
+
+- **El color viaja en el NOMBRE del modelo**, token final: `trash_3_azul` → `deposit_1_azul`. Es la única vía posible: el `central_planner` solo ve nombres (`gz topic .../pose/info`), nunca el material del SDF. `_TRASH_TYPES` (`sim_summit.launch.py`) es la fuente única: `(geometría, inercia, RGB, nombre)` = verde `0.2 0.6 0.3`, azul `0.3 0.4 0.7`, naranja `0.7 0.4 0.2`.
+- **`_n_colors(n_deposits) = min(3, n_deposits)`**: basura y depósitos ciclan sobre el MISMO número, así que **nunca hay una pieza de un color sin depósito**. `n_deposits=3` (nuevo default) → un depósito por color; `=6` → dos por color (reparte la congestión); `=2` → solo se usan 2 colores.
+- **`central_planner._best_deposit`**: al confirmar el joint elige el depósito más cercano **de ese color**; si no hay ninguno de ese color (o el nombre no lleva color, p.ej. un mundo generado antes de este cambio) **cae al más cercano** y lo avisa con un `warn` → retrocompatible y nunca se bloquea con una pieza en la pinza.
+- **Métrica nueva**: `color OK n/m` en la línea de `[metricas]` y en el resumen final (`color correcto` / `mal`), contando en el `detach` confirmado.
+- **No se tocó nada del agarre**: el `visual_grasp` usa **profundidad**, el color le da igual; `grasp_manager` filtra por prefijo `trash_`; los `DetachableJoint` se generan de la misma lista del launch (verificado en el SDF generado: `<child_model>trash_0_verde</child_model>`).
+- **Coste**: el makespan sube (un robot puede cruzar el almacén en vez de soltar en el depósito más cercano) y varios robots con el mismo color convergen al mismo disco. Mitigable con `n_deposits:=6`.
+- De regalo: los depósitos ahora son distinguibles en `/summitN/camera` y `/overhead/image` → la tarea de clasificar por color se vuelve **aprendible desde imagen** para el ACT (antes no lo era, todos eran rojos).
 
 ### Fixes del gripper/agarre (2026-07-08, validados en vivo)
 - **`gripper_controller` que quedaba sin configurar (race intermitente)**: el spawner corría antes de que el `controller_manager` inicializara el hardware → controlador cargado pero inactivo. **Fix**: `--controller-manager-timeout 60 --switch-timeout 30` al spawner en `sim_summit.launch.py`. Validado con 3 robots (los 3 `gripper_controller` `active`).
