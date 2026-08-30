@@ -73,6 +73,9 @@ class GoToGoal(Node):
         self.declare_parameter("k_rep", 0.30)         # ganancia de repulsion
         self.declare_parameter("safety_dist", 0.40)   # m: por debajo, corta el avance frontal
         self.declare_parameter("k_yaw", 1.0)          # ganancia del giro hacia el avance
+        # Cuanto se atenua el giro cuando la repulsion domina (0 = girar siempre
+        # como antes; 1 = no girar nada mientras esquiva, puro strafe mecanum).
+        self.declare_parameter("yaw_damp", 1.0)
         self.declare_parameter("control_rate", 20.0)  # Hz
         self.declare_parameter("goal_topic", "/goal_pose")  # RViz "2D Goal Pose"
 
@@ -105,6 +108,7 @@ class GoToGoal(Node):
         self.k_rep = self.get_parameter("k_rep").value
         self.safety = self.get_parameter("safety_dist").value
         self.k_yaw = self.get_parameter("k_yaw").value
+        self.yaw_damp = self.get_parameter("yaw_damp").value
         rate = self.get_parameter("control_rate").value
 
         # Cesion de paso por prioridad (para grupos que cruzan trayectorias):
@@ -301,7 +305,7 @@ class GoToGoal(Node):
             perp_wx, perp_wy = -by / b, bx / b
             wvx = self.yield_speed_aside * (perp_wx - 0.4 * bx / b)
             wvy = self.yield_speed_aside * (perp_wy - 0.4 * by / b)
-            rep_bx, rep_by, _ = self._repulsion()
+            rep_bx, rep_by, _, _ = self._repulsion()
             cos_y, sin_y = math.cos(yaw), math.sin(yaw)
             vx = cos_y * wvx + sin_y * wvy + rep_bx
             vy = -sin_y * wvx + cos_y * wvy + rep_by
@@ -359,7 +363,7 @@ class GoToGoal(Node):
         att_wy = (dgy / dist) * att_mag
 
         # Repulsion (en frame del cuerpo) a partir del scan.
-        rep_bx, rep_by, min_front = self._repulsion()
+        rep_bx, rep_by, min_front, front_angle = self._repulsion()
 
         # Atraccion mundo -> cuerpo.
         cos_y, sin_y = math.cos(yaw), math.sin(yaw)
@@ -375,15 +379,34 @@ class GoToGoal(Node):
             vx *= self.max_lin / speed
             vy *= self.max_lin / speed
 
-        # Parada de seguridad: obstaculo muy cerca al frente -> no avanzar (deja
-        # que la repulsion lateral y el giro lo saquen).
-        if min_front < self.safety and vx > 0.0:
-            vx = 0.0
+        # Seguridad: obstaculo muy cerca al frente. Antes esto hacia vx=0, que
+        # anula TODO el avance aunque el robot pudiera pasar de lado: el robot
+        # se clavaba, el giro (wz = k_yaw*atan2(vy,0) = +-90 deg) lo hacia rotar
+        # sobre si mismo y salia describiendo un arco lento. Ahora se elimina
+        # SOLO la componente de velocidad que se acerca al obstaculo (proyeccion
+        # sobre la normal) y se conserva la tangencial: el mecanum se DESLIZA
+        # rozando el obstaculo a velocidad plena. La garantia es la misma que
+        # antes (velocidad de acercamiento nula), pero sin frenazo.
+        if min_front < self.safety:
+            nx, ny = math.cos(front_angle), math.sin(front_angle)
+            approach = vx * nx + vy * ny
+            if approach > 0.0:
+                vx -= approach * nx
+                vy -= approach * ny
 
-        # Giro: encarar la direccion de avance (mantiene el FOV mirando al frente).
+        # Giro: encarar la direccion de avance (mantiene el FOV mirando al
+        # frente). Mientras esquiva NO conviene girar: el mecanum puede
+        # strafear de lado a velocidad plena, y encarar cada desvio convierte el
+        # esquive en un arco lento. Se atenua la ganancia segun cuanto domine la
+        # repulsion sobre la atraccion (f=0 en campo abierto => identico a antes;
+        # f=1 con el obstaculo mandando => no gira, puro strafe).
+        att_mag_b = math.hypot(att_bx, att_by)
+        rep_mag_b = math.hypot(rep_bx, rep_by)
+        f = rep_mag_b / (rep_mag_b + att_mag_b + 1e-6)
+        k_yaw_eff = self.k_yaw * max(0.0, 1.0 - self.yaw_damp * f)
         wz = 0.0
         if math.hypot(vx, vy) > 0.05:
-            wz = max(-self.max_ang, min(self.max_ang, self.k_yaw * math.atan2(vy, vx)))
+            wz = max(-self.max_ang, min(self.max_ang, k_yaw_eff * math.atan2(vy, vx)))
 
         cmd = Twist()
         cmd.linear.x = vx
@@ -394,13 +417,16 @@ class GoToGoal(Node):
     def _repulsion(self):
         """Suma de repulsiones de los rayos < influence_radius, en frame cuerpo.
 
-        Devuelve (rep_x, rep_y, min_front) donde min_front es la distancia
-        minima en el sector frontal (+-30 deg)."""
+        Devuelve (rep_x, rep_y, min_front, front_angle): min_front es la
+        distancia minima en el sector frontal (+-30 deg) y front_angle el
+        angulo de ese rayo (direccion al obstaculo mas cercano, frame cuerpo),
+        que usa la parada de seguridad para deslizarse en vez de clavarse."""
         rep_x = rep_y = 0.0
         min_front = float("inf")
+        front_angle = 0.0
         scan = self.scan
         if scan is None:
-            return 0.0, 0.0, min_front
+            return 0.0, 0.0, min_front, front_angle
 
         ang = scan.angle_min
         rmin = scan.range_min
@@ -409,8 +435,9 @@ class GoToGoal(Node):
             ang += scan.angle_increment
             if not math.isfinite(r) or r < rmin:
                 continue
-            if abs(a) < math.radians(30.0):
-                min_front = min(min_front, r)
+            if abs(a) < math.radians(30.0) and r < min_front:
+                min_front = r
+                front_angle = a
             if r >= self.influence:
                 continue
             # Gradiente de campo potencial repulsivo, empujando en sentido
@@ -418,7 +445,7 @@ class GoToGoal(Node):
             w = self.k_rep * (1.0 / r - 1.0 / self.influence) / (r * r)
             rep_x -= w * math.cos(a)
             rep_y -= w * math.sin(a)
-        return rep_x, rep_y, min_front
+        return rep_x, rep_y, min_front, front_angle
 
     def _direction_clear(self, vx, vy, clearance):
         """Comprueba el sector hacia el que se movera el mecanum.

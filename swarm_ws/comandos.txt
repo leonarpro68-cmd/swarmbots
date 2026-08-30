@@ -99,9 +99,10 @@ pinza. Probar con 1 robot (el control de la pinza va por gz_ros2_control).
     trajectory_msgs/msg/JointTrajectory \
     '{joint_names: [finger_left_joint, finger_right_joint], points: [{positions: [0.0, 0.0], time_from_start: {sec: 1}}]}'
 
-  AGARRAR BASURA (DetachableJoint, fiable): frente al spawn (sobre (0,18)) hay
-  6 objetos (cilindros + cajas). El agarre lo gestiona el nodo grasp_manager:
-  cierra la pinza y "pega" el objeto más cercano; al soltar lo despega.
+  AGARRAR BASURA (DetachableJoint, fiable): la sim reparte 6 cajas de
+  0.12 x 0.12 x 0.20 en posiciones aleatorias (semilla seed, def 42) alrededor
+  del centro (0,0). El agarre lo gestiona el nodo grasp_manager: cierra la pinza
+  sobre el objeto más cercano y crea la unión física; al soltar la deshace.
 
   # Terminal 4 — gestor de agarre (déjalo corriendo)
   ros2 run swarm_behavior grasp_manager --ros-args -p robot:=summit0 -p world:=world_demo
@@ -109,7 +110,7 @@ pinza. Probar con 1 robot (el control de la pinza va por gz_ros2_control).
   # Acerca el robot a un objeto (con /summit0/cmd_vel) y luego:
   ros2 topic pub --once /summit0/gripper/grasp   std_msgs/msg/Empty '{}'   # agarrar el más cercano
   ros2 topic pub --once /summit0/gripper/release std_msgs/msg/Empty '{}'   # soltar
-      # grasp_manager avisa si no hay objeto dentro de alcance (param grasp_radius, def 0.30 m)
+      # grasp_manager avisa si no hay objeto dentro de alcance (param grasp_radius, def 0.45 m)
       # mundo empty_arena -> usar  -p world:=empty_arena  (pero la basura está en el warehouse)
 
   # Terminal 3 — ver la CÁMARA frontal
@@ -193,6 +194,88 @@ GRABAR demostraciones (entrenar ACT con odom + IMU + cámaras).
       # flags:  --hz 30 (grasp a mas frecuencia)   --include_xy (pose mundial en qpos)
       #         --no-holonomic (robot skid-steer -> action = [vx, wz, grasp])
       #         --robot summit0   --overhead-topic /overhead/image
+
+
+--------------------------------------------------------------------------
+ DEMO 5 — Recogida AUTÓNOMA de basura (planner + RGB-D + DetachableJoint)
+--------------------------------------------------------------------------
+Sin mando y sin ML: cada robot hace el ciclo completo por su cuenta
+  Ir -> alinear con la cámara de profundidad -> agarrar -> llevar -> depositar.
+El central_planner asigna tareas (basura/depósito más cercano) y mide
+makespan, piezas y colisiones. La sim debe ir con gripper (default: true).
+
+  # Terminal 1 — simulación (3 Summit + pinza + basura + depósitos)
+  ros2 launch swarm_worlds sim_summit.launch.py n_robots:=3
+      # empezar por 1 robot para ver la secuencia limpia:  ... n_robots:=1
+      # escenario reproducible:  ... seed:=42     distinto cada vez:  ... seed:=-1
+      # más piezas:  ... n_trash:=10 n_deposits:=3 area_half:=10
+      # si la GUI va lenta:  ... headless:=true
+
+  # Terminal 2 — ciclo de recogida (planner + navegación + RGB-D + agarre)
+  ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=3
+      # velocidad de crucero de la navegación:  ... max_lin_vel:=0.7
+
+  >> SECUENCIA CORRECTA por pieza (los 4 mensajes que deben salir en orden):
+       Pieza centrada por RGB-D
+       CERRANDO sobre 'trash_N'
+       JOINT CONFIRMADO para 'trash_N'
+       DETACH CONFIRMADO para 'trash_N'; pieza libre en deposito
+     Durante la aproximación final el visual_grasp traza:
+       Alineando: lateral=+12.3px profundidad=0.184m confirmacion=0/2
+
+  Probar el mecanismo a mano (con la sim corriendo):
+  ros2 topic pub --once /summit0/gripper/grasp   std_msgs/msg/Empty '{}'
+  ros2 topic pub --once /summit0/gripper/release std_msgs/msg/Empty '{}'
+
+  Comprobar que llega la profundidad (si no es 32FC1, visual_grasp la rechaza):
+  ros2 topic hz /summit0/camera/depth              # ~15 Hz
+  ros2 topic echo /summit0/camera/depth --once --field encoding
+
+  HIGIENE: NUNCA dejar dos servidores gz a la vez (el planner ve basura
+  fantasma y el RTF se hunde). Matar a fondo entre pruebas; si
+  'pkill -f "gz sim"' no los caza, matar por PID.
+
+
+--------------------------------------------------------------------------
+ Afinar velocidades del agarre y del esquive
+--------------------------------------------------------------------------
+Cambios del 2026-08-29: aproximación RGB-D en dos tramos (rápido lejos, lento
+al insertar) y esquive que DESLIZA en vez de clavarse.
+
+  OJO: los nodos leen sus parámetros UNA sola vez al arrancar, así que
+  'ros2 param set' con la sim corriendo NO cambia el comportamiento. Para
+  afinar hay que RELANZAR el Terminal 2 pasando los args:
+
+  ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=3 \
+      max_lin_vel:=0.7 yaw_damp:=1.0 k_rep:=0.30 \
+      far_forward:=0.30 slow_depth:=0.18 min_forward:=0.03 align_timeout:=15.0
+
+  ESQUIVE (go_to_goal)                                              (default)
+    max_lin_vel   velocidad de crucero de la navegación               0.5
+    yaw_damp      1.0 = no gira mientras esquiva (strafe puro         1.0
+                  mecanum); 0.0 = gira a encarar el avance como antes
+    k_rep         ganancia de repulsión; subirla (0.45) hace que      0.30
+                  se desvíe ANTES y llegue menos veces al frenazo
+
+  AGARRE (visual_grasp)                                             (default)
+    far_forward   m/s del tramo lejano (sube a 0.40 si aún es lento)  0.30
+    slow_depth    m: por debajo empieza el tramo lento de inserción   0.18
+                  (bajarlo a 0.15 = va rápido hasta más cerca)
+    min_forward   m/s: suelo del tramo de inserción; evita el         0.03
+                  reptado de los últimos cm. 0.0 = como antes
+    align_timeout s para completar la alineación RGB-D               15.0
+
+  VOLVER AL COMPORTAMIENTO ANTERIOR (si algo sale peor):
+  ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=3 \
+      yaw_damp:=0.0 min_forward:=0.0 slow_depth:=0.60 align_timeout:=12.0
+
+  Probar UN nodo suelto con otros valores (matar antes el del launch):
+  ros2 run swarm_behavior visual_grasp --ros-args -r __ns:=/summit0 \
+      -p use_sim_time:=true -p far_forward:=0.40 -p slow_depth:=0.15
+
+  Fijar valores de forma permanente: cambiar los default_value en
+  swarm_ws/src/swarm_behavior/launch/swarm_collect.launch.py (o los
+  declare_parameter de {visual_grasp,go_to_goal}.py) y recompilar.
 
 
 --------------------------------------------------------------------------

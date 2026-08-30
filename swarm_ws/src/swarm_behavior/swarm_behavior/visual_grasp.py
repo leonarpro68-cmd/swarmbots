@@ -36,7 +36,25 @@ class VisualGrasp(Node):
         self.declare_parameter("confirm_frames", 2)
         self.declare_parameter("max_forward", 0.05)
         self.declare_parameter("max_strafe", 0.08)
-        self.declare_parameter("timeout", 12.0)
+        # Aproximacion en DOS TRAMOS. El planner cede el control a ~0.95 m de la
+        # pieza, pero la insercion real entre los dedos son solo los ultimos
+        # centimetros: recorrer los ~0.48 m enteros a max_forward costaba ~9.5 s
+        # (con timeout 12 s, sin margen para una correccion lateral).
+        #   d > slow_depth  -> tramo LEJANO, rapido (far_forward / far_gain).
+        #   d <= slow_depth -> tramo de INSERCION, intacto (max_forward + gain
+        #                      proporcional 0.35 de siempre).
+        # far_gain*(d-slow_depth)+max_forward es continuo en slow_depth: al
+        # cruzar la frontera no hay salto de velocidad.
+        self.declare_parameter("far_forward", 0.30)
+        self.declare_parameter("slow_depth", 0.18)
+        self.declare_parameter("far_gain", 1.2)
+        # Suelo de velocidad: el termino proporcional del tramo de insercion
+        # decae a ~0.012 m/s en los ultimos cm y ahi se iba la mitad del tiempo.
+        # NO sube la velocidad de contacto (el techo sigue siendo max_forward),
+        # solo evita el reptado asintotico. min_forward:=0.0 => comportamiento
+        # exacto de antes.
+        self.declare_parameter("min_forward", 0.03)
+        self.declare_parameter("timeout", 15.0)
         self.declare_parameter("sensor_timeout", 0.5)
         self.fov = float(self.get_parameter("horizontal_fov").value)
         self.camera_forward = float(self.get_parameter("camera_forward").value)
@@ -46,6 +64,10 @@ class VisualGrasp(Node):
         self.confirm_frames = int(self.get_parameter("confirm_frames").value)
         self.max_forward = float(self.get_parameter("max_forward").value)
         self.max_strafe = float(self.get_parameter("max_strafe").value)
+        self.far_forward = float(self.get_parameter("far_forward").value)
+        self.slow_depth = float(self.get_parameter("slow_depth").value)
+        self.far_gain = float(self.get_parameter("far_gain").value)
+        self.min_forward = float(self.get_parameter("min_forward").value)
         self.timeout = float(self.get_parameter("timeout").value)
         self.sensor_timeout = float(self.get_parameter("sensor_timeout").value)
 
@@ -174,9 +196,22 @@ class VisualGrasp(Node):
         # No avanzar mientras el error lateral sea grande: evita rozar/tumbar
         # la caja con un dedo. Nunca retrocede por profundidad ruidosa.
         if abs(pixel_error) < 45.0 and object_depth > self.desired_depth + self.depth_tol:
-            cmd.linear.x = min(self.max_forward,
-                               0.35 * (object_depth - self.desired_depth))
+            cmd.linear.x = self._forward_speed(object_depth)
         self.cmd_pub.publish(cmd)
+
+    def _forward_speed(self, object_depth):
+        """Velocidad de avance segun el tramo (lejano rapido / insercion lento).
+
+        En el tramo de insercion (d <= slow_depth) el techo sigue siendo
+        max_forward y la ley proporcional es la de siempre; solo se le pone un
+        suelo (min_forward) para no reptar en los ultimos centimetros.
+        """
+        if object_depth > self.slow_depth:
+            return min(self.far_forward,
+                       self.far_gain * (object_depth - self.slow_depth)
+                       + self.max_forward)
+        speed = min(self.max_forward, 0.35 * (object_depth - self.desired_depth))
+        return max(self.min_forward, speed)
 
 
 def main():

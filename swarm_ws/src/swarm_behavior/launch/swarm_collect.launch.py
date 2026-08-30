@@ -23,6 +23,16 @@ def _setup(context, *args, **kwargs):
     n = int(LaunchConfiguration("n_robots").perform(context))
     world = LaunchConfiguration("world").perform(context)
     max_lin = float(LaunchConfiguration("max_lin_vel").perform(context))
+    # Perillas de velocidad (defaults = los del nodo => sin pasarlas, el
+    # comportamiento es identico). Los nodos leen sus parametros UNA sola vez al
+    # arrancar, asi que afinar en caliente con `ros2 param set` no surte efecto:
+    # hay que relanzar pasando estos args.
+    yaw_damp = float(LaunchConfiguration("yaw_damp").perform(context))
+    k_rep = float(LaunchConfiguration("k_rep").perform(context))
+    far_forward = float(LaunchConfiguration("far_forward").perform(context))
+    slow_depth = float(LaunchConfiguration("slow_depth").perform(context))
+    min_forward = float(LaunchConfiguration("min_forward").perform(context))
+    align_timeout = float(LaunchConfiguration("align_timeout").perform(context))
 
     nodes = []
     for i in range(n):
@@ -40,6 +50,8 @@ def _setup(context, *args, **kwargs):
                 "goal_topic": f"/{ns}/goal_pose",
                 "max_lin_vel": max_lin,
                 "goal_tol": 0.3,
+                "yaw_damp": yaw_damp,
+                "k_rep": k_rep,
             }],
         ))
         # Agarre real (DetachableJoint) por robot.
@@ -53,7 +65,13 @@ def _setup(context, *args, **kwargs):
         nodes.append(Node(
             package="swarm_behavior", executable="visual_grasp",
             namespace=ns, name="visual_grasp", output="screen",
-            parameters=[{"use_sim_time": True}],
+            parameters=[{
+                "use_sim_time": True,
+                "far_forward": far_forward,
+                "slow_depth": slow_depth,
+                "min_forward": min_forward,
+                "timeout": align_timeout,
+            }],
         ))
 
     # Cerebro central: asignacion greedy + metricas.
@@ -71,5 +89,19 @@ def generate_launch_description():
         DeclareLaunchArgument("world", default_value="world_demo",
                               description="Nombre del <world> (world_demo para tugbot_warehouse)"),
         DeclareLaunchArgument("max_lin_vel", default_value="0.5"),
+        # --- Esquive (go_to_goal) ---
+        DeclareLaunchArgument("yaw_damp", default_value="1.0",
+                              description="1.0 = no gira mientras esquiva (strafe puro); 0.0 = giro de siempre"),
+        DeclareLaunchArgument("k_rep", default_value="0.30",
+                              description="Ganancia de repulsion LiDAR; subirla desvia antes de los obstaculos"),
+        # --- Aproximacion RGB-D al agarre (visual_grasp) ---
+        DeclareLaunchArgument("far_forward", default_value="0.30",
+                              description="m/s del tramo lejano (antes de slow_depth)"),
+        DeclareLaunchArgument("slow_depth", default_value="0.18",
+                              description="m: por debajo empieza el tramo lento de insercion"),
+        DeclareLaunchArgument("min_forward", default_value="0.03",
+                              description="m/s: suelo del tramo de insercion; 0.0 = comportamiento anterior"),
+        DeclareLaunchArgument("align_timeout", default_value="15.0",
+                              description="s para completar la alineacion RGB-D"),
         OpaqueFunction(function=_setup),
     ])
