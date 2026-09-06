@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- ==========================================================================
+     electrical_substation.sdf  -  subestacion electrica AL AIRE LIBRE
+
+     Origen: RobotnikAutomation/robotnik_gazebo_worlds, rama jazzy-devel,
+     paquete electrical_substation_world (licencia BSD, ver package.xml del
+     repo origen). Modelos VENDORIZADOS en swarm_worlds/models/
+     electrical_substation_world/models/ -> sin dependencia de Fuel ni de
+     internet, y las URIs model://electrical_substation_world/... siguen
+     resolviendo porque el launch exporta GZ_SIM_RESOURCE_PATH.
+
+     Adaptaciones (todas en este fichero, no se toca ningun otro mundo):
+       - <world name> -> world_demo (lo que esperan central_planner y
+         grasp_manager por defecto)
+       - <physics> ode max_step_size 0.004 en vez de 0.02/50Hz: el agarre
+         RGB-D y el DetachableJoint estan afinados a ese paso
+       - quitado el plugin NavSat (ningun robot nuestro lleva ese sensor) y
+         el <gui><camera>
+       - anadida la camara CENITAL /overhead/image
+
+     Es el mundo EXTERIOR del set: suelo, iluminacion y fondo completamente
+     distintos a los almacenes -> la variacion que mas ayuda a que la politica
+     ACT no aprenda el decorado. Trae ademas un actor (operario) que patrulla
+     el patio: obstaculo movil real, visible al LiDAR. Para quitarlo, borra el
+     <include> de station_worker_actor.
+     ========================================================================== -->
+<sdf version="1.8">
+  <world name="world_demo">
+
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <physics type='ode'>
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <max_contacts>10</max_contacts>
+    </physics>
+    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
+    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
+    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
+    <plugin name='gz::sim::systems::Imu' filename='gz-sim-imu-system'/>
+    <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system'>
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.5 -1</direction>
+    </light>
+
+    <model name="ground_plane">
+        <static>true</static>
+        <link name="link">
+            <collision name="collision">
+            <geometry>
+                <plane>
+                <normal>0 0 1</normal>
+                </plane>
+            </geometry>
+            </collision>
+            <visual name="visual">
+            <geometry>
+                <plane>
+                <normal>0 0 1</normal>
+                <size>500 500</size>
+                </plane>
+            </geometry>
+            <material>
+                <ambient>0.8 0.8 0.8 1</ambient>
+                <diffuse>0.8 0.8 0.8 1</diffuse>
+                <specular>0.8 0.8 0.8 1</specular>
+            </material>
+            </visual>
+        </link>
+    </model>
+
+    <!-- Local station components (ensure model.config <name> matches) -->
+    <include>
+      <name>station_base</name>
+      <pose>-40.9745 -35.2897 -0.08 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_base</uri>
+    </include>
+
+    <include>
+      <name>station_buildings</name>
+      <pose>4.2882 -14.4447 0 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_buildings</uri>
+    </include>
+
+    <include>
+      <name>station_house</name>
+      <pose>-13.1814 25.1466 6.41029 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_house</uri>
+    </include>
+
+    <include>
+      <name>station_robothouse</name>
+      <pose>-19.946 9.0 -0.08 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_robothouse</uri>
+    </include>
+
+    <include>
+      <name>station_fence</name>
+      <pose>-40.9731 10.5303 0 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_fence</uri>
+    </include>
+
+    <!-- Electrical stuff parts -->
+    <include>
+      <name>station_electrical_stuff_part_1</name>
+      <pose>7.31381 -28.5644 0 0 -0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_1</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_2</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_2</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_3</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_3</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_4</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_4</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_5</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_5</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_6</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_6</uri>
+    </include>
+    <include>
+      <name>station_electrical_stuff_part_7</name>
+      <pose>7.31332 -28.5641 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_7</uri>
+    </include>
+
+    <include>
+      <name>summit_docking_station</name>
+      <pose>-18.922 10.0365 0.022095 0 0 -1.57084</pose>
+      <uri>model://electrical_substation_world/models/summit_docking_station</uri>
+    </include>
+
+    <!-- Animated worker actor patrolling the central yard -->
+    <include>
+      <name>station_worker_actor</name>
+      <pose>-12 4 0 0 0 0</pose>
+      <uri>model://electrical_substation_world/models/station_worker_actor</uri>
+    </include>
+
+    
+    <!-- Camara CENITAL: mismo topico y resolucion que en los demas mundos.
+         El patio VALLADO esta lleno de aparamenta (no cabe el escenario);
+         la zona util es la explanada libre AL SUR de la valla, en torno a
+         (-36, 0). La camara se centra en (-30, 0) a 38 m con FOV 1.3 (cubre
+         ~58 m): la explanada queda en el centro del encuadre y la valla y las
+         torres de la subestacion salen de fondo. -->
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>-30 0 38 0 1.5707963 0</pose>
+      <link name="link">
+        <sensor name="overhead" type="camera">
+          <topic>/overhead/image</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.3</horizontal_fov>
+            <image><width>900</width><height>900</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>80.0</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>false</visualize>
+        </sensor>
+      </link>
+    </model>
+
+  </world>
+</sdf>

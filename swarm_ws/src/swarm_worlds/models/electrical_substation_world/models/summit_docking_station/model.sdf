@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="summit_docking_station">
+    <static>true</static>
+
+    <link name="base">
+      <pose>-0.071684 0.000885 0.10 0 0 0</pose>
+      <visual name="base_visual">
+        <geometry>
+          <mesh>
+            <uri>meshes/summit_docking_station.stl</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient>
+          <diffuse>0 0 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <collision name="base_collision">
+        <geometry>
+          <mesh>
+            <uri>meshes/summit_docking_station.stl</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="ar_marker">
+      <!-- Plano vertical -->
+      <pose>0.07 0.0 0.33 1.57079 0 1.57079</pose>
+      <visual name="marker_visual">
+        <geometry>
+          <plane><size>0.14 0.14</size></plane>
+        </geometry>
+        <material>
+          <double_sided>true</double_sided>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>material/textures/marker1_border_12cm.png</albedo_map>
+              <roughness>1.0</roughness>
+              <metalness>0.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <collision name="marker_collision">
+        <geometry>
+          <plane><size>0.14 0.14</size></plane>
+        </geometry>
+      </collision>
+    </link>
+
+  </model>
+</sdf>
