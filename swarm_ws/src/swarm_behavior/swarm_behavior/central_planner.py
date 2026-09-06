@@ -55,6 +55,23 @@ class CentralPlanner(Node):
         # la pieza queda delante del robot, dentro de la pinza, por lo que al
         # soltar cerca del centro cae dentro del disco. Rompe el deadlock.
         self.deposit_radius = self.declare_parameter("deposit_radius", 0.85).value
+        # ---- TURNO DE DESCARGA (un robot a la vez por deposito) ----
+        # Dos robots que llevan piezas del MISMO color van al MISMO disco. Al
+        # llegar juntos se ven con el LiDAR y la repulsion mutua los mantiene
+        # fuera de deposit_radius: ninguno suelta y se quedan bailando ahi
+        # (deadlock observado en vivo; no lo cuenta el contador de colisiones
+        # justamente porque nunca llegan a tocarse). Solucion: el deposito se
+        # concede por TURNOS. Solo el robot con el turno se acerca a soltar; el
+        # resto espera a queue_radius y entra cuando el turno queda libre.
+        # queue_radius > deposit_radius + influence_radius del LiDAR (1.5) para
+        # que el que espera no repela al que esta soltando.
+        self.deposit_turns = self.declare_parameter("deposit_turns", True).value
+        self.queue_radius = self.declare_parameter("queue_radius", 2.5).value
+        # Si el que tiene el turno se atasca, el turno caduca y pasa a otro
+        # (evita cambiar un deadlock por otro). Nunca caduca en 'release': ahi
+        # la pieza puede seguir unida y moverse seria peor.
+        self.deposit_lock_timeout = self.declare_parameter(
+            "deposit_lock_timeout", 25.0).value
         self.rate = self.declare_parameter("rate", 2.0).value
         # colision robot-robot: por debajo de collision_dist cuenta como choque
         # (con histeresis collision_clear para no recontar el mismo evento).
@@ -92,6 +109,12 @@ class CentralPlanner(Node):
         self.align_result = {r: 0 for r in self.robots}    # 0 esperando, 1 listo, -1 aborto
         self.grasp_result = {r: 0 for r in self.robots}    # ACK real de DetachableJoint
         self.release_result = {r: 0 for r in self.robots}  # ACK `detached`
+        # turno de descarga: {deposito: robot} y momento en que se concedio
+        self.deposit_holder = {}
+        self.deposit_lock_t = {}
+        # {deposito: {robot: t_hasta}} veto temporal al que dejo caducar su
+        # turno, para que no se lo vuelva a conceder a si mismo en el acto.
+        self.deposit_skip = {}
 
         # --- metricas ---
         self.t_start = None            # 1er tick con basura visible
@@ -259,6 +282,67 @@ class CentralPlanner(Node):
                 msg.poses.append(pt)
         self.avoid_pub[robot].publish(msg)
 
+    def _update_deposit_turns(self, deposits):
+        """Concede el turno de descarga de cada deposito a UN solo robot.
+
+        Aspirantes = los que van a ese deposito (deliver/release). Manda el que
+        ya esta soltando; si no, el mas cercano (menos makespan). El turno es
+        pegajoso: no se recalcula mientras su dueno siga yendo, para que no
+        oscile con el ruido de la odometria. Caduca si el dueno lleva
+        deposit_lock_timeout s sin soltar y hay alguien esperando."""
+        now = self.get_clock().now().nanoseconds / 1e9
+        want = {}
+        for r in self.robots:
+            tgt = self.target[r]
+            if (self.state[r] in ("deliver", "release")
+                    and tgt and tgt[0] == "deposit"):
+                want.setdefault(tgt[1], []).append(r)
+
+        for dname in list(self.deposit_holder):
+            holder = self.deposit_holder[dname]
+            rivals = want.get(dname, [])
+            if holder not in rivals:
+                # ya solto (o cambio de deposito): turno libre
+                del self.deposit_holder[dname]
+                self.deposit_lock_t.pop(dname, None)
+            elif (self.state[holder] == "deliver" and len(rivals) > 1
+                  and now - self.deposit_lock_t.get(dname, now) > self.deposit_lock_timeout):
+                self.get_logger().warn(
+                    f"{holder}: turno de {dname} CADUCADO tras "
+                    f"{self.deposit_lock_timeout:.0f} s; pasa al siguiente")
+                del self.deposit_holder[dname]
+                self.deposit_lock_t.pop(dname, None)
+                # Sin este veto el atascado vuelve a ganar el turno en el mismo
+                # tick (suele ser el mas cercano, justo por estar plantado ahi)
+                # y la caducidad no serviria de nada.
+                self.deposit_skip.setdefault(dname, {})[holder] = \
+                    now + self.deposit_lock_timeout
+
+        for dname, rivals in want.items():
+            if dname in self.deposit_holder:
+                continue
+            dxy = deposits.get(dname)
+            if dxy is None:
+                continue
+            # el que ya esta soltando tiene preferencia absoluta
+            releasing = [r for r in rivals if self.state[r] == "release"]
+            pool = releasing or rivals
+            # Descartar a los vetados por caducidad (salvo que no quede nadie:
+            # el deposito nunca se queda sin dueno).
+            skip = self.deposit_skip.get(dname, {})
+            libres = [r for r in pool if skip.get(r, 0.0) <= now]
+            pool = libres or pool
+            pick = min(pool, key=lambda r: (
+                math.hypot(self.robot_xy[r][0] - dxy[0],
+                           self.robot_xy[r][1] - dxy[1])
+                if self.robot_xy[r] else 1e9, r))
+            self.deposit_holder[dname] = pick
+            self.deposit_lock_t[dname] = now
+            if len(rivals) > 1:
+                esperan = ", ".join(r for r in rivals if r != pick)
+                self.get_logger().info(
+                    f"TURNO de {dname}: suelta {pick}; espera(n) {esperan}")
+
     def _count_collisions(self):
         """Cuenta eventos de choque robot-robot (flanco de subida, con
         histeresis): un par pasa a < collision_dist => +1; sale al superar
@@ -299,6 +383,8 @@ class CentralPlanner(Node):
                     if n.startswith(self.deposit_prefix)}
         if not deposits:
             return  # sin depositos no hay nada que planificar
+        if self.deposit_turns:
+            self._update_deposit_turns(deposits)
 
         # metricas: arranque del cronometro y total de basuras (1er tick util)
         if self.t_start is None and (trash or self.done_trash):
@@ -406,6 +492,20 @@ class CentralPlanner(Node):
                 if dxy is None:
                     self.state[r] = "seek"
                     self.target[r] = None
+                    continue
+                if self.deposit_holder.get(dname) not in (r, None):
+                    # Sin turno: esperar a queue_radius del disco, sobre la
+                    # linea deposito->robot (o sea, casi donde ya esta), lejos
+                    # del que suelta para no repelerlo con el LiDAR.
+                    ddx, ddy = rxy[0] - dxy[0], rxy[1] - dxy[1]
+                    dd = math.hypot(ddx, ddy) or 1.0
+                    wait = (dxy[0] + self.queue_radius * ddx / dd,
+                            dxy[1] + self.queue_radius * ddy / dd)
+                    self._send_goal(r, "queue", dname, wait)
+                    self.get_logger().info(
+                        f"{r}: espera turno en {dname} "
+                        f"(suelta {self.deposit_holder.get(dname)})",
+                        throttle_duration_sec=5.0)
                     continue
                 self._send_goal(r, "deposit", dname, dxy)
                 if math.hypot(dxy[0] - rxy[0], dxy[1] - rxy[1]) < self.deposit_radius:

@@ -33,6 +33,9 @@ def _setup(context, *args, **kwargs):
     slow_depth = float(LaunchConfiguration("slow_depth").perform(context))
     min_forward = float(LaunchConfiguration("min_forward").perform(context))
     align_timeout = float(LaunchConfiguration("align_timeout").perform(context))
+    deposit_turns = LaunchConfiguration("deposit_turns").perform(context).lower() \
+        in ("1", "true", "yes")
+    queue_radius = float(LaunchConfiguration("queue_radius").perform(context))
 
     nodes = []
     for i in range(n):
@@ -78,7 +81,11 @@ def _setup(context, *args, **kwargs):
     nodes.append(Node(
         package="swarm_behavior", executable="central_planner",
         name="central_planner", output="screen",
-        parameters=[{"use_sim_time": True, "n_robots": n, "world": world}],
+        parameters=[{
+            "use_sim_time": True, "n_robots": n, "world": world,
+            "deposit_turns": deposit_turns,
+            "queue_radius": queue_radius,
+        }],
     ))
     return nodes
 
@@ -103,5 +110,10 @@ def generate_launch_description():
                               description="m/s: suelo del tramo de insercion; 0.0 = comportamiento anterior"),
         DeclareLaunchArgument("align_timeout", default_value="15.0",
                               description="s para completar la alineacion RGB-D"),
+        # --- Turno de descarga (central_planner) ---
+        DeclareLaunchArgument("deposit_turns", default_value="true",
+                              description="Un robot a la vez por deposito; false = comportamiento anterior"),
+        DeclareLaunchArgument("queue_radius", default_value="2.5",
+                              description="m del deposito donde espera el robot sin turno"),
         OpaqueFunction(function=_setup),
     ])
