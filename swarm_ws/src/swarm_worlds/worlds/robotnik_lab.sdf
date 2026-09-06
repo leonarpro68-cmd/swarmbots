@@ -1,0 +1,2303 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- ==========================================================================
+     robotnik_lab.sdf  -  laboratorio/oficina de Robotnik (interior estrecho)
+
+     Origen: RobotnikAutomation/robotnik_gazebo_worlds, rama jazzy-devel,
+     paquete robotnik_lab_world, fichero robotnik_lab_simplifyed.world
+     (licencia BSD). Mallas VENDORIZADAS en swarm_worlds/models/office y
+     swarm_worlds/models/others -> sin Fuel ni internet. Se copian SOLO las
+     que el mundo usa: ROB_office, ROB_long_table, ROB_work_station (.dae +
+     su textura) y fruit_box. Quedan fuera apple.stl (7.2 MB) y
+     ROB_work_station.stl (5.3 MB), que este mundo no referencia.
+
+     Adaptaciones (todas aqui, ningun otro mundo se toca):
+       - <world name> -> world_demo (lo que esperan central_planner y
+         grasp_manager por defecto).
+       - Fuera el <state> (volcado de una sesion de Gazebo Classic que duplica
+         cada modelo con su pose instantanea) y el <gui>.
+       - Fuera los atributos frame="" de los <pose> (tag de Classic).
+       - <physics> ode max_step_size 0.004 igual que tugbot_warehouse: el
+         agarre RGB-D y el DetachableJoint estan afinados a ese paso.
+       - Plugins Harmonic completos, incluido Imu (sin el no hay /summitN/imu).
+       - Visual de las cajas de fruta: fruit_box.dae -> .stl. El .dae pide
+         una textura que el repo origen NO incluye
+         (14029_plastic_fruit_crate_diff.jpg) y Gazebo soltaba un [Err] en
+         cada arranque; el .stl es la misma geometria (ya se usaba para la
+         colision) y no necesita textura.
+       - Anadido un ground_plane (el original se apoyaba en el suelo del
+         edificio) y la camara cenital /overhead/image.
+
+     Geometria: nave-oficina de 16 x 62 m y 4.2 m de alto con 43 estaciones de
+     trabajo (mesa + silla), 2 mesas largas y 3 cajas de fruta. Es el mundo mas
+     ABARROTADO del set: lo mas parecido a la oficina/departamento que no se
+     podia usar tal cual de otros repos (todas tenian techo o colisiones de
+     malla pesadas).
+       - SIN techo: el STL solo tiene 10 triangulos horizontales a z=4.04 m
+         (5 m2 de dinteles) frente a 992 m2 de suelo -> la cenital ve dentro.
+       - Colisiones baratas: las 43 estaciones son CAJAS de 1.5x1.5x1.2; solo
+         el edificio (130 triangulos), 2 mesas y 3 cajas usan malla.
+
+     Zona util medida rasterizando cajas + paredes en la banda z 0.15-0.75 m:
+     area_half 5.2 m centrada en (3.7, -19.0), la sala libre del extremo sur.
+     ========================================================================== -->
+<sdf version="1.8">
+  <world name="world_demo">
+
+    <gravity>0 0 -9.8</gravity>
+    <physics type='ode'>
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <max_contacts>10</max_contacts>
+    </physics>
+    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
+    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
+    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
+    <plugin name='gz::sim::systems::Imu' filename='gz-sim-imu-system'/>
+    <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system'>
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <scene>
+      <ambient>0.5 0.5 0.5 1</ambient>
+      <background>0.7 0.75 0.8 1</background>
+      <shadows>1</shadows>
+    </scene>
+
+    <model name='ground_plane'>
+      <static>true</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry><plane><normal>0 0 1</normal><size>120 120</size></plane></geometry>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry><plane><normal>0 0 1</normal><size>120 120</size></plane></geometry>
+          <material>
+            <ambient>0.75 0.75 0.72 1</ambient>
+            <diffuse>0.75 0.75 0.72 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <light name="sun" type="directional">
+        <cast_shadows>1</cast_shadows>
+        <pose>0 0 10 0 -0 0</pose>
+        <diffuse>0.8 0.8 0.8 1</diffuse>
+        <specular>0.2 0.2 0.2 1</specular>
+        <attenuation>
+          <range>1000</range>
+          <constant>0.9</constant>
+          <linear>0.01</linear>
+          <quadratic>0.001</quadratic>
+        </attenuation>
+        <direction>-0.5 0.1 -0.9</direction>
+        <spot>
+          <inner_angle>0</inner_angle>
+          <outer_angle>0</outer_angle>
+          <falloff>0</falloff>
+        </spot>
+      </light>
+      <model name="ROB_office">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_office/ROB_office.stl</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_office/ROB_office.stl</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>1.72387 -0.606451 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_long_table_1">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_long_table/ROB_long_table.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_long_table/ROB_long_table.stl</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7.17267 -15.006451 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_long_table_2">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_long_table/ROB_long_table.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_long_table/ROB_long_table.stl</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7.17267 -18.006451 0 0 -0 0</pose>
+      </model>
+      <model name="fruit_box">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Yellow</name>
+              </script>
+            </material>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7.17267 -18.57166 0.453809 0 0 0</pose>
+      </model>
+      <model name="fruit_box2">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Red</name>
+              </script>
+            </material>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7.17267 -17.33825 0.453809 0 0 0</pose>
+      </model>
+      <model name="fruit_box3">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1.3 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Blue</name>
+              </script>
+            </material>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://others/meshes/fruit_box.stl</uri>
+                <scale>1.3 1 0.65</scale>
+              </mesh>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7.12267 -15.0 0.453809 0 0 1.5708</pose>
+      </model>
+      <model name="ROB_work_station_1">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7 0 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_2">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6.9 1.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_3">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7 5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_4">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6.9 6.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_5">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7 10 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_6">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6.9 11.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_7">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7 15 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_8">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6.9 16.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_9">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-7 -5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_10">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6.9 -3.25 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_11">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-1 -5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_12">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-0.9 -3.25 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_13">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.5 -5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_14">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.6 -3.25 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_15">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2 -5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_16">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2.1 -3.25 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_17">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-1 0 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_18">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-0.9 1.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_19">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.5 0 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_20">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.6 1.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_21">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2 0 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_22">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2.1 1.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_23">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-1 5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_24">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-0.9 6.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_25">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.5 5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_26">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.6 6.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_27">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2 5 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_28">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2.1 6.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_29">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-1 10 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_30">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-0.9 11.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_31">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.5 10 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_32">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.6 11.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_33">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2 10 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_34">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2.1 11.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_35">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-1 15 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_36">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-0.9 16.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_37">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.5 15 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_38">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0.6 16.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_39">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2 15 0 0 -0 0</pose>
+      </model>
+      <model name="ROB_work_station_40">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>2.1 16.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_41">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>0 28.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_42">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>-6 28.75 0 0 0 3.1416</pose>
+      </model>
+      <model name="ROB_work_station_43">
+        <static>1</static>
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <mesh>
+                <uri>model://office/meshes/ROB_work_station/ROB_work_station.dae</uri>
+                <scale>1 1 1</scale>
+              </mesh>
+            </geometry>
+          </visual>
+          <collision name="collision">
+            <laser_retro>0</laser_retro>
+            <max_contacts>10</max_contacts>
+            <pose>0.1 0.1 0.6 0 -0 0</pose>
+            <geometry>
+              <box>
+                <size>1.5 1.5 1.2</size>
+              </box>
+            </geometry>
+            <surface>
+              <contact>
+                <ode />
+              </contact>
+              <bounce />
+              <friction>
+                <torsional>
+                  <ode />
+                </torsional>
+                <ode />
+              </friction>
+            </surface>
+          </collision>
+          <velocity_decay>
+            <linear>0</linear>
+            <angular>0</angular>
+          </velocity_decay>
+          <self_collide>0</self_collide>
+          <kinematic>0</kinematic>
+          <gravity>1</gravity>
+          <enable_wind>0</enable_wind>
+        </link>
+        <pose>6 28.75 0 0 0 3.1416</pose>
+      </model>
+    <!-- Camara CENITAL sobre la sala libre del sur, por encima de los muros
+         (4.2 m). A 15 m con FOV 1.3 rad cubre ~23 m: la sala de 10.4 m de
+         lado mas el entorno. Mismo topico y resolucion que los demas mundos. -->
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>3.7 -19.0 15 0 1.5707963 0</pose>
+      <link name="link">
+        <sensor name="overhead" type="camera">
+          <topic>/overhead/image</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.3</horizontal_fov>
+            <image><width>900</width><height>900</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>40.0</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>false</visualize>
+        </sensor>
+      </link>
+    </model>
+
+  </world>
+</sdf>
