@@ -10,14 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **DIRECCIÓN ACTUAL (reestructurado 2026-07-08): SOLO Summit XLS + gripper, sin drones.** Tras una sesión que avanzó demasiado rápido y metió bugs, se volvió a la base estable y se reconstruyó paso por paso. El objetivo es entrenar un modelo **ACT** (imitation learning) que recoja basura y la lleve a depósitos. Los drones quedan **aparcados** (`n_drones=0` por defecto; el código sigue ahí para futuras demos).
 
-**Estado end-to-end (default, validado en vivo 2026-07-08):** `ros2 launch swarm_worlds sim_summit.launch.py` abre Gazebo (warehouse **vaciado**) con **N Summit XLS mecanum + gripper** en **posiciones y yaw aleatorios** (semilla reproducible), más **basura agarrable** y **depósitos** también aleatorios. Tópicos por robot: `/summitN/{cmd_vel,odom,scan,imu,encoder_odom,camera,camera/depth,joint_states}` + gripper. Cámara cenital en `/overhead/image`. Defaults: `n_robots=3`, `gripper=true`, `n_drones=0`, `n_trash=6`, `n_deposits=2`, `area_half=8`, `center=(0,0)`, `seed=42`. También disponibles: enjambre de minibots (`sim.launch.py`), Summit XL skid-steer individual (`spawn_summit.launch.py`) y el mundo `empty_arena`.
+**Estado end-to-end (default, validado en vivo 2026-07-08):** `ros2 launch swarm_worlds sim_summit.launch.py` abre Gazebo (warehouse **vaciado**) con **N Summit XLS mecanum + gripper** en **posiciones y yaw aleatorios** (semilla reproducible), más **basura agarrable** y **depósitos** también aleatorios. Tópicos por robot: `/summitN/{cmd_vel,odom,scan,imu,encoder_odom,camera,camera/depth,joint_states}` + gripper. Cámara cenital en `/overhead/image`. Defaults: `n_robots=3`, `gripper=true`, `n_drones=0`, `n_trash=6`, `n_deposits=3`, `area_half=8`, `center=(0,0)`, `seed=42`, `world=tugbot_warehouse`. **Hay 5 mundos** (`tugbot_warehouse`, `colored_warehouse`, `electrical_substation`, `rubber_factory`, `robotnik_lab`) + `empty_arena` de control — ver "Set de 5 mundos" abajo; **cada uno necesita su `center_x`/`center_y`/`area_half`**. También disponibles: enjambre de minibots (`sim.launch.py`) y Summit XL skid-steer individual (`spawn_summit.launch.py`).
 
 Estructura:
 
 - `swarm_ws/docker/` — Pipeline Docker (Dockerfile + docker-compose + entrypoint). **No se ha construido la imagen**; en `isa` no hace falta porque la vía nativa cubre todo. Existe como fallback de portabilidad.
 - `swarm_ws/scripts/` — `sim_native.sh` (host, **primaria**; ahora compila también `swarm_behavior`), `make_warehouse_map.py` (genera el occupancy grid estático del warehouse sin simular), `build.sh` + `run.sh` + `colcon_build.sh` + `sim.sh` (Docker, secundarias).
 - `swarm_ws/src/swarm_description/` — paquete propio: `urdf/minibot.urdf.xacro` (diff-drive + LiDAR 2D, plugins **nativos Harmonic**: `gz-sim-diff-drive-system`, `gz-sim-joint-state-publisher-system`).
-- `swarm_ws/src/swarm_worlds/` — paquete propio: `worlds/tugbot_warehouse.sdf` (**mundo por defecto**, almacén MovAi adaptado) y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
+- `swarm_ws/src/swarm_worlds/` — paquete propio: **6 mundos** en `worlds/` (`tugbot_warehouse.sdf` **por defecto**, `colored_warehouse.sdf`, `electrical_substation.sdf`, `rubber_factory.sdf`, `robotnik_lab.sdf` y `empty_arena.sdf`; ver "Set de 5 mundos") y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
 - `swarm_ws/src/swarm_behavior/` — paquete propio (Python): comportamiento de enjambre + ciclo de recogida. Nodos: `go_to_goal` (campos potenciales holonómico, aprovecha el strafe mecanum; **único publicador de `cmd_vel`**), `drone_go_to_goal`, `central_planner` (asignación greedy + máquina de estados con ACKs), `grasp_manager` (dedos + `DetachableJoint` con confirmación), **`visual_grasp`** (aproximación final con la cámara de profundidad) y `ps5_teleop`. Launches: `swarm_behavior.launch.py` (modos `goal`/`follow`), `swarm_collect.launch.py` (ciclo de recogida), `swarm_pairs.launch.py`, `teleop_ps5.launch.py` y `rviz.launch.py`.
 - `swarm_ws/src/{robotnik_common,robotnik_sensors,summit_xl_description,summit_xl_control}/` — paquetes externos Robotnik. **Summit ya portado a Fortress** en dos variantes propias: `robots/summit_xl_omni.urdf.xacro` (XLS mecanum/omni — **el robot del enjambre**, vía `sim_summit.launch.py`) y `robots/summit_xl_noarm.urdf.xacro` (XL skid-steer 4 ruedas con DiffDrive de joints agrupados 2L+2R, vía `spawn_summit.launch.py`). Siguen **sin portar** (y no se usan): `summit_xl_base.gazebo.xacro` (plugins Classic), `all_sensors.urdf.xacro` (Classic), `ros2_control.urdf.xacro` (declara joints de brazo inexistentes), `summit_xl_control/launch/*.launch` (XML ROS 1).
 
@@ -34,6 +34,9 @@ Estructura:
 - Los `sleep` de **reloj de pared no sirven para secuencias dependientes del tiempo de sim** (el RTF puede ser <1): el despegue de los drones corta la subida leyendo la altitud real por odometría (`gz topic -e ... | awk`), no con `sleep 4`.
 - En headless, añadir `--headless-rendering` a `gz sim -s`: sin él los `gpu_lidar` caen a render por software (libEGL "failed to create dri2 screen" en el log y GPU sin uso en `nvidia-smi`).
 - `model://` en mundos requiere exportar `GZ_SIM_RESOURCE_PATH` con el dir `models` del paquete (lo hace `sim_summit.launch.py` vía `os.environ` antes de lanzar Gazebo).
+- **`pkill -f "gz sim"` se mata a sí mismo** si el patrón aparece en la propia línea de comando del shell que lo ejecuta (pasa al meterlo dentro de un `bash -c`/`eval`): el proceso muere con código 144 y Gazebo sigue vivo. Usar el truco del corchete: `pgrep -f "gz[ ]sim" | xargs -r kill -9`. Mismo cuidado con `swarm_collect`, `swarm_worlds`, etc.
+- **`rclpy.spin_once()` NO es un reloj.** Devuelve en cuanto procesa un mensaje, así que un bucle `for _ in range(10): spin_once(timeout_sec=0.1)` NO tarda 1 s: con tópicos activos tarda ~0.15 s. Un muestreador escrito así da velocidades ~7× más bajas de lo real y hace pensar que los robots se arrastran. Para muestrear a 1 Hz de verdad: `nxt = t0 + n; while time.time() < nxt: spin_once(...)`.
+- **`colcon build` desde un subdirectorio** (p. ej. `swarm_ws/src/swarm_worlds/worlds`) crea ahí `build/`, `install/` y `log/` que el `.gitignore` de la raíz NO cubre. Compilar siempre desde `swarm_ws/`.
 
 ## Comandos comunes
 
@@ -99,7 +102,7 @@ ros2 launch swarm_worlds sim_summit.launch.py seed:=-1     # escenario distinto 
 
 **Límite conocido**: el campo protege el corredor de la **pieza transportada**; el chasis (semiancho 0.248 m) puede rozar una caja si la geometría obliga (en el caso artificial del hueco de 0.5 m la holgura bajó a 0.25 m). En situaciones normales da ~0.59 m. Si se nota, subir `avoid_radius`/`k_avoid`.
 
-### Clasificación por color: cada pieza a su depósito (2026-08-29) — pendiente de validar en vivo
+### Clasificación por color: cada pieza a su depósito (2026-08-29) — visto en vivo el 2026-08-30 (`color OK 1/1`) y el 2026-09-05 (`color OK 4/4`)
 
 Cada basura se lleva al depósito **de su mismo color**. Manda el color de la **PIEZA**, no el del robot: cualquier robot puede coger cualquier basura (funciona con cualquier `n_robots`).
 
@@ -116,6 +119,63 @@ Cada basura se lleva al depósito **de su mismo color**. Manda el color de la **
 - **Basura pegada al robot al spawn**: los `DetachableJoint` NACEN adjuntados → la basura se movía soldada. **Fix**: `ExecuteProcess` por robot que publica `detach` a todos los objetos (3 rondas) al arrancar. El `grasp_manager` los re-adjunta al agarrar.
 - **`grasp_radius` 0.30 → 0.45 m** (`grasp_manager.py`): con 0.30, los prismas (se deslizan al empujarlos con la cara plana) quedaban justo fuera de alcance y no se agarraban; el `DetachableJoint` sujeta bien **cualquier forma** (verificado: prisma agarrado se mueve rígido y de pie). Sigue eligiendo el objeto más cercano (no coge el equivocado).
 - `swarm_description/CMakeLists.txt`: quitado `launch` del `install()` (dir inexistente cuyo install a medias **bloqueaba la compilación** de `swarm_worlds`).
+
+## Set de 5 mundos para el dataset ACT (HECHO y VALIDADO — 2026-09-05)
+
+Objetivo: **variación de entorno** para que la política ACT aprenda la tarea y no el decorado. Los 5 mundos cubren interior/exterior, vacío/abarrotado, grande/pequeño y cuatro suelos e iluminaciones distintas. **Todos** comparten `<world name>world_demo`, física ode `max_step_size=0.004`, los 5 plugins Harmonic (incluido `Imu`) y la misma cenital `/overhead/image` 900×900 → el dataset sale homogéneo. Peso añadido al repo: **20 MB vendorizados, sin Fuel ni internet**.
+
+| Mundo | Entorno | `center_x`,`center_y` | `area_half` | Escenario probado | Cenital |
+|---|---|---|---|---|---|
+| `tugbot_warehouse` | almacén vaciado 30×50 | 0, 0 (default) | 8 | 3 robots, 6 piezas | 38 m |
+| `colored_warehouse` | 4 cuadrantes, estanterías de color | **4.2, 4.2** | **3.5** | 2 robots, 4 piezas | 20 m |
+| `electrical_substation` | **exterior**, sombras, operario animado | **−36, 0** | **5** | 2 robots, 4 piezas | 38 m |
+| `rubber_factory` | nave industrial 91×121 | **−15.3, 85.5** | **8** | 3 robots, 6 piezas | 26 m |
+| `robotnik_lab` | oficina con 43 puestos | **3.7, −19.0** | **4.5** | 2 robots, 4 piezas | 15 m |
+| `empty_arena` | control sin distractores | 0, 0 | 4 | — | 25 m |
+
+```bash
+ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
+  n_robots:=2 n_trash:=4 n_deposits:=3 center_x:=4.2 center_y:=4.2 area_half:=3.5
+ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale world_demo
+```
+
+**⚠️ El `center`/`area_half` NO es opcional en los 4 mundos nuevos.** `_random_poses` esquiva robots, basura y depósitos **entre sí**, pero NO la geometría del mundo: con el centro (0,0) por defecto se spawnea dentro de una pared. Los valores de la tabla son huecos libres **medidos**, no estimados.
+
+**⚠️ `empty_arena` es la excepción del nombre**: su `<world>` se llama `empty_arena`, no `world_demo` → al lanzar el ciclo ahí hay que pasarle `world:=empty_arena` a `swarm_collect.launch.py`. Si no, el planner no ve ninguna basura y parece que "el mundo no funciona".
+
+### Qué necesita un mundo para servir aquí (checklist)
+
+1. **SIN techo.** La cenital está a 15–38 m; un techo a 3 m la deja ciega y el ACT pierde la observación `overhead`. Es el criterio que descarta a casi todas las oficinas/casas de otros repos.
+2. **Colisiones primitivas o mallas pequeñas.** Lección vieja: una malla de colisión grande hunde el RTF. Medido: 7088 triángulos (`rubber_factory`) van bien; el peligro es la interpenetración al spawnear, no el nº de triángulos.
+3. **Hueco libre ≥ el `area_half`** que se vaya a usar, medido de verdad (ver abajo).
+4. **Plugins Harmonic** `gz-sim-*-system` + `Sensors` **e** `Imu` en el `<world>`.
+5. **SDF ≤ 1.11** (sdformat14). El 1.12 es Gazebo Jetty y no carga.
+6. **Añadirle el modelo `overhead_camera`** publicando en `/overhead/image` (copiar el de cualquier mundo y ajustar `z`/FOV al tamaño del sitio).
+
+Añadir un mundo es solo dejar el `.sdf` en `worlds/` y pasar `world:=<nombre>`: la inyección de basura/depósitos usa `rpartition("</world>")` y no depende del mundo. **Renombrar el `<world name>` a `world_demo`** es lo único imprescindible (`central_planner` y `grasp_manager` lo esperan por defecto).
+
+### Cómo se mide el hueco libre (no estimarlo a ojo)
+
+Script de un solo uso (queda el patrón, no el fichero): parsear el SDF, componer `model∘link∘collision`, quedarse con lo que corta la banda **z 0.15–0.75 m** (lo que ve el robot y donde están las cajas de 0.20), rasterizar a 0.2–0.25 m con **margen de 0.45 m** (semiancho del robot) y buscar el mayor cuadrado libre con una imagen integral. Para colisiones de malla, leer el STL binario y usar el AABB de cada triángulo. Así salieron los `center`/`area_half` de la tabla y así se descubrió que el patio vallado de la subestación **no cabe** el escenario.
+
+### Procedencia y adaptaciones (todas dentro de cada `.sdf` nuevo; no se tocó `tugbot_warehouse` ni el launch)
+
+- **`colored_warehouse`** ← Fuel `hboc/simple_colored_warehouse` (SDF 1.7, ya nativo gz-sim). Añadido `Imu`, `render_engine` `ogre`→`ogre2` (venía afinado para WSL2), física 0.004, el `<include>` del `Sun` de Fuel → luz inline.
+- **`electrical_substation`** ← RobotnikAutomation/robotnik_gazebo_worlds `jazzy-devel` (BSD), 14 modelos vendorizados en `models/electrical_substation_world/` (3.6 MB). Fuera `NavSat` y `<gui>`.
+- **`rubber_factory`** ← mismo repo. Modelo `models/emka_factory/` (364 KB). **Se le añadió `<static>true</static>`**: el original declara masa 1 kg sin `static`, o sea que la nave entera era un cuerpo dinámico que los robots podían empujar.
+- **`robotnik_lab`** ← mismo repo (`robotnik_lab_simplifyed.world`). Mallas en `models/office/` y `models/others/` (16 MB), **solo las que el mundo usa** (fuera `apple.stl` 7.2 MB y `ROB_work_station.stl` 5.3 MB). Quitados el `<state>` (volcado de una sesión de Gazebo Classic) y el `<gui>`; visual de las cajas de fruta `.dae`→`.stl` porque el `.dae` pide una textura que el repo origen NO incluye y Gazebo soltaba un `[Err]` en cada arranque.
+
+### Candidatos DESCARTADOS (para no volver a investigarlo)
+
+- **AWS RoboMaker `small_house`, `bookstore`, `hospital`**: modelos `*_Ceiling_*` → cenital ciega. Además Classic, con 89/141/183 includes de colisión por malla.
+- **`husarion_office.sdf`** (Apache-2.0, gz-sim): la oficina más limpia que hay, pero TODAS las colisiones son `.obj` de Fuel, el suelo está lleno de muebles y trae un Rosbot embebido. Viable con medio día de trabajo.
+- **AWS `no_roof_small_warehouse`**: el techo está comentado (bien), pero son 29 includes a vendorizar con colisiones de malla. Segunda opción si hiciera falta un 6º mundo.
+- **Fuel `OpenRobotics/Jetty World`**: SDF **1.12** → no carga en Harmonic.
+- **`warehouse_world` de Robotnik**: correcto pero solo deja `area_half` 2.5 m, y pesa 17 MB.
+
+### Estado de validación (IMPORTANTE para la próxima sesión)
+
+De los 4 mundos nuevos se verificó **en vivo y headless**: carga sin errores, **RTF 1.00**, todos los tópicos por robot, robots/basura/depósitos dentro del hueco libre, y **captura revisada a ojo de la cenital y de la frontal**. Lo que **NO** se ha hecho: **una pasada del ciclo completo con métricas** (6/6 piezas, makespan, colisiones) en ninguno de los 4. El único mundo con esa pasada medida sigue siendo `tugbot_warehouse`.
 
 ## Planner greedy + ciclo de recogida de basura (VALIDADO EN VIVO 2026-07-18; **agarre rehecho con RGB-D + DetachableJoint el 2026-08-22**)
 
@@ -172,6 +232,25 @@ Sin evitación mutua real (Fase C/D, aún sin empezar), varios robots hacia el M
 - **Reverso al soltar (2026-07-19)**: tras dejar la pieza, el robot giraba hacia la siguiente basura y el arco del gripper **empujaba la pieza recién soltada** fuera del depósito. Fix: al disparar `release`, el `central_planner` publica en `/summitN/retreat` y `go_to_goal` hace un **reverso RECTO de `retreat_dist` (def 0.15 m, `retreat_speed` 0.2)** — vx<0 en frame cuerpo con wz=0, SIN girar (una meta detrás lo haría girar 180° por el `wz=k_yaw·atan2(vy,vx)` que encara el avance) — que preempta goal/cesión hasta recorrer la distancia, apartando el gripper antes de girar. Validado: piezas dentro del disco (~0.2–0.3 m del centro); si varias caen en el MISMO depósito se apilan y alguna puede rodar al borde (crowding, no el gripper).
 
 **Higiene de test**: NUNCA dejar **dos servidores gz** a la vez — ambos publican el mismo `/world/world_demo/pose/info` y el planner ve basura fantasma + el RTF se hunde. Matar SIEMPRE a fondo entre pruebas (a veces `pkill -f "gz sim"` no los caza; matar por PID — ver `scratchpad/killsim.sh` del flujo de esta sesión).
+
+### Turno de descarga: un robot a la vez por depósito (2026-09-05)
+
+**Problema (reportado en vivo por el usuario):** dos robots que llevan piezas del **mismo color** van al **mismo disco**; al llegar juntos se ven con el LiDAR y la repulsión mutua los mantiene fuera de `deposit_radius`. Ninguno suelta. El contador de colisiones marca **0** justamente porque nunca llegan a tocarse — no busques el bug ahí.
+
+**Medido** con el stack arriba (2 robots, `tugbot_warehouse`): RTF **0.89** (0.90 sin comportamiento → el stack NO lo hunde), la física sigue al comando **exactamente** (0.274 m/s reales vs 0.270 comandados de media), y **el 19 % de los mensajes de `cmd_vel` son Twist CERO** = la parada de seguridad del LiDAR. En el encuentro sobre el depósito esa fracción sube al 100 % para los dos. La máquina va sobrada (20 núcleos, load 6.6).
+
+**Solución, toda en `central_planner`** (no se tocó `go_to_goal`, ni el agarre, ni los ACKs):
+- **`_update_deposit_turns`** concede cada depósito a UN robot. Aspirantes = los que van a él (`deliver`/`release`). Manda el que **ya está soltando** (su pieza puede seguir unida); si no, **el más cercano**, así el turno también minimiza el makespan en vez de ser un orden fijo por índice.
+- El que **no** tiene turno no dispara la suelta: meta de espera a **`queue_radius` (2.5 m)** del disco, sobre la línea depósito→robot. Ese radio = `deposit_radius` (0.85) + `influence_radius` del LiDAR (1.5) + margen → el que espera queda **fuera del alcance de repulsión** del que suelta, que es lo que causaba el bloqueo.
+- El turno es **pegajoso** (no se recalcula mientras su dueño siga yendo, para que no oscile con el ruido de odometría) y **caduca a `deposit_lock_timeout` (25 s)** si el dueño se atasca en `deliver` y hay alguien esperando. **Nunca caduca en `release`.**
+- **VETO tras caducar** (`deposit_skip`): sin él, el atascado se reconcedía el turno **a sí mismo en el mismo tick** — por estar plantado delante del depósito era justo el más cercano — y el timeout no servía de nada. **Lo destapó el test, no la simulación.**
+- Interruptor **`deposit_turns:=false`** para volver al comportamiento anterior (mismo patrón que `yaw_damp:=0.0` o `min_forward:=0.0`). Args nuevos en `swarm_collect.launch.py`: `deposit_turns`, `queue_radius`.
+
+**`swarm_behavior/test/test_deposit_turns.py`**: 7 casos offline que instancian el `CentralPlanner` real sin Gazebo (un solo turno, va al más cercano, pegajoso, prioridad del que suelta, relevo al terminar, caducidad con veto, depósitos distintos sin espera). Correr con `python3 test/test_deposit_turns.py` tras `source install/setup.bash`.
+
+**Validado en vivo** (2 robots, 4 piezas, **1 solo depósito** para forzar el choque): los dos agarran a la vez, ambos a `deposit_0_verde`, aparece `summit1: espera turno en deposit_0_verde (suelta summit0)`, summit0 suelta y summit1 entra detrás. **4/4 piezas, color OK 4/4, 0 colisiones, makespan 66.7 s.**
+
+**Honestidad sobre el contraste:** el MISMO escenario con `deposit_turns:=false` también terminó 4/4 (69.8 s) — los dos robots coincidieron cargados pero llegaron escalonados. O sea: el arreglo está validado como **correcto e inocuo**, pero **no se ha conseguido reproducir el deadlock que evita**. Reproducirlo probablemente pide llegadas más sincronizadas o más robots.
 
 ## Convenciones del minibot
 - Namespace por robot: `robot0`, `robot1`, … (asignado por el launch)
@@ -341,6 +420,17 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 ```
 
 ### Próximos pasos
+
+#### ⭐⭐ EL CICLO DE DEJADO SE TRABA (reportado en vivo por el usuario, 2026-09-05) — SIN ARREGLAR
+El usuario lo vio y lo aparcó a propósito para priorizar tener los 5 mundos: *"no termina el ciclo de dejado se traba"*. Es **distinto** (o al menos no idéntico) al conflicto de dos robots sobre el mismo depósito, que ya tiene su arreglo (ver "Turno de descarga"). Lo que se sabe:
+- Con 2 robots y 1 solo depósito el ciclo SÍ cerró 4/4 en las dos pruebas (con y sin turnos), así que el atasco no se reprodujo en banco.
+- Dato duro que puede estar detrás: **el 19 % de los `cmd_vel` son Twist CERO** por la parada de seguridad del LiDAR (medido, ver "Turno de descarga"). Cerca del depósito esa fracción sube.
+- Sitios por donde empezar: el estado `release` (si el ACK de `detached` no llega, el planner **no mueve el robot** a propósito y reintenta para siempre); el `hold_release` que congela la navegación; y `deposit_radius=0.85` frente a la repulsión LiDAR.
+- Primer paso recomendado: reproducirlo con el log del planner delante y mirar en qué estado se queda (`deliver`, `release`, `espera turno`) y si el `grasp_manager` está reintentando `detach`.
+
+#### ⭐ VALIDAR EL CICLO COMPLETO con métricas en los 4 mundos nuevos (2026-09-05)
+De `colored_warehouse`, `electrical_substation`, `rubber_factory` y `robotnik_lab` se verificó carga, RTF 1.00, tópicos y cámaras — pero **ninguno tiene una pasada de ciclo completo** (N/N piezas, makespan, colisiones). Los comandos exactos de cada uno están en la tabla de "Set de 5 mundos". Ojo al hacerlo: **matar siempre Gazebo entre mundo y mundo** (`pkill -f "gz sim"` y comprobar con `pgrep`); dos servidores publican el mismo `/world/world_demo/pose/info` y el planner ve basura fantasma.
+
 
 #### ⭐ RE-VALIDAR EN VIVO el agarre RGB-D (commit `76a3f6b`, 2026-08-22)
 El ciclo pasó de transporte cinemático a **RGB-D + `DetachableJoint` con ACKs** (ver "Agarre RGB-D + DetachableJoint verificado" arriba). Ese commit reporta el depósito verificado, pero **NO se ha vuelto a correr el ciclo completo desde entonces** con métricas (piezas/makespan/colisiones) como se hizo el 2026-07-18. Siguiente paso natural: `sim_summit.launch.py` + `swarm_collect.launch.py` con 1 y 3 robots y comprobar 6/6 piezas y 0 colisiones, mirando los 4 mensajes de la secuencia correcta. Puntos calientes a vigilar: que la profundidad llegue como `32FC1` (si no, `visual_grasp` lo rechaza y nunca alinea), que el `align_safety_dist=0.045` no deje al robot empujando la caja, y que ningún `attach`/`detach` se pierda (los timeouts de 2.5 s abortan y reaproximan).
