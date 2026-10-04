@@ -1,32 +1,37 @@
 <?xml version='1.0' encoding='utf-8'?>
 <!-- ==========================================================================
-     rubber_factory.sdf  -  nave industrial (planta de fabrica de caucho)
+     rubber_factory.sdf  -  nave industrial (planta de fabrica de caucho),
+     RECORTADA a 30 x 50 m (el tamano de tugbot_warehouse)
 
      Origen: RobotnikAutomation/robotnik_gazebo_worlds, rama jazzy-devel,
-     paquete rubber_factory_world (licencia BSD). El modelo emka_factory queda
-     VENDORIZADO en swarm_worlds/models/emka_factory (0.35 MB, solo el STL en
-     uso; no se copia el emka_factory_OLD.stl) -> sin Fuel ni internet.
+     paquete rubber_factory_world (licencia BSD), modelo emka_factory.
+
+     RECORTE (scripts/crop_world.py): de la planta original de 91 x 121 m se
+     conserva la ventana de 30 x 50 m centrada en (-12.79, 58.5) del original,
+     trasladada al origen: nave abierta en el centro, la fila de maquinas
+     largas al este y el muro norte. Elegida con scripts/measure_safe_zones.py:
+     hueco libre de 9.6 m desde (0,0) (el spawn por defecto, area_half 8, cabe
+     sin argumentos) y la mayor cantidad de estructura alrededor sin zonas sin
+     suelo. Los trozos cortados viven en models/rubber_factory_crop (generado;
+     el emka_factory original se borro del repo, esta en la historia de git).
+     Cerrado con 4 paredes perimetrales de 2.5 m en x=+-15 / y=+-25, como el
+     edificio de tugbot_warehouse, y la misma camara cenital (0,0,38 m).
 
      Adaptaciones (todas aqui, no se toca ningun otro mundo):
        - <world name> -> world_demo (lo que esperan central_planner y
          grasp_manager por defecto).
-       - <static>true</static> en el include de la fabrica. EL ORIGINAL NO LO
-         TRAE: el modelo declara masa 1 kg, asi que la nave entera era un
-         cuerpo DINAMICO que los robots podian empujar.
+       - el modelo recortado es <static>true</static>. EL ORIGINAL NO LO
+         TRAIA: declaraba masa 1 kg, asi que la nave entera era un cuerpo
+         DINAMICO que los robots podian empujar.
        - <physics> ode max_step_size 0.004, igual que tugbot_warehouse (el
          agarre RGB-D y el DetachableJoint estan afinados a ese paso).
        - plugins Harmonic completos, incluido Imu (sin el no hay /summitN/imu).
        - camara cenital /overhead/image.
 
-     Geometria: planta de 91 x 121 m extruida 2 m de alto (paredes y tabiques,
-     SIN techo -> la cenital ve el interior). La colision es la MISMA malla:
-     7088 triangulos, 5232 de ellos en la banda de altura que ve el robot. Es
-     el patron que hundio el RTF con la malla del almacen, por eso se midio en
-     vivo antes de dar el mundo por bueno (ver mensaje del commit).
-
-     Zona util medida rasterizando el STL: la nave grande del norte,
-     area_half 14 m centrada en (-15.3, 85.5). Es el unico mundo del set,
-     ademas del almacen, donde cabe el escenario a tamano completo.
+     Geometria: planta extruida 2 m de alto (paredes y tabiques, SIN techo ->
+     la cenital ve el interior). Tras el recorte, 168 triangulos de malla
+     (antes 7088); colision y visual son la misma malla.
+     El ground_plane y el sol se trasladaron con el recorte.
      ========================================================================== -->
 <sdf version="1.8">
   <world name="world_demo">
@@ -53,13 +58,14 @@
 
     <light name='sun' type='directional'>
       <cast_shadows>1</cast_shadows>
-      <pose>0 0 10 0 0 0</pose>
+      <pose>12.79 -58.5 10 0 0 0</pose>
       <diffuse>0.7 0.7 0.7 1</diffuse>
       <specular>0.2 0.2 0.2 1</specular>
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
     <model name='ground_plane'>
+      <pose>12.79 -58.5 0 0 0 0</pose>
       <static>true</static>
       <link name='link'>
         <collision name='collision'>
@@ -79,20 +85,11 @@
       </link>
     </model>
 
-    <!-- La nave. static=true anadido aqui a proposito (ver cabecera). -->
-    <include>
-      <uri>model://emka_factory</uri>
-      <name>emka_factory</name>
-      <static>true</static>
-      <pose>0 0 0 0 0 0</pose>
-    </include>
-
-    <!-- Camara CENITAL sobre la nave util: mismo topico y resolucion que en
-         los demas mundos. A 26 m con FOV 1.3 rad cubre ~40 m, que envuelve
-         el cuadrado libre de 28 m de lado. -->
+    <!-- Camara CENITAL, igual que en tugbot_warehouse: (0,0) a 38 m, FOV 1.3
+         rad -> cubre ~58 m, el recorte de 30 x 50 m entero. -->
     <model name="overhead_camera">
       <static>true</static>
-      <pose>-15.3 85.5 26 0 1.5707963 0</pose>
+      <pose>0 0 38 0 1.5707963 0</pose>
       <link name="link">
         <sensor name="overhead" type="camera">
           <topic>/overhead/image</topic>
@@ -100,11 +97,47 @@
           <camera>
             <horizontal_fov>1.3</horizontal_fov>
             <image><width>900</width><height>900</height><format>R8G8B8</format></image>
-            <clip><near>0.1</near><far>60.0</far></clip>
+            <clip><near>0.1</near><far>80.0</far></clip>
           </camera>
           <always_on>1</always_on>
           <visualize>false</visualize>
         </sensor>
+      </link>
+    </model>
+
+    <!-- Recorte 30 x 50 m del mundo original (scripts/crop_world.py) -->
+    <include>
+      <uri>model://rubber_factory_crop</uri>
+      <name>rubber_factory_crop</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- Paredes perimetrales del recorte (crop_world.py): caras interiores en
+         x=+-14.75, y=+-24.75. 2.5 m de alto: el LiDAR las
+         ve y no tapan la cenital. -->
+    <model name="perimeter_walls">
+      <static>true</static>
+      <link name="link">
+        <collision name="wall_north_collision"><pose>0 25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
+        <visual name="wall_north_visual"><pose>0 25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_south_collision"><pose>0 -25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
+        <visual name="wall_south_visual"><pose>0 -25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_east_collision"><pose>15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
+        <visual name="wall_east_visual"><pose>15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_west_collision"><pose>-15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
+        <visual name="wall_west_visual"><pose>-15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
       </link>
     </model>
 
