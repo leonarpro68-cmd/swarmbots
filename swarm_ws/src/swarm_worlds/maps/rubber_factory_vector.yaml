@@ -1,0 +1,9 @@
+world: rubber_factory
+frame: world
+units: m
+note: Generado por scripts/measure_safe_zones.py. Obstaculos = colision o visual en
+  z [0.04, 2.00] m + sin suelo + actores, recortado a la valla + 3.0 m. Poligonos
+  conservadores (envuelven el obstaculo, exceso <= 0.05 m). La valla NO va en 'obstacles'.
+fence_inner: [-19.07, 81.73, -11.57, 89.23]
+spawn_box: [-18.07, 82.73, -12.57, 88.23]
+obstacles: []

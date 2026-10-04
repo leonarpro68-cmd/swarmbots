@@ -1,0 +1,67 @@
+# Zonas seguras de grabacion por mundo. NO editar a mano:
+#   /usr/bin/python3 scripts/measure_safe_zones.py --write
+generated_by: scripts/measure_safe_zones.py
+params:
+  res: 0.05
+  floor_tol: 0.04
+  robot_top: 2.0
+  fence_t: 0.1
+  fence_h: 0.3
+  fence_clear: 0.2
+  spawn_margin: 1.0
+  actor_clear: 1.0
+camera:
+  z: 12.0
+  fov: 0.6955
+  cover: 8.7
+  width: 900
+  height: 900
+worlds:
+  tugbot_warehouse:
+    world_name: world_demo
+    center_x: -0.01
+    center_y: -19.64
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 4.43
+    clearance: 0.52
+  colored_warehouse:
+    world_name: world_demo
+    center_x: 4.23
+    center_y: 4.23
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 3.98
+    clearance: 0.23
+  electrical_substation:
+    world_name: world_demo
+    center_x: -36.02
+    center_y: -0.01
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 20.28
+    clearance: 1.77
+  rubber_factory:
+    world_name: world_demo
+    center_x: -15.32
+    center_y: 85.48
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 14.33
+    clearance: 10.53
+  robotnik_lab:
+    world_name: world_demo
+    center_x: 3.7
+    center_y: -19.01
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 7.33
+    clearance: 1.62
+  empty_arena:
+    world_name: empty_arena
+    center_x: -2.63
+    center_y: 2.73
+    fence_half: 3.75
+    spawn_half: 2.75
+    max_free_half: 8.18
+    clearance: 0.52

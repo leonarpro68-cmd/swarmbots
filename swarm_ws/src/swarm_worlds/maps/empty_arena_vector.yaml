@@ -1,0 +1,21 @@
+world: empty_arena
+frame: world
+units: m
+note: Generado por scripts/measure_safe_zones.py. Obstaculos = colision o visual en
+  z [0.04, 2.00] m + sin suelo + actores, recortado a la valla + 3.0 m. Poligonos
+  conservadores (envuelven el obstaculo, exceso <= 0.05 m). La valla NO va en 'obstacles'.
+fence_inner: [-6.38, -1.02, 1.12, 6.48]
+spawn_box: [-5.38, -0.02, 0.12, 5.48]
+obstacles:
+- - [1.717, 0.679]
+  - [1.717, 1.279]
+  - [2.317, 1.279]
+  - [2.317, 0.679]
+- - [-1.683, -2.371]
+  - [-1.883, -2.121]
+  - [-1.883, -1.971]
+  - [-1.483, -1.621]
+  - [-1.333, -1.621]
+  - [-1.133, -1.821]
+  - [-1.083, -2.021]
+  - [-1.483, -2.371]

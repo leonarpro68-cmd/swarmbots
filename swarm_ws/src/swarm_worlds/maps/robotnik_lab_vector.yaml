@@ -1,0 +1,31 @@
+world: robotnik_lab
+frame: world
+units: m
+note: Generado por scripts/measure_safe_zones.py. Obstaculos = colision o visual en
+  z [0.04, 2.00] m + sin suelo + actores, recortado a la valla + 3.0 m. Poligonos
+  conservadores (envuelven el obstaculo, exceso <= 0.05 m). La valla NO va en 'obstacles'.
+fence_inner: [-0.05, -22.76, 7.45, -15.26]
+spawn_box: [0.95, -21.76, 6.45, -16.26]
+obstacles:
+- - [-3.248, -13.664]
+  - [-3.248, -13.564]
+  - [-1.898, -13.564]
+  - [-1.848, -13.514]
+  - [-1.898, -13.464]
+  - [-3.248, -13.464]
+  - [-3.248, -13.364]
+  - [-1.748, -13.364]
+  - [-1.748, -13.664]
+- - [-3.248, -21.114]
+  - [-3.248, -21.014]
+  - [-1.898, -21.014]
+  - [-1.848, -20.964]
+  - [-1.898, -20.914]
+  - [-3.248, -20.914]
+  - [-3.248, -20.814]
+  - [-1.748, -20.814]
+  - [-1.748, -21.114]
+- - [9.452, -25.964]
+  - [9.452, -12.114]
+  - [9.552, -12.114]
+  - [9.552, -25.964]
