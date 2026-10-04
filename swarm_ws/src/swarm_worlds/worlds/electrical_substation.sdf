@@ -1,13 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <!-- ==========================================================================
-     electrical_substation.sdf  -  subestacion electrica AL AIRE LIBRE
+     electrical_substation.sdf  -  subestacion electrica AL AIRE LIBRE,
+     RECORTADA a 30 x 50 m (el tamano de tugbot_warehouse)
 
      Origen: RobotnikAutomation/robotnik_gazebo_worlds, rama jazzy-devel,
      paquete electrical_substation_world (licencia BSD, ver package.xml del
-     repo origen). Modelos VENDORIZADOS en swarm_worlds/models/
-     electrical_substation_world/models/ -> sin dependencia de Fuel ni de
-     internet, y las URIs model://electrical_substation_world/... siguen
-     resolviendo porque el launch exporta GZ_SIM_RESOURCE_PATH.
+     repo origen).
+
+     RECORTE (scripts/crop_world.py, opcion rotate90): ventana de 50 x 30 m centrada
+     en (-40.69, 21.77) del original, trasladada al origen y GIRADA +90 grados
+     para quedar en 30 x 50 como tugbot. Contiene la explanada del noroeste
+     (spawn), la esquina norte del patio vallado con aparamenta, los edificios
+     del oeste, la caseta y la estacion de carga del Summit y parte de la casa
+     (19 m de alto, cortada por el borde: desde la cenital se ve abierta).
+     Elegida con scripts/measure_safe_zones.py: 12.4 m libres desde (0,0) sobre
+     suelo PLANO a z=0 (la losa station_base esta a +3 cm y enterraria los
+     depositos), asi que el spawn por defecto (area_half 8) funciona sin
+     argumentos. Trozos en models/electrical_substation_crop (generado; los
+     modelos originales se borraron del repo, estan en la historia de git).
+     Cerrado con 4 paredes perimetrales de 2.5 m en x=+-15 / y=+-25 y la misma
+     camara cenital que tugbot (0,0,38 m). Sol y ground_plane girados con el
+     recorte.
+
+     BUG DEL ORIGINAL ELIMINADO: el marcador AR del summit_docking_station es
+     un <plane> de COLISION, y en gz-physics un plano de colision es INFINITO:
+     cruzaba toda la subestacion como un muro invisible (medido: un robot se
+     paraba en seco a 17 m de la estacion). En el recorte esa colision es una
+     malla finita de 0.14 m; verificado en vivo que el robot pasa.
 
      Adaptaciones (todas en este fichero, no se toca ningun otro mundo):
        - <world name> -> world_demo (lo que esperan central_planner y
@@ -16,13 +35,13 @@
          RGB-D y el DetachableJoint estan afinados a ese paso
        - quitado el plugin NavSat (ningun robot nuestro lleva ese sensor) y
          el <gui><camera>
-       - anadida la camara CENITAL /overhead/image
+       - camara CENITAL /overhead/image
 
      Es el mundo EXTERIOR del set: suelo, iluminacion y fondo completamente
      distintos a los almacenes -> la variacion que mas ayuda a que la politica
-     ACT no aprenda el decorado. Trae ademas un actor (operario) que patrulla
-     el patio: obstaculo movil real, visible al LiDAR. Para quitarlo, borra el
-     <include> de station_worker_actor.
+     ACT no aprenda el decorado. El actor (operario) del original patrullaba el
+     centro del patio, fuera del recorte: ya no esta (tampoco su descarga de
+     Fuel por internet).
      ========================================================================== -->
 <sdf version="1.8">
   <world name="world_demo">
@@ -43,13 +62,15 @@
     </plugin>
 
     <light name="sun" type="directional">
+      <pose>21.77 40.69 0 0 -0 1.5708</pose>
       <cast_shadows>true</cast_shadows>
       <diffuse>1 1 1 1</diffuse>
       <specular>0.2 0.2 0.2 1</specular>
-      <direction>-0.5 0.5 -1</direction>
+      <direction>-0.5 -0.5 -1</direction>
     </light>
 
     <model name="ground_plane">
+      <pose>21.77 40.69 0 0 -0 1.5708</pose>
         <static>true</static>
         <link name="link">
             <collision name="collision">
@@ -75,97 +96,11 @@
         </link>
     </model>
 
-    <!-- Local station components (ensure model.config <name> matches) -->
-    <include>
-      <name>station_base</name>
-      <pose>-40.9745 -35.2897 -0.08 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_base</uri>
-    </include>
-
-    <include>
-      <name>station_buildings</name>
-      <pose>4.2882 -14.4447 0 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_buildings</uri>
-    </include>
-
-    <include>
-      <name>station_house</name>
-      <pose>-13.1814 25.1466 6.41029 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_house</uri>
-    </include>
-
-    <include>
-      <name>station_robothouse</name>
-      <pose>-19.946 9.0 -0.08 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_robothouse</uri>
-    </include>
-
-    <include>
-      <name>station_fence</name>
-      <pose>-40.9731 10.5303 0 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_fence</uri>
-    </include>
-
-    <!-- Electrical stuff parts -->
-    <include>
-      <name>station_electrical_stuff_part_1</name>
-      <pose>7.31381 -28.5644 0 0 -0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_1</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_2</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_2</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_3</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_3</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_4</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_4</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_5</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_5</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_6</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_6</uri>
-    </include>
-    <include>
-      <name>station_electrical_stuff_part_7</name>
-      <pose>7.31332 -28.5641 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_electrical_stuff_part_7</uri>
-    </include>
-
-    <include>
-      <name>summit_docking_station</name>
-      <pose>-18.922 10.0365 0.022095 0 0 -1.57084</pose>
-      <uri>model://electrical_substation_world/models/summit_docking_station</uri>
-    </include>
-
-    <!-- Animated worker actor patrolling the central yard -->
-    <include>
-      <name>station_worker_actor</name>
-      <pose>-12 4 0 0 0 0</pose>
-      <uri>model://electrical_substation_world/models/station_worker_actor</uri>
-    </include>
-
-    
-    <!-- Camara CENITAL: mismo topico y resolucion que en los demas mundos.
-         El patio VALLADO esta lleno de aparamenta (no cabe el escenario);
-         la zona util es la explanada libre AL SUR de la valla, en torno a
-         (-36, 0). La camara se centra en (-30, 0) a 38 m con FOV 1.3 (cubre
-         ~58 m): la explanada queda en el centro del encuadre y la valla y las
-         torres de la subestacion salen de fondo. -->
+    <!-- Camara CENITAL, igual que en tugbot_warehouse: (0,0) a 38 m, FOV 1.3
+         rad -> cubre ~58 m, el recorte de 30 x 50 m entero. -->
     <model name="overhead_camera">
       <static>true</static>
-      <pose>-30 0 38 0 1.5707963 0</pose>
+      <pose>0 0 38 0 1.5707963 0</pose>
       <link name="link">
         <sensor name="overhead" type="camera">
           <topic>/overhead/image</topic>
@@ -178,6 +113,42 @@
           <always_on>1</always_on>
           <visualize>false</visualize>
         </sensor>
+      </link>
+    </model>
+
+    <!-- Recorte 30 x 50 m del mundo original (scripts/crop_world.py) -->
+    <include>
+      <uri>model://electrical_substation_crop</uri>
+      <name>electrical_substation_crop</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- Paredes perimetrales del recorte (crop_world.py): caras interiores en
+         x=+-14.75, y=+-24.75. 2.5 m de alto: el LiDAR las
+         ve y no tapan la cenital. -->
+    <model name="perimeter_walls">
+      <static>true</static>
+      <link name="link">
+        <collision name="wall_north_collision"><pose>0 25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
+        <visual name="wall_north_visual"><pose>0 25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_south_collision"><pose>0 -25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
+        <visual name="wall_south_visual"><pose>0 -25.0 1.25 0 0 0</pose>
+          <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_east_collision"><pose>15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
+        <visual name="wall_east_visual"><pose>15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+        <collision name="wall_west_collision"><pose>-15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
+        <visual name="wall_west_visual"><pose>-15.0 0 1.25 0 0 0</pose>
+          <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
+          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
       </link>
     </model>
 

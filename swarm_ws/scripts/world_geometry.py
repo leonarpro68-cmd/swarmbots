@@ -358,7 +358,12 @@ def _resolve(uri, base_dir, models_dirs):
     return p if os.path.exists(p) else None
 
 
-def _geometry(gel, base_dir, models_dirs, unresolved):
+# Un <plane> de COLISION es infinito en gz-physics (su <size> solo afecta al
+# visual); se aproxima con este lado.
+INFINITE_PLANE = 2000.0
+
+
+def _geometry(gel, base_dir, models_dirs, unresolved, kind="visual"):
     if gel is None or len(gel) == 0:
         return None, None
     g = gel[0]
@@ -372,6 +377,8 @@ def _geometry(gel, base_dir, models_dirs, unresolved):
     if k == "plane":
         n = [float(v) for v in (_text(g, "normal") or "0 0 1").split()]
         s = [float(v) for v in (_text(g, "size") or "100 100").split()]
+        if kind == "collision":
+            s = [INFINITE_PLANE, INFINITE_PLANE]
         return k, plane_tris(n, s)
     if k == "mesh":
         uri = _text(g, "uri")
@@ -395,7 +402,7 @@ def _walk_model(mel, T_model, name, base_dir, models_dirs, geoms, unresolved):
         for kind in ("collision", "visual"):
             for c in _children(link, kind):
                 shape, tris = _geometry(_child(c, "geometry"), base_dir,
-                                        models_dirs, unresolved)
+                                        models_dirs, unresolved, kind)
                 if tris is None:
                     continue
                 T = T_link @ pose_matrix(_text(c, "pose"))

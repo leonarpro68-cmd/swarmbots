@@ -20,7 +20,15 @@ Que hace, con la geometria REAL del mundo (world_geometry.py, poses 6D):
      tugbot_warehouse: x=+-wx/2, y=+-wy/2, 0.5 m de grosor) + la camara cenital
      de tugbot (0,0,38, FOV 1.3). Fisica, plugins, luz y ground_plane se
      conservan tal cual.
-  5. <actor>: si su trayectoria entra en la ventana (en frame mundo o relativa
+  5. --rotate90: gira el recorte +90 grados alrededor de z (geometria, poses
+     inline y <direction> de las luces), para dejar en 30 x 50 (x por y,
+     como tugbot) una ventana que en el original es 50 x 30.
+  6. Los <plane> de COLISION de los modelos incluidos se recortan con su
+     <size> declarado. En gz-physics un plano de colision es INFINITO: el
+     marcador AR (plano vertical) del summit_docking_station de la
+     subestacion era un muro invisible que cruzaba todo el mundo en y~10
+     (verificado en vivo: el robot se para en seco a 17 m de la estacion).
+  7. <actor>: si su trayectoria entra en la ventana (en frame mundo o relativa
      a su pose) se aborta, porque habria que trasladarla; si no, se quita.
 
 Uso:
@@ -31,6 +39,7 @@ import argparse
 import math
 import os
 import re
+import shutil
 import struct
 import sys
 
@@ -131,6 +140,8 @@ def collect(world_path):
             for kind in ("collision", "visual"):
                 for c in wg._children(link, kind):
                     unres = []
+                    # kind="visual" a proposito: un <plane> se toma con su
+                    # <size> declarado, no infinito (ver punto 6 arriba).
                     shape, tris = wg._geometry(wg._child(c, "geometry"), mdir, [MODELS], unres)
                     if tris is None:
                         sys.exit(f"{name}/{c.get('name')}: geometria no cargada {unres}")
@@ -139,7 +150,8 @@ def collect(world_path):
                         else ("surface", "max_contacts", "laser_retro")
                     extra = "".join(_xml(x) for x in c if wg._tag(x) in keep)
                     items.append((name, link.get("name"), kind, c.get("name"),
-                                  wg.transform(tris, Tc), extra))
+                                  wg.transform(tris, Tc), extra, shape, Tc,
+                                  _xml(wg._child(c, "geometry")), mdir))
     return items, actors
 
 
@@ -187,18 +199,27 @@ OVERHEAD = """
     </model>"""
 
 
-def _shift_pose_text(text, cx, cy):
-    v = [float(t) for t in (text or "").split()] + [0.0] * 6
-    v = v[:6]
-    v[0] -= cx
-    v[1] -= cy
-    return " ".join(f"{x:.6g}" for x in v)
+def frame_matrix(cx, cy, rot_deg):
+    """M = Rz(rot) * T(-cx, -cy): del mundo original al recortado."""
+    M = wg.pose_matrix(f"0 0 0 0 0 {math.radians(rot_deg)}")
+    T = np.eye(4)
+    T[:2, 3] = [-cx, -cy]
+    return M @ T
 
 
-def shift_inline(xml, cx, cy):
-    """Traslada (-cx,-cy) cada <model> inline (salvo overhead_camera, que ya
-    esta en el origen) y cada <light>: compone sobre su <pose> de primer nivel o
-    la anade. Trabaja sobre el texto para conservar comentarios y formato."""
+def _pose_from_matrix(T):
+    R = T[:3, :3]
+    roll = math.atan2(R[2, 1], R[2, 2])
+    pitch = -math.asin(max(-1.0, min(1.0, R[2, 0])))
+    yaw = math.atan2(R[1, 0], R[0, 0])
+    return " ".join(f"{v:.6g}" for v in (*T[:3, 3], roll, pitch, yaw))
+
+
+def shift_inline(xml, M):
+    """Aplica M a cada <model> inline (salvo overhead_camera, que ya esta en
+    el origen) y a cada <light>: compone sobre su <pose> de primer nivel o la
+    anade; la <direction> de las luces se gira. Trabaja sobre el texto para
+    conservar comentarios y formato."""
     def fix(m):
         block = m.group(0)
         if re.match(r"<model name=[\"']overhead_camera", block):
@@ -209,10 +230,15 @@ def shift_inline(xml, cx, cy):
         first_link = body.find("<link")
         pm = re.search(r"<pose[^>]*>([^<]*)</pose>", body)
         if pm and (first_link < 0 or pm.start() < first_link):
-            new = f"<pose>{_shift_pose_text(pm.group(1), cx, cy)}</pose>"
+            new = f"<pose>{_pose_from_matrix(M @ wg.pose_matrix(pm.group(1)))}</pose>"
             body = body[:pm.start()] + new + body[pm.end():]
         else:
-            body = f"\n      <pose>{_shift_pose_text('', cx, cy)}</pose>" + body
+            body = f"\n      <pose>{_pose_from_matrix(M)}</pose>" + body
+        dm = re.search(r"<direction>([^<]*)</direction>", body)
+        if open_tag.startswith("<light") and dm:
+            d = M[:3, :3] @ np.array([float(v) for v in dm.group(1).split()])
+            body = body[:dm.start()] + "<direction>" + " ".join(f"{v:.6g}" for v in d) \
+                + "</direction>" + body[dm.end():]
         return open_tag + body
 
     return re.sub(r"<(model|light)\s[^>]*>.*?</\1>", fix, xml, flags=re.S)
@@ -222,10 +248,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("world")
     ap.add_argument("--center", nargs=2, type=float, required=True)
-    ap.add_argument("--size", nargs=2, type=float, default=(30.0, 50.0))
+    ap.add_argument("--size", nargs=2, type=float, default=(30.0, 50.0),
+                    help="ventana en el mundo ORIGINAL (x y)")
+    ap.add_argument("--rotate90", action="store_true")
     args = ap.parse_args()
     cx, cy = args.center
     wx, wy = args.size
+    rot = 90.0 if args.rotate90 else 0.0
+    M = frame_matrix(cx, cy, rot)
+    fx, fy = (wy, wx) if args.rotate90 else (wx, wy)   # tamano final
     world_path = os.path.join(PKG, "worlds", f"{args.world}.sdf")
     crop_name = f"{args.world}_crop"
     out_dir = os.path.join(MODELS, crop_name)
@@ -244,10 +275,34 @@ def main():
 
     shift = np.array([cx, cy, 0.0])
     cache, elems, stats = {}, [], []
-    for model, link, kind, cname, tris, extra in items:
+    for model, link, kind, cname, tris, extra, shape, Tc, geom_xml, mdir in items:
+        # Ficheros que referencia el material (texturas PBR con ruta relativa
+        # al modelo original): se copian con la misma ruta al recortado.
+        for ref in re.findall(r"<(?:albedo|normal|roughness|metalness|emissive|light)_map>([^<]+)<", extra):
+            if ref != "__default__" and "://" not in ref and not os.path.isabs(ref):
+                dst = os.path.join(out_dir, ref)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(os.path.join(mdir, ref), dst)
+        # Primitiva ENTERA dentro de la ventana: se conserva como primitiva con
+        # su pose transformada (exacta y con sus UV: el marcador AR es un
+        # <plane> texturizado y un STL no tiene coordenadas de textura).
+        lo, hi = (tris - shift)[:, :, :2].reshape(-1, 2).min(0), (tris - shift)[:, :, :2].reshape(-1, 2).max(0)
+        inside = lo[0] >= -wx / 2 and hi[0] <= wx / 2 and lo[1] >= -wy / 2 and hi[1] <= wy / 2
+        # Excepcion: un <plane> de COLISION nunca se conserva como plano (en
+        # gz-physics seria infinito otra vez); va a STL con su <size>.
+        if shape != "mesh" and inside and not (kind == "collision" and shape == "plane"):
+            stats.append((model, kind, len(tris), len(tris)))
+            elems.append(f"""
+      <{kind} name="{model}__{cname}">
+        <pose>{_pose_from_matrix(M @ Tc)}</pose>
+        {geom_xml}
+        {extra}
+      </{kind}>""")
+            continue
         key = tris.tobytes().__hash__()
         if key not in cache:
-            cache[key] = clip_tris_xy(tris - shift, -wx / 2, wx / 2, -wy / 2, wy / 2)
+            cut = clip_tris_xy(tris - shift, -wx / 2, wx / 2, -wy / 2, wy / 2)
+            cache[key] = cut @ M[:3, :3].T
         cut = cache[key]
         stats.append((model, kind, len(tris), len(cut)))
         if len(cut) == 0:
@@ -266,7 +321,7 @@ def main():
         f.write(f"""<?xml version="1.0"?>
 <!-- GENERADO por scripts/crop_world.py a partir de worlds/{args.world}.sdf:
      ventana {wx:g} x {wy:g} m centrada en ({cx:g}, {cy:g}) del mundo original,
-     trasladada al origen. No editar a mano. -->
+     trasladada al origen{" y girada +90 grados" if rot else ""}. No editar a mano. -->
 <sdf version="1.8">
   <model name="{crop_name}">
     <static>true</static>
@@ -288,21 +343,30 @@ def main():
     # Mundo: fuera includes, cenital sustituida, dentro recorte + paredes.
     with open(world_path, encoding="utf-8") as f:
         xml = f.read()
-    xml, n_inc = re.subn(r"\s*<include>.*?</include>", "", xml, flags=re.S)
-    xml, n_cam = re.subn(r"\s*<!--[^>]*?CENITAL.*?-->\s*(?=<model name=[\"']overhead_camera)", "\n", xml, flags=re.S)
-    xml, n_cam = re.subn(r"<model name=[\"']overhead_camera[\"']>.*?</model>", OVERHEAD.strip(), xml, flags=re.S)
+    # Las sustituciones se hacen SOLO fuera de comentarios: la cabecera de la
+    # subestacion dice "borra el <include> de station_worker_actor" y un regex
+    # ciego empezaba a borrar desde ahi y se comia el cierre del comentario.
+    parts = re.split(r"(<!--.*?-->)", xml, flags=re.S)
+    n_inc = n_cam = 0
+    for k in range(0, len(parts), 2):
+        parts[k], n = re.subn(r"\s*<include>.*?</include>", "", parts[k], flags=re.S)
+        n_inc += n
+        parts[k], n = re.subn(r"<model name=[\"']overhead_camera[\"']>.*?</model>",
+                              OVERHEAD.strip(), parts[k], flags=re.S)
+        n_cam += n
+        parts[k] = shift_inline(parts[k], M)
+    xml = "".join(parts)
     if n_cam != 1:
         sys.exit(f"se esperaba 1 overhead_camera, hay {n_cam}")
     inc = f"""
-    <!-- Recorte {wx:g} x {wy:g} m del mundo original (scripts/crop_world.py) -->
+    <!-- Recorte {fx:g} x {fy:g} m del mundo original (scripts/crop_world.py) -->
     <include>
       <uri>model://{crop_name}</uri>
       <name>{crop_name}</name>
       <pose>0 0 0 0 0 0</pose>
     </include>
-{walls_sdf(wx, wy)}
+{walls_sdf(fx, fy)}
 """
-    xml = shift_inline(xml, cx, cy)
     head, sep, tail = xml.rpartition("</world>")
     xml = head.rstrip() + "\n" + inc + "\n  " + sep + tail
     with open(world_path, "w", encoding="utf-8") as f:

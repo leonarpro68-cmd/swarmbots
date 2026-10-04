@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<!-- GENERADO por scripts/crop_world.py a partir de worlds/electrical_substation.sdf:
+     ventana 50 x 30 m centrada en (-40.69, 21.77) del mundo original,
+     trasladada al origen y girada +90 grados. No editar a mano. -->
+<sdf version="1.8">
+  <model name="electrical_substation_crop">
+    <static>true</static>
+    <link name="link">
+      <collision name="station_base__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_base__link_0__collision.stl</uri></mesh></geometry>
+        <max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_base__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_base__link_0__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <ambient>0.3 0.3 0.3 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+          <specular>0.01 0.01 0.01 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material><cast_shadows>true</cast_shadows>
+      </visual>
+      <collision name="station_buildings__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_buildings__link_0__collision.stl</uri></mesh></geometry>
+        <laser_retro>0</laser_retro><max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_buildings__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_buildings__link_0__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material><transparency>0</transparency><cast_shadows>1</cast_shadows>
+      </visual>
+      <collision name="station_house__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_house__link_0__collision.stl</uri></mesh></geometry>
+        <laser_retro>0</laser_retro><max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_house__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_house__link_0__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material><transparency>0</transparency><cast_shadows>1</cast_shadows>
+      </visual>
+      <collision name="station_robothouse__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_robothouse__link_1__collision.stl</uri></mesh></geometry>
+        <laser_retro>0</laser_retro><max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_robothouse__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_robothouse__link_1__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material><transparency>0</transparency><cast_shadows>1</cast_shadows>
+      </visual>
+      <collision name="station_fence__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_fence__link_0__collision.stl</uri></mesh></geometry>
+        <laser_retro>0</laser_retro><max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_fence__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_fence__link_0__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+          <shader type="vertex">
+            <normal_map>__default__</normal_map>
+          </shader>
+          <ambient>0.3 0.3 0.3 1</ambient>
+          <diffuse>0.7 0.7 0.7 1</diffuse>
+          <specular>0.01 0.01 0.01 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material><transparency>0</transparency><cast_shadows>1</cast_shadows>
+      </visual>
+      <collision name="station_electrical_stuff_part_1__collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_electrical_stuff_part_1__link_0__collision.stl</uri></mesh></geometry>
+        <laser_retro>0</laser_retro><max_contacts>10</max_contacts>
+      </collision>
+      <visual name="station_electrical_stuff_part_1__visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/station_electrical_stuff_part_1__link_0__visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Grey</name>
+          </script>
+        </material><transparency>0</transparency><cast_shadows>1</cast_shadows>
+      </visual>
+      <collision name="summit_docking_station__base_collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/summit_docking_station__base__base_collision.stl</uri></mesh></geometry>
+        
+      </collision>
+      <visual name="summit_docking_station__base_visual">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/summit_docking_station__base__base_visual__vis.stl</uri></mesh></geometry>
+        <material>
+          <ambient>0 0 0 1</ambient>
+          <diffuse>0 0 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <collision name="summit_docking_station__marker_collision">
+        <geometry><mesh><uri>model://electrical_substation_crop/meshes/summit_docking_station__ar_marker__marker_collision.stl</uri></mesh></geometry>
+        
+      </collision>
+      <visual name="summit_docking_station__marker_visual">
+        <pose>11.8035 21.768 0.352095 1.57079 -0 1.57075</pose>
+        <geometry>
+          <plane><size>0.14 0.14</size></plane>
+        </geometry>
+        <material>
+          <double_sided>true</double_sided>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>material/textures/marker1_border_12cm.png</albedo_map>
+              <roughness>1.0</roughness>
+              <metalness>0.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
