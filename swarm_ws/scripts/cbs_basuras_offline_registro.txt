@@ -1,0 +1,19 @@
+CBS + grafo dinámico (prueba offline)
+Basuras pendientes antes: ['trash_A1_azul', 'trash_A2_azul', 'trash_N1_naranja', 'trash_N2_naranja', 'trash_V1_verde', 'trash_V2_verde']
+Bloqueo liberado: trash_V1_verde
+Basuras pendientes después: ['trash_A1_azul', 'trash_A2_azul', 'trash_N1_naranja', 'trash_N2_naranja', 'trash_V2_verde']
+
+--- ANTES ---
+Raiz CT: costo=12, primer conflicto=None
+SOLUCION CT costo=12, expandidos=1, generados=1
+Robot 0: ((8, 10), (7, 11), (6, 12), (7, 13), (8, 14))
+Robot 1: ((14, 10), (13, 11), (12, 12), (13, 13), (14, 14))
+Robot 2: ((11, 18), (10, 19), (9, 20), (10, 21), (11, 22))
+
+--- DESPUES ---
+Raiz CT: costo=12, primer conflicto=None
+SOLUCION CT costo=12, expandidos=1, generados=1
+Robot 0: ((8, 10), (7, 11), (6, 12), (7, 13), (8, 14))
+Robot 1: ((14, 10), (13, 11), (12, 12), (13, 13), (14, 14))
+Robot 2: ((11, 18), (10, 19), (9, 20), (10, 21), (11, 22))
+Ruta posible al vértice liberado: ((8, 10), (7, 11), (8, 12))
