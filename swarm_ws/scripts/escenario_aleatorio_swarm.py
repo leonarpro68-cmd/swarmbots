@@ -34,29 +34,59 @@ def build(seed: int, attempts: int = 2000):
             continue
         elements = tuple(Element(e.name, e.color, v, e.kind) for e, v in zip(ELEMENTS, chosen[:9]))
         starts = tuple(chosen[9:])
-        # Verificar las dos rondas usando las funciones reales del planificador.
+        # Verificar las dos rondas con el planificador refactorizado.
         try:
-            from grafo_basuras_dinamico import DynamicTrashGraph
-            from cbs_primera_recogida_ros import plan
-            from cbs_entrega_depositos_ros import plan_delivery
-            import grafo_basuras_dinamico as dyn
-            previous = dyn.ELEMENTS
-            try:
-                dyn.ELEMENTS = elements
-                graph = DynamicTrashGraph()
-                current = starts
-                for _ in range(2):
-                    assignments, goals, result = plan(current, graph, max_ct=1500, max_time=90)
-                    for name, _distance in assignments:
-                        graph.collect(name)
-                    _options, delivery = plan_delivery(
-                        graph, tuple(path[-1] for path in result['paths']),
-                        [name for name, _ in assignments], max_ct=1500, max_time=90)
-                    current = tuple(path[-1] for path in delivery['paths'])
-                if graph.pending:
-                    raise ValueError('Quedaron basuras')
-            finally:
-                dyn.ELEMENTS = previous
+            from swarm_behavior.swarm_planning.bridge import PlanningBridge
+            from swarm_behavior.swarm_planning.scenario import Scenario
+            from swarm_behavior.swarm_planning.objects import Element as PlanningElement
+
+            planning_elements = tuple(
+                PlanningElement(e.name, e.color, e.node, e.kind)
+                for e in elements
+            )
+
+            scenario = Scenario(
+                seed=seed,
+                elements=planning_elements,
+                robots=starts,
+                attempt=attempt + 1,
+            )
+
+            bridge = PlanningBridge(scenario)
+            current = starts
+
+            for _ in range(2):
+                pickup = bridge.plan_pickup(
+                    current,
+                    max_ct=1500,
+                    max_time=90,
+                )
+
+                picked_names = tuple(
+                    name for name, _distance in pickup.assigned
+                )
+
+                for name in picked_names:
+                    bridge.confirm_collected(name)
+
+                delivery_starts = tuple(
+                    path[-1] for path in pickup.paths
+                )
+
+                delivery = bridge.plan_delivery(
+                    delivery_starts,
+                    picked_names,
+                    max_ct=1500,
+                    max_time=90,
+                )
+
+                current = tuple(
+                    path[-1] for path in delivery.paths
+                )
+
+            if bridge.pending:
+                raise ValueError('Quedaron basuras')
+
         except (ValueError, RuntimeError, KeyError, IndexError):
             continue
         return {

@@ -19,6 +19,7 @@ def generate_launch_description():
     actions = [
         DeclareLaunchArgument('world', default_value='tugbot_warehouse'),
         DeclareLaunchArgument('headless', default_value='false'),
+        DeclareLaunchArgument('seed', default_value='42'),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(original),
             launch_arguments={
