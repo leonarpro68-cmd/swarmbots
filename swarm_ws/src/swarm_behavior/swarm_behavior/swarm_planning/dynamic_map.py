@@ -21,10 +21,11 @@ TRASH_RADIUS_M = math.hypot(0.12, 0.12) / 2.0
 TRASH_EXCLUSION_M = geom.CLEARANCE_WALL_M + TRASH_RADIUS_M
 
 class DynamicTrashGraph:
-    def __init__(self):
+    def __init__(self, elements=None):
+        self.elements = tuple(ELEMENTS if elements is None else elements)
         self.static_vertices, self.static_edges, _, _ = geom.make_graph()
-        self.trash = {e.name: e for e in ELEMENTS if e.kind == 'trash'}
-        self.deposits = {e.name: e for e in ELEMENTS if e.kind == 'deposit'}
+        self.trash = {e.name: e for e in self.elements if e.kind == 'trash'}
+        self.deposits = {e.name: e for e in self.elements if e.kind == 'deposit'}
         self.pending = set(self.trash)
         self.vertices: set[geom.Node] = set()
         self.edges: list[tuple[geom.Node, geom.Node]] = []
