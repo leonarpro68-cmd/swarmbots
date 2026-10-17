@@ -19,6 +19,8 @@ from .objects import ELEMENTS
 # La caja 0.12 x 0.12 m se aproxima por un círculo circunscrito.
 TRASH_RADIUS_M = math.hypot(0.12, 0.12) / 2.0
 TRASH_EXCLUSION_M = geom.CLEARANCE_WALL_M + TRASH_RADIUS_M
+# Depósitos: obstáculos permanentes, sin margen adicional.
+DEPOSIT_RADIUS_M = 0.50
 
 class DynamicTrashGraph:
     def __init__(self, elements=None):
@@ -36,30 +38,73 @@ class DynamicTrashGraph:
         return tuple(geom.node_position(self.trash[name].node) for name in sorted(self.pending))
 
     def free_position(self, p: geom.Point) -> bool:
-        return geom.free_position(p) and all(
-            math.dist(p, q) >= TRASH_EXCLUSION_M - 1e-9
+        # Paredes y columnas: obstáculos permanentes.
+        if not geom.free_position(p):
+            return False
+
+        # Basuras pendientes: obstáculos eliminables.
+        if any(
+            math.dist(p, q) < TRASH_EXCLUSION_M - 1e-9
             for q in self.active_positions()
-        )
+        ):
+            return False
+
+        # Depósitos: obstáculos permanentes.
+        if any(
+            math.dist(p, geom.node_position(d.node))
+            < DEPOSIT_RADIUS_M - 1e-9
+            for d in self.deposits.values()
+        ):
+            return False
+
+        return True
 
     def segment_clear(self, a: geom.Point, b: geom.Point) -> bool:
-        if not geom.segment_clear(a, b) or not self.free_position(a) or not self.free_position(b):
+        if not geom.segment_clear(a, b):
             return False
-        return all(
-            geom.segment_point_distance(a, b, q) >= TRASH_EXCLUSION_M - 1e-9
-            for q in self.active_positions()
-        )
 
+        if not self.free_position(a) or not self.free_position(b):
+            return False
+
+        # Evitar atravesar basuras pendientes.
+        if any(
+            geom.segment_point_distance(a, b, q)
+            < TRASH_EXCLUSION_M - 1e-9
+            for q in self.active_positions()
+        ):
+            return False
+
+        # Evitar atravesar depósitos permanentemente.
+        if any(
+            geom.segment_point_distance(
+                a, b, geom.node_position(d.node)
+            ) < DEPOSIT_RADIUS_M - 1e-9
+            for d in self.deposits.values()
+        ):
+            return False
+
+        return True
+        
     def rebuild(self):
         self.vertices = {v for v in self.static_vertices if self.free_position(geom.node_position(v))}
         self.edges = [(a, b) for a, b in self.static_edges
                       if a in self.vertices and b in self.vertices
                       and self.segment_clear(geom.node_position(a), geom.node_position(b))]
+
         self.neighbors = {v: [] for v in self.vertices}
+
         for a, b in self.edges:
             self.neighbors[a].append(b)
             self.neighbors[b].append(a)
-        for neighbors in self.neighbors.values():
-            neighbors.sort()
+
+        for v, neighbors in self.neighbors.items():
+            neighbors.sort(
+                key=lambda w: (
+                    abs(w[0] - v[0]) + abs(w[1] - v[1]) == 2,
+                    w[0],
+                    w[1]
+                )
+            )
 
     def collect(self, name: str):
         """Actualiza el grafo lógico; NO elimina automáticamente modelos en Gazebo."""

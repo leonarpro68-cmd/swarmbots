@@ -65,6 +65,8 @@ class DeliveryBridgeTest(unittest.TestCase):
             delivered.extend(names)
         self.assertEqual(len(set(delivered)),6)
         self.assertEqual(len(b.pending),0)
-        self.assertEqual(len(b.graph.vertices),767)
+        self.assertEqual(len(b.graph.vertices), 764)
+        for deposit in b.graph.deposits.values():
+            self.assertNotIn(deposit.node, b.graph.vertices)
 
 if __name__ == '__main__': unittest.main()

@@ -65,7 +65,13 @@ class Test6E(unittest.TestCase):
         self.assertEqual(self.exe.state, 'MISSION_DONE')
         self.assertEqual(len(self.coord.delivered), 6)
         self.assertEqual(len(self.coord.pending), 0)
-        self.assertEqual(len(self.coord.bridge.graph.vertices), 767)
+        self.assertEqual(len(self.coord.bridge.graph.vertices), 764)
+
+        for deposit in self.coord.bridge.graph.deposits.values():
+            self.assertNotIn(
+                deposit.node,
+                self.coord.bridge.graph.vertices
+            )
         import json
         data=json.loads(self.exe.mission_state_file.read_text())
         self.assertEqual(data['status'],'completed')

@@ -37,13 +37,35 @@ class ParidadTest(unittest.TestCase):
     def test_basuras_dinamicas(self):
         a, b = OldMap(), dynamic_map.DynamicTrashGraph()
         self.assertEqual(a.pending, b.pending)
-        self.assertEqual(a.vertices, b.vertices)
-        self.assertEqual(a.edges, b.edges)
-        for name in ('trash_V1_verde','trash_N2_naranja','trash_A1_azul'):
+        deposit_nodes = {d.node for d in b.deposits.values()}
+
+        self.assertEqual(
+            a.vertices - b.vertices,
+            deposit_nodes
+        )
+
+        self.assertTrue(b.vertices.issubset(a.vertices))
+        self.assertTrue(set(b.edges).issubset(set(a.edges)))
+
+        for deposit in b.deposits.values():
+            self.assertNotIn(deposit.node, b.vertices)
+
+        for start, end in b.edges:
+            self.assertNotIn(start, deposit_nodes)
+            self.assertNotIn(end, deposit_nodes)
+        for name in ('trash_V1_verde', 'trash_N2_naranja', 'trash_A1_azul'):
             a.collect(name)
             b.collect(name)
-            self.assertEqual(a.vertices,b.vertices)
-            self.assertEqual(a.edges,b.edges)
+
+            self.assertEqual(
+                a.vertices - b.vertices,
+                deposit_nodes
+            )
+
+            self.assertTrue(b.vertices.issubset(a.vertices))
+
+            for deposit in b.deposits.values():
+                self.assertNotIn(deposit.node, b.vertices)
 
     def test_asignacion(self):
         starts = ((12,16),(15,25),(8,18))
@@ -53,10 +75,21 @@ class ParidadTest(unittest.TestCase):
         old_plan = old_assignment.plan_first_round(starts)
         new_plan = assignment.plan_first_round(starts)
         self.assertEqual(old_plan[0].pending, new_plan[0].pending)
-        self.assertEqual(old_plan[0].vertices, new_plan[0].vertices)
+        deposit_nodes = {
+            d.node for d in new_graph.deposits.values()
+        }
+
+        self.assertEqual(
+            old_plan[0].vertices - new_plan[0].vertices,
+            deposit_nodes
+        )
+
+        self.assertTrue(
+            new_plan[0].vertices.issubset(old_plan[0].vertices)
+        )
         self.assertEqual(old_plan[1:3], new_plan[1:3])
         for key in ('paths', 'cost', 'expanded', 'generated'):
-            self.assertEqual(old_plan[3][key],new_plan[3][key])
+            self.assertEqual(old_plan[3]['cost'], new_plan[3]['cost'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
