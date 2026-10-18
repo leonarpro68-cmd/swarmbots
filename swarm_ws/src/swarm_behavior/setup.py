@@ -31,6 +31,7 @@ setup(
             "ps5_teleop = swarm_behavior.ps5_teleop:main",
             "swarm_mission = swarm_behavior.swarm_planning.ros_full_mission:main",
             "swarm_path_follower = swarm_behavior.path_follower:main",
+            "swarm_path_follower_grasp = swarm_behavior.path_follower_grasp:main",
         ],
     },
 )
