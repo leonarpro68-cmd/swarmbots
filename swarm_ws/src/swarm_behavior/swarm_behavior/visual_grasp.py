@@ -79,6 +79,11 @@ class VisualGrasp(Node):
         self.good_frames = 0
         self.active = False
         self.last_progress_log = None
+        self.diag_last_xy = None
+        self.diag_last_depth = None
+        self.diag_last_progress_time = None
+        self.diag_last_command = (0.0, 0.0)
+        self.diag_stall_seconds = 3.0
 
         qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT,
                          durability=QoSDurabilityPolicy.VOLATILE,
@@ -113,6 +118,10 @@ class VisualGrasp(Node):
         self.started = self.get_clock().now()
         self.good_frames = 0
         self.last_progress_log = None
+        self.diag_last_xy = None
+        self.diag_last_depth = None
+        self.diag_last_progress_time = self.get_clock().now()
+        self.diag_last_command = (0.0, 0.0)
         self.active = True
         self.active_pub.publish(Bool(data=True))
 
@@ -127,7 +136,10 @@ class VisualGrasp(Node):
             return
         now = self.get_clock().now()
         if self.started is None or (now - self.started).nanoseconds / 1e9 > self.timeout:
-            self.get_logger().warn("Alineacion RGB-D agotó el tiempo; no se agarra")
+            self.get_logger().warn(
+                f"RGBD_V2 TIMEOUT: objetivo={self.target}, pose={self.pose}, "
+                f"profundidad_ultima={self.diag_last_depth}, "
+                f"cmd_ultimo={self.diag_last_command}; no se agarra")
             self._finish(-1)
             return
         if self.pose is None or self.depth is None or self.depth_stamp is None or \
@@ -141,6 +153,7 @@ class VisualGrasp(Node):
         lateral = -math.sin(yaw) * dx + math.cos(yaw) * dy
         bearing = math.atan2(-lateral, max(forward, 1e-3))  # pixel +x = derecha
         if forward <= 0.0 or abs(bearing) > 0.48 * self.fov:
+            self.get_logger().error(f"RGBD_V2 FOV: forward={forward:.3f} bearing={bearing:.3f}")
             self._finish(-1)
             return
 
@@ -158,6 +171,9 @@ class VisualGrasp(Node):
             (np.abs(roi - expected_depth) < 0.30)
         rows, cols = np.nonzero(valid)
         if cols.size < 20:
+            self.get_logger().warn(
+                f"RGBD_V2 SIN_DEPTH: pixeles={cols.size} "
+                f"depth_pred={expected_depth:.3f}", throttle_duration_sec=2.0)
             self.good_frames = 0
             self.cmd_pub.publish(Twist())
             return
@@ -166,6 +182,22 @@ class VisualGrasp(Node):
         object_u = float(np.median(cols[near] + u0))
         object_depth = float(np.median(depths[near]))
         pixel_error = object_u - width * 0.5
+        if self.diag_last_xy is None:
+            self.diag_last_xy = (rx, ry)
+            self.diag_last_depth = object_depth
+            self.diag_last_progress_time = now
+        elif (math.hypot(rx - self.diag_last_xy[0], ry - self.diag_last_xy[1]) >= 0.012
+              or (self.diag_last_depth - object_depth) >= 0.012):
+            self.diag_last_xy = (rx, ry)
+            self.diag_last_depth = object_depth
+            self.diag_last_progress_time = now
+        elif (self.diag_last_progress_time is not None and
+              (now - self.diag_last_progress_time).nanoseconds / 1e9 >= self.diag_stall_seconds):
+            self.get_logger().warn(
+                f"RGBD_V2 ESTANCAMIENTO: depth={object_depth:.3f}m "
+                f"error_px={pixel_error:+.1f} cmd_anterior={self.diag_last_command} "
+                f"pose_xy=({rx:.3f},{ry:.3f}); comprobar contacto fisico y cmd_vel",
+                throttle_duration_sec=1.5)
 
         if self.last_progress_log is None or \
                 (now - self.last_progress_log).nanoseconds / 1e9 >= 1.0:
@@ -197,6 +229,7 @@ class VisualGrasp(Node):
         # la caja con un dedo. Nunca retrocede por profundidad ruidosa.
         if abs(pixel_error) < 45.0 and object_depth > self.desired_depth + self.depth_tol:
             cmd.linear.x = self._forward_speed(object_depth)
+        self.diag_last_command = (float(cmd.linear.x), float(cmd.linear.y))
         self.cmd_pub.publish(cmd)
 
     def _forward_speed(self, object_depth):
