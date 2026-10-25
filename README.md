@@ -39,10 +39,10 @@ Todos comparten nombre interno `world_demo` (salvo `empty_arena`), física `max_
 | `colored_warehouse` | 4 cuadrantes con estanterías de color | **4.2, 4.2** | **3.5** |
 | `electrical_substation` | exterior, recortado a 30×50 m | 0, 0 | 8 |
 | `rubber_factory` | nave industrial, recortada a 30×50 m | 0, 0 | 8 |
-| `robotnik_lab` | oficina con 43 puestos | **3.7, −19.0** | **4.5** |
 | `empty_arena` | control sin distractores | 0, 0 | 4 |
+| `pallet_warehouse` | paletizado con pasillos, 30×50 m | 0, 0 | 24 |
 
-> ⚠️ En `colored_warehouse` y `robotnik_lab` el centro y el `area_half` **no son opcionales**: la colocación aleatoria no esquiva la geometría del mundo, y con el centro por defecto los robots nacen dentro de una pared. Los valores de la tabla son huecos libres medidos con `scripts/world_maps.py`.
+> ⚠️ En `colored_warehouse` el centro y el `area_half` **no son opcionales**: con el centro por defecto el hueco libre es mínimo (la cruz de paredes pasa por el origen). La colocación esquiva la geometría usando `maps/<mundo>.pgm` de `scripts/world_maps.py`.
 
 Capturas de la simulación (izquierda: cámara cenital `/overhead/image`; derecha: cámara frontal del robot `/summit0/camera`).
 
@@ -78,14 +78,6 @@ Exterior de Robotnik, recortado a 30×50 m con `crop_world.py`. En el recorte se
 </p>
 
 Nave industrial `emka_factory` de Robotnik, recortada a 30×50 m: nave abierta con una fila de máquinas.
-
-### `robotnik_lab`
-<p>
-<img src="docs/img/worlds/robotnik_lab_overhead.jpg" width="45%">
-<img src="docs/img/worlds/robotnik_lab_front.jpg" width="52%">
-</p>
-
-Oficina/laboratorio de Robotnik, el entorno más abarrotado. Las rayas de la cenital son z-fighting entre el plano de suelo y el suelo de la malla (conocido, se dejó así).
 
 ### `empty_arena`
 <p>
