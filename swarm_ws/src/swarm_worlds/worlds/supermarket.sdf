@@ -1,0 +1,206 @@
+<?xml version="1.0"?>
+<!--
+  supermarket.sdf  -  SUPERMERCADO 30x50 m con 5 personas caminando (generado).
+  NO editar a mano: regenerar con scripts/gen_supermarket.py y despues
+  /usr/bin/python3 scripts/world_maps.py - -worlds supermarket - -write.
+  Spawn: center 0,0 y area_half 24. Las personas son <actor>: sin colision
+  fisica, visibles al LiDAR y a las camaras; su recorrido esta vetado en el mapa.
+  Visual = UNA malla COLLADA (models/supermarket/meshes); colision = primitivas.
+-->
+<sdf version="1.9">
+  <world name="world_demo">
+    <gravity>0 0 -9.8</gravity>
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <max_contacts>10</max_contacts>
+    </physics>
+    <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
+    <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
+    <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system"/>
+    <plugin name="gz::sim::systems::Imu" filename="gz-sim-imu-system"/>
+    <plugin name="gz::sim::systems::Sensors" filename="gz-sim-sensors-system">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <scene>
+      <ambient>0.7 0.7 0.7 1</ambient>
+      <background>0.85 0.86 0.88 1</background>
+      <shadows>0</shadows>
+      <grid>false</grid>
+    </scene>
+    <light type="directional" name="sun">
+      <cast_shadows>0</cast_shadows>
+      <pose>0 0 20 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.2 0.3 -1</direction>
+    </light>
+
+    <model name="supermarket">
+      <static>true</static>
+      <link name="link">
+        <collision name="floor_c"><pose>0.000 0.000 -0.050 0 0 0.0000</pose><geometry><box><size>30.600 50.600 0.100</size></box></geometry></collision>
+        <collision name="wall_n_c"><pose>0.000 25.150 1.750 0 0 0.0000</pose><geometry><box><size>30.600 0.300 3.500</size></box></geometry></collision>
+        <collision name="wall_s_c"><pose>0.000 -25.150 1.750 0 0 0.0000</pose><geometry><box><size>30.600 0.300 3.500</size></box></geometry></collision>
+        <collision name="wall_e_c"><pose>15.150 0.000 1.750 0 0 0.0000</pose><geometry><box><size>0.300 50.000 3.500</size></box></geometry></collision>
+        <collision name="wall_w_c"><pose>-15.150 0.000 1.750 0 0 0.0000</pose><geometry><box><size>0.300 50.000 3.500</size></box></geometry></collision>
+        <collision name="gon0_c"><pose>-10.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.000 16.000 1.800</size></box></geometry></collision>
+        <collision name="gon0_caps_c"><pose>-10.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.100 16.600 1.800</size></box></geometry></collision>
+        <collision name="gon1_c"><pose>-5.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.000 16.000 1.800</size></box></geometry></collision>
+        <collision name="gon1_caps_c"><pose>-5.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.100 16.600 1.800</size></box></geometry></collision>
+        <collision name="gon2_c"><pose>0.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.000 16.000 1.800</size></box></geometry></collision>
+        <collision name="gon2_caps_c"><pose>0.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.100 16.600 1.800</size></box></geometry></collision>
+        <collision name="gon3_c"><pose>5.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.000 16.000 1.800</size></box></geometry></collision>
+        <collision name="gon3_caps_c"><pose>5.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.100 16.600 1.800</size></box></geometry></collision>
+        <collision name="gon4_c"><pose>10.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.000 16.000 1.800</size></box></geometry></collision>
+        <collision name="gon4_caps_c"><pose>10.000 4.000 0.900 0 0 0.0000</pose><geometry><box><size>1.100 16.600 1.800</size></box></geometry></collision>
+        <collision name="fridges_c"><pose>0.000 24.500 1.000 0 0 0.0000</pose><geometry><box><size>26.900 1.000 2.000</size></box></geometry></collision>
+        <collision name="isl0_c"><pose>-8.000 18.500 0.450 0 0 0.0000</pose><geometry><box><size>3.000 1.600 0.900</size></box></geometry></collision>
+        <collision name="isl1_c"><pose>0.000 18.500 0.450 0 0 0.0000</pose><geometry><box><size>3.000 1.600 0.900</size></box></geometry></collision>
+        <collision name="isl2_c"><pose>8.000 18.500 0.450 0 0 0.0000</pose><geometry><box><size>3.000 1.600 0.900</size></box></geometry></collision>
+        <collision name="chk0_c"><pose>-9.000 -13.000 0.450 0 0 0.0000</pose><geometry><box><size>0.800 3.000 0.900</size></box></geometry></collision>
+        <collision name="chk1_c"><pose>-4.500 -13.000 0.450 0 0 0.0000</pose><geometry><box><size>0.800 3.000 0.900</size></box></geometry></collision>
+        <collision name="chk2_c"><pose>4.500 -13.000 0.450 0 0 0.0000</pose><geometry><box><size>0.800 3.000 0.900</size></box></geometry></collision>
+        <collision name="chk3_c"><pose>9.000 -13.000 0.450 0 0 0.0000</pose><geometry><box><size>0.800 3.000 0.900</size></box></geometry></collision>
+        <collision name="carts_c"><pose>11.000 -21.250 0.500 0 0 0.0000</pose><geometry><box><size>0.600 2.400 1.000</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><mesh><uri>model://supermarket/meshes/supermarket.dae</uri></mesh></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>0 0 38 0 1.5707963 0</pose>
+      <link name="link">
+        <sensor name="overhead" type="camera">
+          <topic>/overhead/image</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.3</horizontal_fov>
+            <image><width>900</width><height>900</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>80.0</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>false</visualize>
+        </sensor>
+      </link>
+    </model>
+
+    <actor name="person0">
+      <skin><filename>model://person_red/meshes/walk.dae</filename><scale>1.0</scale></skin>
+      <animation name="walking">
+        <filename>model://person_red/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.00</time><pose>-2.50 -8.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>0.60</time><pose>-2.50 -8.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>26.16</time><pose>-2.50 15.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>26.17</time><pose>-2.50 15.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>26.77</time><pose>-2.50 15.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>52.32</time><pose>-2.50 -8.00 1.0 0 0 -1.571</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+    <actor name="person1">
+      <skin><filename>model://person_white/meshes/walk.dae</filename><scale>1.0</scale></skin>
+      <animation name="walking">
+        <filename>model://person_white/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.00</time><pose>-7.50 -2.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>0.60</time><pose>-7.50 -2.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>13.93</time><pose>-7.50 10.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>13.94</time><pose>-7.50 10.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>14.54</time><pose>-7.50 10.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>27.88</time><pose>-7.50 -2.00 1.0 0 0 -1.571</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+    <actor name="person2">
+      <skin><filename>model://person_red/meshes/walk.dae</filename><scale>1.0</scale></skin>
+      <animation name="walking">
+        <filename>model://person_red/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.00</time><pose>-12.00 -8.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>0.60</time><pose>-12.00 -8.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>27.27</time><pose>12.00 -8.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>27.28</time><pose>12.00 -8.50 1.0 0 0 3.142</pose></waypoint>
+          <waypoint><time>27.88</time><pose>12.00 -8.50 1.0 0 0 3.142</pose></waypoint>
+          <waypoint><time>54.54</time><pose>-12.00 -8.50 1.0 0 0 3.142</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+    <actor name="person3">
+      <skin><filename>model://person_white/meshes/walk.dae</filename><scale>1.0</scale></skin>
+      <animation name="walking">
+        <filename>model://person_white/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.00</time><pose>-11.50 15.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>0.60</time><pose>-11.50 15.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>26.16</time><pose>11.50 15.50 1.0 0 0 0.000</pose></waypoint>
+          <waypoint><time>26.17</time><pose>11.50 15.50 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>26.77</time><pose>11.50 15.50 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>33.43</time><pose>11.50 21.50 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>33.44</time><pose>11.50 21.50 1.0 0 0 3.142</pose></waypoint>
+          <waypoint><time>34.04</time><pose>11.50 21.50 1.0 0 0 3.142</pose></waypoint>
+          <waypoint><time>59.60</time><pose>-11.50 21.50 1.0 0 0 3.142</pose></waypoint>
+          <waypoint><time>59.61</time><pose>-11.50 21.50 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>60.21</time><pose>-11.50 21.50 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>66.87</time><pose>-11.50 15.50 1.0 0 0 -1.571</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+    <actor name="person4">
+      <skin><filename>model://person_red/meshes/walk.dae</filename><scale>1.0</scale></skin>
+      <animation name="walking">
+        <filename>model://person_red/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint><time>0.00</time><pose>7.50 10.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>0.60</time><pose>7.50 10.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>13.93</time><pose>7.50 -2.00 1.0 0 0 -1.571</pose></waypoint>
+          <waypoint><time>13.94</time><pose>7.50 -2.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>14.54</time><pose>7.50 -2.00 1.0 0 0 1.571</pose></waypoint>
+          <waypoint><time>27.88</time><pose>7.50 10.00 1.0 0 0 1.571</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+  </world>
+</sdf>

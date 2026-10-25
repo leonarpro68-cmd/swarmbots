@@ -42,6 +42,7 @@ Todos comparten nombre interno `world_demo` (salvo `empty_arena`), física `max_
 | `empty_arena` | control sin distractores | 0, 0 | 4 |
 | `pallet_warehouse` | paletizado con pasillos, 30×50 m | 0, 0 | 24 |
 | `parking_lot` | aparcamiento exterior, 30×50 m | 0, 0 | 24 |
+| `supermarket` | supermercado con 5 personas caminando, 30×50 m | 0, 0 | 24 |
 
 > ⚠️ En `colored_warehouse` el centro y el `area_half` **no son opcionales**: con el centro por defecto el hueco libre es mínimo (la cruz de paredes pasa por el origen). La colocación esquiva la geometría usando `maps/<mundo>.pgm` de `scripts/world_maps.py`.
 

@@ -136,6 +136,7 @@ Objetivo: **variación de entorno** para que la política ACT aprenda la tarea y
 | `empty_arena` | control sin distractores | 0, 0 | 4 | — | 25 m |
 | `pallet_warehouse` | **paletizado con PASILLOS** 30×50, generado | 0, 0 (default) | **24** (el mapa recorta) | 3 robots, 6 piezas | 38 m |
 | `parking_lot` | **aparcamiento exterior** 30×50, generado | 0, 0 (default) | **24** | 3 robots, 6 piezas | 38 m |
+| `supermarket` | **supermercado con 5 personas caminando**, generado | 0, 0 (default) | **24** | 3 robots, 6 piezas | 38 m |
 
 ```bash
 ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
@@ -158,6 +159,14 @@ ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale
 ### Mundos generados: `scripts/world_builder.py` (2026-10-24)
 
 Los `gen_*.py` usan `Builder`: `box`/`cyl` acumulan el visual en **una malla COLLADA con un material por color** y la colisión en primitivas; `walls()` pone el perímetro; `write()` escribe `worlds/<n>.sdf` (world_demo, plugins Harmonic, cenital 38 m) + `models/<n>/`. Tras generar: `world_maps.py --worlds <n> --write` y `colcon build`. **Sin `ground_plane`** (suelo = caja con colisión) para que fuera del recinto el mapa dé ocupado.
+
+### `supermarket`: supermercado con gente caminando (2026-10-24)
+
+`scripts/gen_supermarket.py`. Suelo en damero crema/gris de 2 m, 5 góndolas dobles (pasillos de 4 m) llenas de producto de colores con cabeceras rojas, neveras en la pared norte, islas de fruta, 4 cajas de cobro, carros. **5 personas (`<actor>`)** en bucle a 0.9 m/s: pasillo central, dos pasillos de góndolas, delante de cajas y alrededor de la fruta.
+- Animación **vendorizada y RECOLOREADA** en `models/person_{red,white}/meshes/walk.dae` (Fuel `mingfei/actor` v1): venía con **jersey verde y vaqueros azules** = colores de basura/depósitos → jersey rojo o blanco, pantalón gris oscuro. La piel sigue siendo anaranjada (área pequeña; vigilar si el ACT se confunde).
+- **Los actores NO tienen colisión física** en Harmonic: los robots los atravesarían. **El LiDAR SÍ los ve** (medido: con robots quietos, 100–170 rayos por robot varían >0.5 m en 30 s) y las cámaras también. `world_maps.py` marca su recorrido como ocupado (±1 m) → nunca se coloca basura ni robots encima.
+- ⚠️ **Gazebo NO publica la pose de los actores** en `/world/<w>/pose/info` ni en `dynamic_pose/info` (medido). Para los **repulsores virtuales** de personas (pendiente) hay que calcular su posición desde la `<trajectory>` del SDF + el tiempo de sim (bucle determinista).
+- Validado en vivo: RTF 0.87 con 3 robots, personas moviéndose (diferencia de cenitales), cenital y frontales revisadas.
 
 ### `parking_lot`: aparcamiento exterior (2026-10-24)
 
@@ -464,7 +473,7 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 ### Próximos pasos
 
 #### ⭐⭐ PLANIFICADOR GLOBAL para mundos con pasillos (2026-10-24)
-En `pallet_warehouse` los robots se clavan contra las estanterías cuando la meta está en otro pasillo (campos potenciales = solo reactivo). Plan: A\* (o Dijkstra) sobre `maps/<mundo>.pgm` inflado con el radio del robot, en `central_planner`, publicando el siguiente waypoint en `/summitN/goal_pose` en vez de la meta final. Siguen pendientes del pedido de variedad del usuario: **mundo con personas caminando** (actores + repulsores virtuales) y **recolorear** subestación/fábrica/lab/arena (contraste robot/basura).
+En `pallet_warehouse` los robots se clavan contra las estanterías cuando la meta está en otro pasillo (campos potenciales = solo reactivo). Plan: A\* (o Dijkstra) sobre `maps/<mundo>.pgm` inflado con el radio del robot, en `central_planner`, publicando el siguiente waypoint en `/summitN/goal_pose` en vez de la meta final. Del pedido de variedad del usuario quedan: **repulsores virtuales para las personas** del `supermarket` (pose desde la trayectoria del SDF + `/clock`, publicadas como `avoid_points`) y actualizar el mosaico del README con los mundos nuevos.
 
 #### ⭐⭐ EL CICLO DE DEJADO SE TRABA (reportado en vivo por el usuario, 2026-09-05) — SIN ARREGLAR
 El usuario lo vio y lo aparcó a propósito para priorizar tener los 5 mundos: *"no termina el ciclo de dejado se traba"*. Es **distinto** (o al menos no idéntico) al conflicto de dos robots sobre el mismo depósito, que ya tiene su arreglo (ver "Turno de descarga"). Lo que se sabe:
