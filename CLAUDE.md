@@ -135,6 +135,7 @@ Objetivo: **variación de entorno** para que la política ACT aprenda la tarea y
 | `rubber_factory` | nave industrial, **recortada a 30×50** | 0, 0 (default) | 8 | 3 robots, 6 piezas | 38 m |
 | `empty_arena` | control sin distractores | 0, 0 | 4 | — | 25 m |
 | `pallet_warehouse` | **paletizado con PASILLOS** 30×50, generado | 0, 0 (default) | **24** (el mapa recorta) | 3 robots, 6 piezas | 38 m |
+| `parking_lot` | **aparcamiento exterior** 30×50, generado | 0, 0 (default) | **24** | 3 robots, 6 piezas | 38 m |
 
 ```bash
 ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
@@ -153,6 +154,14 @@ ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale
 ### Colocación que evita la geometría del mundo (2026-10-24)
 
 `sim_summit.launch.py` carga **`maps/<mundo>.{pgm,yaml}`** (de `world_maps.py`) con `_FreeSpace` y `_random_poses` rechaza toda pose a menos de `_CLEAR_ROBOT` (1.0 m), `_CLEAR_TRASH` (0.9) o `_CLEAR_DEPOSIT` (0.9) de un obstáculo; fuera del mapa = ocupado. Imprime `colocacion: evitando la geometria (...)`. **Mundo sin mapa → caja libre como antes.** Cambia el escenario de una semilla solo donde antes caía algo dentro de un obstáculo (en `tugbot_warehouse` rechaza el 8 % de la caja: las columnas solo-visuales). **Al tocar un mundo, regenerar su mapa** (`world_maps.py --worlds <m> --write`) y `colcon build` (un fichero nuevo en `maps/` necesita build para el symlink).
+
+### Mundos generados: `scripts/world_builder.py` (2026-10-24)
+
+Los `gen_*.py` usan `Builder`: `box`/`cyl` acumulan el visual en **una malla COLLADA con un material por color** y la colisión en primitivas; `walls()` pone el perímetro; `write()` escribe `worlds/<n>.sdf` (world_demo, plugins Harmonic, cenital 38 m) + `models/<n>/`. Tras generar: `world_maps.py --worlds <n> --write` y `colcon build`. **Sin `ground_plane`** (suelo = caja con colisión) para que fuera del recinto el mapa dé ocupado.
+
+### `parking_lot`: aparcamiento exterior (2026-10-24)
+
+`scripts/gen_parking_lot.py`. Asfalto casi negro con plazas en batería (líneas blancas), 46 coches (rojo/blanco/negro/morado/amarillo/plata) al 65 % de ocupación, 2 calles de 4.5 m + calle transversal de 5 m con cebra amarilla, isleta central con farolas (**cortada en el cruce**: entera partía el mundo en dos, lo vio el mapa), muro bajo de hormigón de 1 m, caseta de cobro. Validado en vivo: RTF 0.87 con 3 robots, colocación en calles/plazas libres, cenital y frontales revisadas.
 
 ### `pallet_warehouse`: almacén de paletizado con pasillos (2026-10-24)
 

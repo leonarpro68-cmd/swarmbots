@@ -42,7 +42,7 @@ PKG = os.path.join(REPO, "src", "swarm_worlds")
 MODELS = [os.path.join(PKG, "models")]
 
 WORLDS = ["tugbot_warehouse", "colored_warehouse", "electrical_substation",
-          "rubber_factory", "empty_arena", "pallet_warehouse"]
+          "rubber_factory", "empty_arena", "pallet_warehouse", "parking_lot"]
 
 RES = 0.05          # m/celda
 FLOOR_TOL = 0.04    # |z| del suelo admitido; por encima = obstaculo
