@@ -146,6 +146,10 @@ ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale
 
 **⚠️ `empty_arena` es la excepción del nombre**: su `<world>` se llama `empty_arena`, no `world_demo` → al lanzar el ciclo ahí hay que pasarle `world:=empty_arena` a `swarm_collect.launch.py`. Si no, el planner no ve ninguna basura y parece que "el mundo no funciona".
 
+### Paleta propia por mundo (2026-10-24)
+
+`rubber_factory` y `electrical_substation` eran gris sobre gris y se confundían. **`scripts/paint_worlds.py`** (idempotente; **correrlo DESPUÉS de `crop_world.py`**, que regenera los `*_crop`) les da identidad: **fábrica** = suelo de epoxi crema, cada línea de máquinas de un color (rojo/amarillo/morado/blanco), pared interior de ladrillo, perímetro pizarra (la malla visual única se parte en un STL por componente conexa; la original se conserva como fuente). **Subestación** = patio de asfalto oscuro, casa amarilla, edificios de ladrillo, equipos galvanizados. RTF 0.83–0.85 con 3 robots, revisado a ojo. **Regla para cualquier mundo nuevo: nada de verde/azul/naranja en el decorado** (colores de basura/depósitos) y que el suelo contraste en luminancia con la basura.
+
 ### Colocación que evita la geometría del mundo (2026-10-24)
 
 `sim_summit.launch.py` carga **`maps/<mundo>.{pgm,yaml}`** (de `world_maps.py`) con `_FreeSpace` y `_random_poses` rechaza toda pose a menos de `_CLEAR_ROBOT` (1.0 m), `_CLEAR_TRASH` (0.9) o `_CLEAR_DEPOSIT` (0.9) de un obstáculo; fuera del mapa = ocupado. Imprime `colocacion: evitando la geometria (...)`. **Mundo sin mapa → caja libre como antes.** Cambia el escenario de una semilla solo donde antes caía algo dentro de un obstáculo (en `tugbot_warehouse` rechaza el 8 % de la caja: las columnas solo-visuales). **Al tocar un mundo, regenerar su mapa** (`world_maps.py --worlds <m> --write`) y `colcon build` (un fichero nuevo en `maps/` necesita build para el symlink).
