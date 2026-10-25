@@ -126,10 +126,64 @@ _TRASH_TYPES = [
 _SPAWN_BOX = (-8.0, 8.0, -8.0, 8.0)
 
 
-def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
+class _FreeSpace:
+    """Mapa occupancy del mundo (maps/<mundo>.{pgm,yaml}, de scripts/world_maps.py)
+    para no colocar nada encima o pegado a la geometria: _random_poses solo
+    evita robots/basura/depositos entre si. ok(x, y, clear) = todas las celdas a
+    < clear m estan libres (fuera del mapa = ocupado). Sin mapa => None y todo
+    vale, como antes."""
+
+    def __init__(self, pgm, meta):
+        import numpy as np
+        with open(pgm, "rb") as f:
+            assert f.readline().strip() == b"P5"
+            line = f.readline()
+            while line.startswith(b"#"):
+                line = f.readline()
+            w, h = map(int, line.split())
+            maxval = int(f.readline())
+            img = np.frombuffer(f.read(w * h), np.uint8).reshape(h, w)
+        # trinary: libre = blanco (254); ocupado (0) y desconocido (205) bloquean
+        self.free = img >= maxval - 5
+        self.res = float(meta["resolution"])
+        self.ox, self.oy = float(meta["origin"][0]), float(meta["origin"][1])
+        self.h, self.w = h, w
+
+    @classmethod
+    def load(cls, maps_dir, world):
+        import yaml
+        meta_path = os.path.join(maps_dir, f"{world}.yaml")
+        if not os.path.exists(meta_path):
+            return None
+        with open(meta_path) as f:
+            meta = yaml.safe_load(f)
+        return cls(os.path.join(maps_dir, meta["image"]), meta)
+
+    def ok(self, x, y, clear):
+        r = int(math.ceil(clear / self.res))
+        col = int((x - self.ox) / self.res)
+        row = self.h - 1 - int((y - self.oy) / self.res)   # fila 0 = arriba (y max)
+        if not (r <= col < self.w - r and r <= row < self.h - r):
+            return False
+        win = self.free[row - r:row + r + 1, col - r:col + r + 1]
+        yy, xx = __import__("numpy").ogrid[-r:r + 1, -r:r + 1]
+        return bool(win[xx * xx + yy * yy <= r * r].all())
+
+
+# Holgura minima a la geometria del mundo (solo si el mundo tiene mapa). Robot:
+# semidiagonal ~0.45 m + pinza + margen para girar. Basura: el robot tiene que
+# poder ponerse delante (centro a ~0.78 m), basta con que el pasillo lo permita.
+_CLEAR_ROBOT = 1.0
+_CLEAR_TRASH = 0.9
+_CLEAR_DEPOSIT = 0.9
+
+
+def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8,
+                  free=None, clear=0.0):
     """n poses (x,y) por rejection sampling: separadas entre si (min_sep) y de
     las posiciones a evitar (avoid_clear). rng es un random.Random ya sembrado
-    => reproducible. Devuelve [(x, y)] (puede ser <n si la zona se satura)."""
+    => reproducible. Devuelve [(x, y)] (puede ser <n si la zona se satura).
+    Con free (_FreeSpace) ademas a >= clear m de la geometria del mundo."""
     xmin, xmax, ymin, ymax = box
     placed = []
     attempts = 0
@@ -140,6 +194,8 @@ def _random_poses(rng, n, avoid, box=_SPAWN_BOX, min_sep=0.5, avoid_clear=0.8):
         if any(math.hypot(x - ax, y - ay) < avoid_clear for ax, ay in avoid):
             continue
         if any(math.hypot(x - px, y - py) < min_sep for px, py in placed):
+            continue
+        if free is not None and not free.ok(x, y, clear):
             continue
         placed.append((x, y))
     return placed
@@ -155,34 +211,36 @@ def _n_colors(n_deposits):
     return max(1, min(len(_TRASH_TYPES), n_deposits))
 
 
-def _trash_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None):
+def _trash_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None, free=None):
     """[(name, x, y, type_idx)] de basuras. Mismo seed => mismas poses.
     El nombre lleva el color al final: trash_3_azul."""
     nc = len(_TRASH_TYPES) if n_colors is None else n_colors
-    pts = _random_poses(random.Random(seed + 101), n, avoid, box=box)
+    pts = _random_poses(random.Random(seed + 101), n, avoid, box=box,
+                        free=free, clear=_CLEAR_TRASH)
     return [(f"trash_{i}_{_TRASH_TYPES[i % nc][3]}", x, y, i % nc)
             for i, (x, y) in enumerate(pts)]
 
 
-def _deposit_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None):
+def _deposit_poses(n, seed, avoid, box=_SPAWN_BOX, n_colors=None, free=None):
     """[(name, x, y, type_idx)] de depositos. Stream de rng separado
     (seed+10007) pero reproducible con el mismo seed. Mas separados entre si
     (min_sep 2 m) y evitando robots + basuras (avoid). El nombre lleva el color
     al final (deposit_1_azul) y el disco se pinta de ese color."""
     nc = len(_TRASH_TYPES) if n_colors is None else n_colors
     pts = _random_poses(random.Random(seed + 10007), n, avoid, box=box,
-                        min_sep=2.0, avoid_clear=1.0)
+                        min_sep=2.0, avoid_clear=1.0, free=free, clear=_CLEAR_DEPOSIT)
     return [(f"deposit_{i}_{_TRASH_TYPES[i % nc][3]}", x, y, i % nc)
             for i, (x, y) in enumerate(pts)]
 
 
-def _robot_specs_random(n, seed, box, avoid=(), min_sep=2.0):
+def _robot_specs_random(n, seed, box, avoid=(), min_sep=2.0, free=None):
     """[(ns, x, y, yaw)] de robots en poses y yaw aleatorios (sembrados).
     Stream de rng propio (seed+20011). Separados entre si (min_sep) y de
     'avoid'. yaw uniforme en [-pi, pi]."""
     rng = random.Random(seed + 20011)
     pts = _random_poses(rng, n, list(avoid), box=box,
-                        min_sep=min_sep, avoid_clear=min_sep)
+                        min_sep=min_sep, avoid_clear=min_sep, free=free,
+                        clear=_CLEAR_ROBOT)
     return [(f"summit{i}", x, y, rng.uniform(-math.pi, math.pi))
             for i, (x, y) in enumerate(pts)]
 
@@ -519,9 +577,15 @@ def _launch_setup(context, *args, **kwargs):
     # margen a las paredes (±15 x, ±25 y) lo da area_half < 15.
     box = (cx - area_half, cx + area_half, cy - area_half, cy + area_half)
 
+    # Si el mundo tiene mapa occupancy (maps/<mundo>.pgm), nada se coloca sobre
+    # o pegado a su geometria: imprescindible en mundos con pasillos/estanterias.
+    free = _FreeSpace.load(os.path.join(worlds_share, "maps"), world)
+    print(f"[sim_summit] colocacion: " + (f"evitando la geometria (maps/{world}.pgm)"
+          if free else "sin mapa del mundo, caja libre"))
+
     # Robots: posiciones Y yaw aleatorios (sembrados), separados entre sí. Se
     # calculan ANTES de basura/depósitos para que éstos los eviten.
-    robot_specs = _robot_specs_random(n_robots, seed, box, min_sep=2.0)
+    robot_specs = _robot_specs_random(n_robots, seed, box, min_sep=2.0, free=free)
     if len(robot_specs) < n_robots:
         print(f"[sim_summit] AVISO: solo se colocaron {len(robot_specs)}/{n_robots} "
               f"robots (zona saturada). Sube area_half o baja n_robots.")
@@ -533,7 +597,7 @@ def _launch_setup(context, *args, **kwargs):
     # (si no, el joint no se forma y no se puede agarrar).
     avoid = [(x, y) for (_, x, y, _) in robot_specs]
     n_colors = _n_colors(n_deposits)
-    trash = _trash_poses(n_trash, seed, avoid, box, n_colors) if n_trash > 0 else []
+    trash = _trash_poses(n_trash, seed, avoid, box, n_colors, free) if n_trash > 0 else []
     trash_names = [t[0] for t in trash]
     trash_list = " ".join(trash_names)
     if len(trash) < n_trash:
@@ -544,7 +608,7 @@ def _launch_setup(context, *args, **kwargs):
     # misma semilla y zona, evitando robots Y basuras (así el robot tiene que
     # transportar la basura hasta ellos). Stream de rng propio (reproducible).
     avoid_dep = avoid + [(x, y) for (_, x, y, _) in trash]
-    deposits = _deposit_poses(n_deposits, seed, avoid_dep, box, n_colors) \
+    deposits = _deposit_poses(n_deposits, seed, avoid_dep, box, n_colors, free) \
         if n_deposits > 0 else []
     if len(deposits) < n_deposits:
         print(f"[sim_summit] AVISO: solo se colocaron {len(deposits)}/{n_deposits} "

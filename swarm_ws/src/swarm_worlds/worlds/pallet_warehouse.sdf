@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!--
+  pallet_warehouse.sdf  -  almacen de paletizado con PASILLOS (generado).
+  NO editar a mano: regenerar con scripts/gen_pallet_warehouse.py y despues
+  /usr/bin/python3 scripts/world_maps.py - -worlds pallet_warehouse - -write
+  (el mapa maps/pallet_warehouse.pgm es el que usa el launch para no colocar
+  robots/basura/depositos dentro de las estanterias).
+  Nave 30x50 m, sin techo (cenital a 38 m como tugbot_warehouse). Spawn:
+  center 0,0 y area_half 24 (el mapa recorta todo lo que no es pasillo).
+  Visual = UNA malla COLLADA (models/pallet_warehouse/meshes, un material por color);
+  colision = primitivas.
+-->
+<sdf version="1.9">
+  <world name="world_demo">
+    <gravity>0 0 -9.8</gravity>
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <max_contacts>10</max_contacts>
+    </physics>
+    <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
+    <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
+    <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system"/>
+    <plugin name="gz::sim::systems::Imu" filename="gz-sim-imu-system"/>
+    <plugin name="gz::sim::systems::Sensors" filename="gz-sim-sensors-system">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.62 0.72 0.80 1</background>
+      <shadows>0</shadows>
+      <grid>false</grid>
+    </scene>
+    <light type="directional" name="sun">
+      <cast_shadows>0</cast_shadows>
+      <pose>0 0 20 0 0 0</pose>
+      <diffuse>0.95 0.95 0.92 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.3 0.2 -1</direction>
+    </light>
+
+    <model name="pallet_warehouse">
+      <static>true</static>
+      <link name="link">
+        <collision name="floor_c"><pose>0.000 0.000 -0.050 0 0 0.0000</pose><geometry><box><size>30.600 50.600 0.100</size></box></geometry></collision>
+        <collision name="wall_n_c"><pose>0.000 25.150 2.000 0 0 0.0000</pose><geometry><box><size>30.600 0.300 4.000</size></box></geometry></collision>
+        <collision name="wall_s_c"><pose>0.000 -25.150 2.000 0 0 0.0000</pose><geometry><box><size>30.600 0.300 4.000</size></box></geometry></collision>
+        <collision name="wall_e_c"><pose>15.150 0.000 2.000 0 0 0.0000</pose><geometry><box><size>0.300 50.000 4.000</size></box></geometry></collision>
+        <collision name="wall_w_c"><pose>-15.150 0.000 2.000 0 0 0.0000</pose><geometry><box><size>0.300 50.000 4.000</size></box></geometry></collision>
+        <collision name="rk_n00_c"><pose>-7.000 9.600 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s00_c"><pose>-7.000 -9.600 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_n01_c"><pose>-7.000 15.200 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s01_c"><pose>-7.000 -15.200 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_n02_c"><pose>-7.000 20.800 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s02_c"><pose>-7.000 -20.800 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_n10_c"><pose>7.000 9.600 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s10_c"><pose>7.000 -9.600 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_n11_c"><pose>7.000 15.200 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s11_c"><pose>7.000 -15.200 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_n12_c"><pose>7.000 20.800 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="rk_s12_c"><pose>7.000 -20.800 2.200 0 0 0</pose><geometry><box><size>10.000 2.200 4.400</size></box></geometry></collision>
+        <collision name="conv_body_c"><pose>-8.500 4.200 0.380 0 0 0.0000</pose><geometry><box><size>8.000 0.900 0.760</size></box></geometry></collision>
+        <collision name="pal_robot_base_c"><pose>-3.900 4.200 0.450 0 0 0</pose><geometry><cylinder><radius>0.450</radius><length>0.900</length></cylinder></geometry></collision>
+        <collision name="pal_out_c"><pose>-3.900 2.600 0.650 0 0 0.0000</pose><geometry><box><size>1.000 1.050 1.300</size></box></geometry></collision>
+        <collision name="wrap_c"><pose>8.700 -3.500 0.8 0 0 0</pose><geometry><box><size>2.8 2.3 1.6</size></box></geometry></collision>
+        <collision name="stack0_c"><pose>-13.600 -4.500 0.525 0 0 0</pose><geometry><box><size>1.05 1.0 1.050</size></box></geometry></collision>
+        <collision name="stack1_c"><pose>-13.600 -2.800 0.525 0 0 0</pose><geometry><box><size>1.05 1.0 1.050</size></box></geometry></collision>
+        <collision name="stack2_c"><pose>13.600 2.500 0.450 0 0 0</pose><geometry><box><size>1.05 1.0 0.900</size></box></geometry></collision>
+        <collision name="stack3_c"><pose>13.600 4.200 0.525 0 0 0</pose><geometry><box><size>1.05 1.0 1.050</size></box></geometry></collision>
+        <collision name="pillar0_c"><pose>-6.500 6.500 2.000 0 0 0.0000</pose><geometry><box><size>0.400 0.400 4.000</size></box></geometry></collision>
+        <collision name="pillar1_c"><pose>6.500 6.500 2.000 0 0 0.0000</pose><geometry><box><size>0.400 0.400 4.000</size></box></geometry></collision>
+        <collision name="pillar2_c"><pose>-6.500 -6.500 2.000 0 0 0.0000</pose><geometry><box><size>0.400 0.400 4.000</size></box></geometry></collision>
+        <collision name="pillar3_c"><pose>6.500 -6.500 2.000 0 0 0.0000</pose><geometry><box><size>0.400 0.400 4.000</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><mesh><uri>model://pallet_warehouse/meshes/pallet_warehouse.dae</uri></mesh></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>0 0 38 0 1.5707963 0</pose>
+      <link name="link">
+        <sensor name="overhead" type="camera">
+          <topic>/overhead/image</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.3</horizontal_fov>
+            <image><width>900</width><height>900</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>80.0</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>false</visualize>
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>

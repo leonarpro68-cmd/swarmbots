@@ -135,6 +135,7 @@ Objetivo: **variación de entorno** para que la política ACT aprenda la tarea y
 | `rubber_factory` | nave industrial, **recortada a 30×50** | 0, 0 (default) | 8 | 3 robots, 6 piezas | 38 m |
 | `robotnik_lab` | oficina con 43 puestos | **3.7, −19.0** | **4.5** | 2 robots, 4 piezas | 15 m |
 | `empty_arena` | control sin distractores | 0, 0 | 4 | — | 25 m |
+| `pallet_warehouse` | **paletizado con PASILLOS** 30×50, generado | 0, 0 (default) | **24** (el mapa recorta) | 3 robots, 6 piezas | 38 m |
 
 ```bash
 ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
@@ -145,6 +146,18 @@ ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale
 **⚠️ El `center`/`area_half` NO es opcional en `colored_warehouse` y `robotnik_lab`.** `_random_poses` esquiva robots, basura y depósitos **entre sí**, pero NO la geometría del mundo: con el centro (0,0) por defecto se spawnea dentro de una pared. Los valores de la tabla son huecos libres **medidos**, no estimados.
 
 **⚠️ `empty_arena` es la excepción del nombre**: su `<world>` se llama `empty_arena`, no `world_demo` → al lanzar el ciclo ahí hay que pasarle `world:=empty_arena` a `swarm_collect.launch.py`. Si no, el planner no ve ninguna basura y parece que "el mundo no funciona".
+
+### Colocación que evita la geometría del mundo (2026-10-24)
+
+`sim_summit.launch.py` carga **`maps/<mundo>.{pgm,yaml}`** (de `world_maps.py`) con `_FreeSpace` y `_random_poses` rechaza toda pose a menos de `_CLEAR_ROBOT` (1.0 m), `_CLEAR_TRASH` (0.9) o `_CLEAR_DEPOSIT` (0.9) de un obstáculo; fuera del mapa = ocupado. Imprime `colocacion: evitando la geometria (...)`. **Mundo sin mapa → caja libre como antes.** Cambia el escenario de una semilla solo donde antes caía algo dentro de un obstáculo (en `tugbot_warehouse` rechaza el 8 % de la caja: las columnas solo-visuales). **Al tocar un mundo, regenerar su mapa** (`world_maps.py --worlds <m> --write`) y `colcon build` (un fichero nuevo en `maps/` necesita build para el symlink).
+
+### `pallet_warehouse`: almacén de paletizado con pasillos (2026-10-24)
+
+**Generado** por `scripts/gen_pallet_warehouse.py` (no editar el `.sdf` a mano; regenerar + mapa). 4 bloques de estanterías de palets (filas dobles, pasillos de 3.4 m entre filas, pasillo central de 4 m, laterales de 3 m) al norte y al sur; zona de paletizado central (transportador, robot paletizador, enfardadora, pilas de palets, 4 columnas). Sin `ground_plane`: el suelo es una caja 30×50 → fuera de la nave el mapa da ocupado.
+- **Paleta para el ACT (contraste)**: suelo gris oscuro, montantes rojo oscuro, cargas blancas/negras/**moradas**, amarillo solo en máquinas. **Ningún verde/azul/naranja** (son los colores de basura y depósitos: la política no debe confundir el decorado con un depósito).
+- **Visual = UNA malla COLLADA** (`models/pallet_warehouse/meshes/pallet_warehouse.dae`, un material por color, 8250 caras); colisión = 29 primitivas. Con los ~1300 visuales sueltos el RTF era **0.76**; fundidos, **0.88** (3 robots). ⚠️ Un **OBJ+MTL salía todo blanco** en Gazebo (no aplica el `.mtl`): usar COLLADA.
+- Validado en vivo: carga sin errores, robots/basura/depósitos en los pasillos, cenital y frontales revisadas.
+- **Ciclo probado (2 robots, 4 piezas, 240 s): 2/4, color OK 2/2, 0 colisiones — y destapó la limitación clave:** `go_to_goal` son campos potenciales SIN planificador global → un robot con la pieza en el pasillo de al lado se queda **clavado contra la estantería** (mínimo local; `summit0` en y=−11.8 hacia una pieza en y=−18.6). Hace falta un **planificador global (A\* sobre `maps/<mundo>.pgm`) en `central_planner` que mande waypoints** — ver Próximos pasos. (La otra pieza que falló estaba en el pasillo lateral de 2.5 m a 0.67 m de una estantería: se ensancharon los laterales a 3 m y `_CLEAR_TRASH` 0.6→0.9.)
 
 ### Qué necesita un mundo para servir aquí (checklist)
 
@@ -438,6 +451,9 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 ```
 
 ### Próximos pasos
+
+#### ⭐⭐ PLANIFICADOR GLOBAL para mundos con pasillos (2026-10-24)
+En `pallet_warehouse` los robots se clavan contra las estanterías cuando la meta está en otro pasillo (campos potenciales = solo reactivo). Plan: A\* (o Dijkstra) sobre `maps/<mundo>.pgm` inflado con el radio del robot, en `central_planner`, publicando el siguiente waypoint en `/summitN/goal_pose` en vez de la meta final. Siguen pendientes del pedido de variedad del usuario: **mundo con personas caminando** (actores + repulsores virtuales) y **recolorear** subestación/fábrica/lab/arena (contraste robot/basura).
 
 #### ⭐⭐ EL CICLO DE DEJADO SE TRABA (reportado en vivo por el usuario, 2026-09-05) — SIN ARREGLAR
 El usuario lo vio y lo aparcó a propósito para priorizar tener los 5 mundos: *"no termina el ciclo de dejado se traba"*. Es **distinto** (o al menos no idéntico) al conflicto de dos robots sobre el mismo depósito, que ya tiene su arreglo (ver "Turno de descarga"). Lo que se sabe:
