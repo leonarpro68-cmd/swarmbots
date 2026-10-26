@@ -9,7 +9,13 @@ from __future__ import annotations
 import math
 import time
 
+from std_msgs.msg import String
+from .swarm_planning.hybrid_refinement.timed_protocol import (
+    TimedProtocolError, decode_command, build_status, reference,
+)
+
 import rclpy
+from rclpy.clock import Clock, ClockType
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, Float64, Int8
 
@@ -46,9 +52,163 @@ class GraspPathFollower(PathFollower):
         self.create_subscription(Float64, 'local_turn/target_yaw', self.on_turn_target, 10)
         self.create_subscription(Bool, 'visual_grasp/active', self.on_visual_active, 10)
         self.create_subscription(Twist, 'visual_grasp/cmd_vel', self.on_visual_cmd, 10)
-        self.get_logger().info('Seguidor experimental: RGB-D y preorientación local habilitados')
+        # Fase 5: NO creamos un segundo publicador de cmd_vel.
+        # Este modo permanece deshabilitado para la misión v1.1 original.
+        self.declare_parameter('hybrid_enabled', False)
+        self.declare_parameter('hybrid_kp', 1.1)
+        self.hybrid_enabled = bool(self.get_parameter('hybrid_enabled').value)
+        self.hybrid_kp = float(self.get_parameter('hybrid_kp').value)
+        self.timed_command = None
+        self.timed_last_time = None
+        self.timed_heartbeat_wall = None
+        self.timed_last_velocity = (0., 0.)
+        self.timed_goal_since = None
+        self.timed_running_reported = False
+        self.timed_status_pub = self.create_publisher(String, 'hybrid_trajectory/status', 10)
+        self.create_subscription(String, 'hybrid_trajectory/command', self.on_timed_command, 10)
+        # Temporizador independiente de /clock: si Gazebo se congela, mandar STOP.
+        self.create_timer(0.2, self._timed_wall_watchdog,
+                          clock=Clock(clock_type=ClockType.STEADY_TIME))
+        if self.hybrid_kp <= 0 or not math.isfinite(self.hybrid_kp):
+            raise ValueError('hybrid_kp inválido')
+        self.get_logger().info('Seguidor experimental: RGB-D y preorientación local habilitados; '
+                               f'hybrid_enabled={self.hybrid_enabled}')
+
+    def _timed_wall_watchdog(self):
+        if (self.timed_command is not None and self.timed_heartbeat_wall is not None
+                and time.monotonic()-self.timed_heartbeat_wall > 1.0):
+            self._timed_abort('Sin avance del controlador o /clock por más de 1 s')
+
+    def _timed_status(self, cmd, state, detail=''):
+        self.timed_status_pub.publish(String(data=build_status(cmd.robot, cmd.session_id, state, detail)))
+
+    def _timed_abort(self, detail, state='failed'):
+        cmd = self.timed_command
+        self.timed_command = None
+        self.timed_last_velocity = (0., 0.)
+        self.timed_last_time = None
+        self.timed_heartbeat_wall = None
+        self.timed_goal_since = None
+        self.stop()
+        if cmd is not None:
+            self._timed_status(cmd, state, detail)
+            self.get_logger().error(f'HÍBRIDO {state}: {detail}')
+
+    def on_timed_command(self, msg):
+        if not self.hybrid_enabled:
+            return
+        try:
+            cmd = decode_command(msg.data)
+        except TimedProtocolError as exc:
+            self.get_logger().error(f'Orden híbrida inválida: {exc}')
+            self._timed_abort('Mensaje malformado')
+            return
+        if cmd.robot != self.get_namespace().lstrip('/'):
+            self.get_logger().warn('Orden híbrida para otro namespace ignorada')
+            return
+        if cmd.action == 'cancel':
+            if self.timed_command is not None and self.timed_command.session_id == cmd.session_id:
+                self._timed_abort('Cancelación de coordinador', state='cancelled')
+            return
+        now = self.get_clock().now().nanoseconds / 1e9
+        if self.timed_command is not None:
+            self.get_logger().warn('Ya existe una trayectoria híbrida activa; rechazada')
+            return
+        if (self.visual_active or self.turn_target is not None or self.pose is None
+                or self.odom_frame != cmd.frame_id or self.last_odom_time is None
+                or not 0 <= now-self.last_odom_time <= self.odom_timeout
+                or not 1 <= cmd.start_time_s-now <= 30):
+            self._timed_status(cmd, 'failed', 'Modo ocupado, odometría/frame inválido o inicio fuera de ventana')
+            return
+        p0 = cmd.control_points[0][0]
+        if math.dist(self.pose[:2], p0) > cmd.goal_tolerance_m:
+            self._timed_status(cmd, 'failed', 'Robot no alineado con el inicio Bézier')
+            return
+        self.path=[]
+        self.path_index=0
+        self.stop()
+        self.timed_command=cmd
+        self.timed_last_time=now
+        self.timed_heartbeat_wall=time.monotonic()
+        self.timed_last_velocity=(0., 0.)
+        self.timed_goal_since=None
+        self.timed_running_reported=False
+        self._timed_status(cmd, 'armed')
+        self.get_logger().info(f'HÍBRIDO armado: {len(cmd.control_points)} piezas, '
+                               f'inicio en {cmd.start_time_s-now:.1f}s')
+
+    def _timed_control_step(self):
+        cmd=self.timed_command
+        if cmd is None:
+            return
+        self.timed_heartbeat_wall=time.monotonic()
+        now=self.get_clock().now().nanoseconds/1e9
+        dt=now-self.timed_last_time
+        if (self.pose is None or self.last_odom_time is None
+                or not 0 <= now-self.last_odom_time <= self.odom_timeout
+                or self.odom_frame != cmd.frame_id or dt < -0.02
+                or (now >= cmd.start_time_s and dt > 0.5)):
+            self._timed_abort('Odometría vencida, cambio de frame o salto de /clock')
+            return
+        if now < cmd.start_time_s:
+            self.stop()
+            self.timed_last_time=now
+            return
+        if not self.timed_running_reported:
+            self.timed_running_reported=True
+            self._timed_status(cmd,'running')
+        point,velocity,phase=reference(cmd,now)
+        ex=point[0]-self.pose[0]
+        ey=point[1]-self.pose[1]
+        error=math.hypot(ex,ey)
+        if error > cmd.max_tracking_error_m:
+            self._timed_abort(f'Error de seguimiento {error:.3f}m excede {cmd.max_tracking_error_m:.3f}m')
+            return
+        if phase=='after':
+            if now > cmd.start_time_s+cmd.duration_s+cmd.finish_grace_s:
+                self._timed_abort('Tiempo de llegada excedido')
+                return
+            if error <= cmd.goal_tolerance_m:
+                if self.timed_goal_since is None:
+                    self.timed_goal_since=now
+                if now-self.timed_goal_since >= cmd.goal_settle_s:
+                    self._timed_status(cmd,'done')
+                    self.timed_command=None
+                    self.stop()
+                    return
+            else:
+                self.timed_goal_since=None
+        # Feedforward temporal + realimentación P en el plano mundial.
+        vx=velocity[0]+self.hybrid_kp*ex
+        vy=velocity[1]+self.hybrid_kp*ey
+        limit=min(self.max_speed,cmd.speed_limit_m_s)
+        length=math.hypot(vx,vy)
+        if length>limit:
+            vx*=limit/length;vy*=limit/length
+        # Limitar aceleración COMANDADA, distinta de la cota de referencia.
+        dt=max(0.,min(dt,0.2))
+        if dt>0:
+            dvx=vx-self.timed_last_velocity[0]
+            dvy=vy-self.timed_last_velocity[1]
+            dv=math.hypot(dvx,dvy)
+            allowed=cmd.acceleration_limit_m_s2*dt
+            if dv>allowed:
+                vx=self.timed_last_velocity[0]+dvx*allowed/dv
+                vy=self.timed_last_velocity[1]+dvy*allowed/dv
+        yaw=self.pose[2]
+        c,s=math.cos(yaw),math.sin(yaw)
+        twist=Twist()
+        twist.linear.x=c*vx+s*vy
+        twist.linear.y=-s*vx+c*vy
+        self.cmd_pub.publish(twist)
+        self.timed_last_velocity=(vx,vy)
+        self.timed_last_time=now
 
     def on_turn_target(self, msg):
+        if self.timed_command is not None:
+            self._timed_abort('Se recibió preorientación durante trayectoria')
+            self.turn_result_pub.publish(Int8(data=-1))
+            return
         if self.visual_active or self.turn_target is not None or not math.isfinite(msg.data):
             self.get_logger().warn('Giro rechazado: control ocupado u objetivo inválido')
             self.turn_result_pub.publish(Int8(data=-1))
@@ -68,6 +228,9 @@ class GraspPathFollower(PathFollower):
     def on_visual_active(self, msg):
         active = bool(msg.data)
         if active and not self.visual_active:
+            if self.timed_command is not None:
+                self._timed_abort('Control RGB-D solicitado durante trayectoria')
+                return
             if self.turn_target is not None:
                 self.turn_target = None
                 self.turn_result_pub.publish(Int8(data=-1))
@@ -85,6 +248,12 @@ class GraspPathFollower(PathFollower):
         self.visual_active = active
 
     def on_path(self, msg):
+        if self.timed_command is not None:
+            if not msg.poses:
+                self._timed_abort('Ruta vacía de parada', state='cancelled')
+            else:
+                self.get_logger().warn('Waypoint rechazado: Bézier está activo')
+            return
         if self.visual_active or self.turn_target is not None:
             self.get_logger().warn('Ruta recibida mientras control local está activo; ignorada')
             return
@@ -96,6 +265,9 @@ class GraspPathFollower(PathFollower):
             self.visual_last_time = self.get_clock().now().nanoseconds / 1e9
 
     def control_step(self):
+        if self.timed_command is not None:
+            self._timed_control_step()
+            return
         if self.visual_active:
             now = self.get_clock().now().nanoseconds / 1e9
             if (self.visual_last_time is not None

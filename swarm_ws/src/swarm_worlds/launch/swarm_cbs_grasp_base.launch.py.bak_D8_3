@@ -1,0 +1,133 @@
+"""Prueba aislada: Gazebo + escenario CBS precargado + 3 Summit con pinzas.
+
+NO inicia CBS, central_planner, ni elimina basuras. Reutiliza las funciones
+originales de sim_summit.launch.py para generar SDF, puentes y controladores.
+
+Preparacion previa (Docker):
+  python3 scripts/escenario_aleatorio_swarm.py --seed 123 --output /tmp/swarm_cbs_grasp_123.json
+  python3 scripts/swarm_cbs_grasp_prepare.py \\
+    --scenario /tmp/swarm_cbs_grasp_123.json \\
+    --world $(ros2 pkg prefix swarm_worlds)/share/swarm_worlds/worlds/tugbot_warehouse.sdf \\
+    --output /tmp/tugbot_warehouse_grasp_123.sdf
+
+Prueba:
+  ros2 launch swarm_worlds swarm_cbs_grasp_base.launch.py seed:=123 \\
+    scenario:=/tmp/swarm_cbs_grasp_123.json \\
+    world_sdf:=/tmp/tugbot_warehouse_grasp_123.sdf
+"""
+import importlib.util
+import json
+import math
+import os
+import re
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+
+
+def _original_sim_helpers():
+    filename = Path(get_package_share_directory('swarm_worlds')) / 'launch' / 'sim_summit.launch.py'
+    spec = importlib.util.spec_from_file_location('swarm_grasp_original_sim', str(filename))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _setup(context, *args, **kwargs):
+    seed = int(LaunchConfiguration('seed').perform(context))
+    scenario_path = Path(LaunchConfiguration('scenario').perform(context)).expanduser()
+    world_path = Path(LaunchConfiguration('world_sdf').perform(context)).expanduser()
+    headless = LaunchConfiguration('headless').perform(context).lower() in ('true', '1', 'yes')
+    hybrid_enabled = LaunchConfiguration('hybrid_enabled').perform(context).lower() in ('true', '1', 'yes')
+    if not scenario_path.is_file() or not world_path.is_file():
+        raise FileNotFoundError('Falta JSON o mundo SDF. Ejecuta primero ambos preparadores.')
+    data = json.loads(scenario_path.read_text(encoding='utf-8'))
+    if data.get('seed') != seed:
+        raise ValueError(f'Semilla inconsistente: launch={seed}, JSON={data.get("seed")}')
+    objects = data.get('elements', [])
+    trash_names = [e['name'] for e in objects if e.get('type') == 'trash']
+    if len(trash_names) != 6 or sum(e.get('type') == 'deposit' for e in objects) != 3:
+        raise ValueError('Se esperan seis basuras y tres depositos')
+
+    with open(world_path, encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(r'<world\b[^>]*\bname\s*=\s*["\']([^"\']+)["\']', content)
+
+    if not match:
+        raise RuntimeError(
+            f"No se encontró el nombre del mundo en {world_path}"
+        )
+
+
+    tree = ET.parse(world_path)
+    world = tree.getroot().find('world')
+    world_name = world.get('name')
+    if world is None:
+        raise ValueError('Falta <world> en archivo SDF')
+    model_names = {m.get('name') for m in world.findall('model')}
+    absent = {e['name'] for e in objects} - model_names
+    if absent:
+        raise ValueError(f'Modelos del JSON ausentes del mundo: {sorted(absent)}')
+
+    sim = _original_sim_helpers()
+    models_dir = os.path.join(get_package_share_directory('swarm_worlds'), 'models')
+    for env_name in ('GZ_SIM_RESOURCE_PATH', 'SDF_PATH'):
+        entries = os.environ.get(env_name, '').split(':')
+        if models_dir not in entries:
+            os.environ[env_name] = models_dir + (':' + os.environ[env_name] if os.environ.get(env_name) else '')
+    # Misma distribucion de robots usada por sim_summit.launch.py. Las posiciones
+    # 'robots' del JSON son propuestas offline; CBS emplea odometria real.
+    specs = sim._robot_specs_random(3, seed, (-8.0, 8.0, -8.0, 8.0), min_sep=2.0)
+    if len(specs) != 3:
+        raise RuntimeError(f'No se pudieron generar 3 Summit: {len(specs)}')
+    print('[GRASP BASE] mundo:', world_path, flush=True)
+    print('[GRASP BASE] basuras:', ', '.join(trash_names), flush=True)
+    print('[GRASP BASE] Summit con pinza:', specs, flush=True)
+    sim._force_nvidia_render()
+    gz_args = f'-r -v 4 {world_path}' + (' -s --headless-rendering' if headless else '')
+    gz_launch = Path(get_package_share_directory('ros_gz_sim')) / 'launch' / 'gz_sim.launch.py'
+    actions = [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(str(gz_launch)),
+        launch_arguments={'gz_args': gz_args}.items(),
+    )]
+    trash_list = ' '.join(trash_names)
+    for ns, x, y, yaw in specs:
+        actions.extend(sim._spawn_for_robot(ns, x, y, yaw, True, trash_list, trash_names))
+        actions.append(Node(
+            package='swarm_behavior', executable='swarm_path_follower_grasp',
+            namespace=ns, name='path_follower', output='screen',
+            parameters=[{'use_sim_time': True, 'max_speed': 0.60,
+                         'kp': 1.2, 'waypoint_tolerance': 0.08,
+                         'hybrid_enabled': hybrid_enabled}],
+        ))
+        actions.append(Node(
+            package='swarm_behavior', executable='visual_grasp',
+            namespace=ns, name='visual_grasp', output='screen',
+            parameters=[{'use_sim_time': True}],
+        ))
+        actions.append(Node(
+            package='swarm_behavior', executable='grasp_manager',
+            name=f'grasp_manager_{ns}', output='screen',
+            parameters=[{'use_sim_time': True, 'robot': ns,
+                         'world': world.get('name'),
+                         'attach_timeout': 5.0}],
+        ))
+    return actions
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument('seed', default_value='123'),
+        DeclareLaunchArgument('scenario', default_value='/tmp/swarm_cbs_grasp_123.json'),
+        DeclareLaunchArgument('world_sdf', default_value='/tmp/tugbot_warehouse_grasp_123.sdf'),
+        DeclareLaunchArgument('headless', default_value='false'),
+        DeclareLaunchArgument('hybrid_enabled', default_value='false'),
+        OpaqueFunction(function=_setup),
+    ])

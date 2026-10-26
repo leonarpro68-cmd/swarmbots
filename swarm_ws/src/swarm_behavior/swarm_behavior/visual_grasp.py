@@ -6,6 +6,7 @@ confirma el centro y la distancia antes de autorizar el agarre. Este nodo no
 publica al motor: propone cmd_vel a go_to_goal, que mantiene la parada LiDAR.
 """
 import math
+from collections import deque
 
 import numpy as np
 import rclpy
@@ -20,6 +21,26 @@ from std_msgs.msg import Bool, Int8
 def _yaw(q):
     return math.atan2(2.0 * (q.w * q.z + q.x * q.y),
                       1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+
+def _near_field_geometry(pose, target, camera_forward,
+                         min_range, max_range, max_lateral, max_camera_depth):
+    """Cota geometrica, NO una lectura visual ni prueba de contacto.
+
+    Solo se usa tras una historia positiva de RGB-D y con el robot detenido.
+    Devuelve (apto, distancia_centro, lateral, profundidad_camara).
+    """
+    rx, ry, yaw = pose
+    dx, dy = target[0] - rx, target[1] - ry
+    forward = math.cos(yaw) * dx + math.sin(yaw) * dy
+    lateral = -math.sin(yaw) * dx + math.cos(yaw) * dy
+    camera_depth = forward - camera_forward
+    distance = math.hypot(dx, dy)
+    ok = (all(map(math.isfinite, (distance, lateral, camera_depth)))
+          and min_range <= forward <= max_range
+          and abs(lateral) <= max_lateral
+          and 0.055 <= camera_depth <= max_camera_depth)
+    return ok, distance, lateral, camera_depth
 
 
 class VisualGrasp(Node):
@@ -56,6 +77,18 @@ class VisualGrasp(Node):
         self.declare_parameter("min_forward", 0.03)
         self.declare_parameter("timeout", 15.0)
         self.declare_parameter("sensor_timeout", 0.5)
+        # D.8.6: rescate opt-in ante perdida de profundidad cerca de la pinza.
+        # NO ordena movimientos sin datos: valida odometria + historia RGB-D y
+        # solamente entrega un OK provisional al grasp_manager, que debe
+        # confirmar fisicamente el joint. Por defecto deshabilitado.
+        self.declare_parameter("near_field_handoff_enabled", False)
+        self.declare_parameter("near_field_min_range", 0.43)
+        self.declare_parameter("near_field_max_range", 0.50)
+        self.declare_parameter("near_field_max_lateral", 0.045)
+        self.declare_parameter("near_field_max_camera_depth", 0.16)
+        self.declare_parameter("near_field_depth_loss_s", 0.75)
+        self.declare_parameter("near_field_recent_vision_s", 3.0)
+        self.declare_parameter("near_field_vision_depth_limit", 0.46)
         self.fov = float(self.get_parameter("horizontal_fov").value)
         self.camera_forward = float(self.get_parameter("camera_forward").value)
         self.desired_depth = float(self.get_parameter("desired_depth").value)
@@ -70,8 +103,22 @@ class VisualGrasp(Node):
         self.min_forward = float(self.get_parameter("min_forward").value)
         self.timeout = float(self.get_parameter("timeout").value)
         self.sensor_timeout = float(self.get_parameter("sensor_timeout").value)
+        self.near_field_enabled = bool(self.get_parameter("near_field_handoff_enabled").value)
+        self.near_min_range = float(self.get_parameter("near_field_min_range").value)
+        self.near_max_range = float(self.get_parameter("near_field_max_range").value)
+        self.near_max_lateral = float(self.get_parameter("near_field_max_lateral").value)
+        self.near_max_camera_depth = float(self.get_parameter("near_field_max_camera_depth").value)
+        self.near_depth_loss_s = float(self.get_parameter("near_field_depth_loss_s").value)
+        self.near_recent_vision_s = float(self.get_parameter("near_field_recent_vision_s").value)
+        self.near_vision_depth_limit = float(self.get_parameter("near_field_vision_depth_limit").value)
+        if not (0.0 < self.near_min_range < self.near_max_range
+                and 0.0 < self.near_max_lateral <= 0.10
+                and 0.0 < self.near_depth_loss_s
+                and 0.0 < self.near_recent_vision_s <= 5.0):
+            raise ValueError('Parametros near_field invalidos')
 
         self.pose = None
+        self.odom_stamp = None
         self.target = None
         self.depth = None
         self.depth_stamp = None
@@ -84,6 +131,8 @@ class VisualGrasp(Node):
         self.diag_last_progress_time = None
         self.diag_last_command = (0.0, 0.0)
         self.diag_stall_seconds = 3.0
+        self.near_vision_history = deque(maxlen=100)
+        self.near_missing_since = None
 
         qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT,
                          durability=QoSDurabilityPolicy.VOLATILE,
@@ -99,6 +148,7 @@ class VisualGrasp(Node):
     def _odom(self, msg):
         p, q = msg.pose.pose.position, msg.pose.pose.orientation
         self.pose = (p.x, p.y, _yaw(q))
+        self.odom_stamp = self.get_clock().now()
 
     def _depth(self, msg):
         if msg.encoding not in ("32FC1", "32FC"):
@@ -122,6 +172,8 @@ class VisualGrasp(Node):
         self.diag_last_depth = None
         self.diag_last_progress_time = self.get_clock().now()
         self.diag_last_command = (0.0, 0.0)
+        self.near_vision_history.clear()
+        self.near_missing_since = None
         self.active = True
         self.active_pub.publish(Bool(data=True))
 
@@ -130,6 +182,43 @@ class VisualGrasp(Node):
         self.active = False
         self.active_pub.publish(Bool(data=False))
         self.result_pub.publish(Int8(data=result))
+
+    def _nearfield_handoff(self, now):
+        """Acepta una alineacion GEOMETRICA solo tras RGB-D previo consistente.
+
+        Nunca publica velocidades no nulas. grasp_manager sigue siendo el
+        unico que puede confirmar un DetachableJoint; si falla, D7 aborta.
+        """
+        if not self.near_field_enabled or self.pose is None or self.target is None:
+            return False
+        if self.odom_stamp is None:
+            return False
+        odom_age = (now - self.odom_stamp).nanoseconds / 1e9
+        if not 0 <= odom_age <= self.sensor_timeout:
+            return False
+        good_geometry, distance, lateral, camera_depth = _near_field_geometry(
+            self.pose, self.target, self.camera_forward, self.near_min_range,
+            self.near_max_range, self.near_max_lateral, self.near_max_camera_depth)
+        if not good_geometry:
+            return False
+        # El ultimo RGB-D valido debe ser reciente, centrado y de una
+        # superficie razonablemente cercana; nunca solo una prediccion odom.
+        recent = [(stamp, error, depth)
+                  for stamp, error, depth in self.near_vision_history
+                  if 0 <= (now.nanoseconds - stamp) / 1e9 <= self.near_recent_vision_s]
+        if len(recent) < 3:
+            return False
+        # Tres muestras a lo largo de >= 0.12 s evitan un unico frame espurio.
+        if (recent[-1][0] - recent[0][0]) / 1e9 < 0.12:
+            return False
+        self.get_logger().warn(
+            f'RGBD_V2 NEAR_FIELD HANDOFF CONTROLADO: depth no disponible; '
+            f'dist_centro={distance:.3f}m lateral={lateral:+.3f}m '
+            f'camara_pred={camera_depth:.3f}m, '
+            f'ult_rgbd={recent[-1][2]:.3f}m en {len(recent)} muestras. '
+            'Robot detenido; alineacion geometrica provisional, NO joint confirmado.')
+        self._finish(1)
+        return True
 
     def _step(self):
         if not self.active:
@@ -175,13 +264,26 @@ class VisualGrasp(Node):
                 f"RGBD_V2 SIN_DEPTH: pixeles={cols.size} "
                 f"depth_pred={expected_depth:.3f}", throttle_duration_sec=2.0)
             self.good_frames = 0
+            # Parada efectiva, sin avanzar a ciegas. Solo tras perdida sostenida
+            # podemos considerar entrega geometrica al gestor del joint.
             self.cmd_pub.publish(Twist())
+            if self.near_missing_since is None:
+                self.near_missing_since = now
+            elif ((now - self.near_missing_since).nanoseconds / 1e9
+                  >= self.near_depth_loss_s):
+                self._nearfield_handoff(now)
             return
+        self.near_missing_since = None
         depths = roi[rows, cols]
         near = depths <= np.percentile(depths, 35.0)
         object_u = float(np.median(cols[near] + u0))
         object_depth = float(np.median(depths[near]))
         pixel_error = object_u - width * 0.5
+        if (self.near_field_enabled and abs(pixel_error) <= self.pixel_tol
+                and object_depth <= self.near_vision_depth_limit
+                and abs(object_depth - expected_depth) <= 0.26):
+            self.near_vision_history.append(
+                (now.nanoseconds, pixel_error, object_depth))
         if self.diag_last_xy is None:
             self.diag_last_xy = (rx, ry)
             self.diag_last_depth = object_depth
