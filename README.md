@@ -2,7 +2,7 @@
 
 Simulación de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**: un enjambre de **Summit XLS omnidireccionales (mecanum) con pinza y cámara RGB-D** que recoge basura y la lleva al depósito de su color. El objetivo final es grabar demostraciones y entrenar una política **ACT** (Action Chunking Transformer, imitation learning) que haga la tarea sola.
 
-![Cámara cenital de los 6 mundos](docs/img/worlds/mosaico_cenitales.jpg)
+![Cámara cenital de los 8 mundos](docs/img/worlds/mosaico_cenitales.jpg)
 
 ## Estado
 
@@ -12,8 +12,9 @@ Simulación de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**: u
 | Escenario aleatorio con semilla (robots, basura, depósitos) | ✅ validado en vivo |
 | Ciclo de recogida clásico (planner greedy + RGB-D + `DetachableJoint`) | ✅ validado en `tugbot_warehouse` (1 robot 6/6, 3 robots 6/6, 0 colisiones) |
 | Clasificación por color, anti-arrastre, turno de descarga por depósito | ✅ validados en vivo (`color OK 4/4`, 0 colisiones) |
-| Set de **6 mundos** para variar el dataset | ✅ cargan sin errores, RTF 0.85–1.0, cámaras revisadas |
-| Ciclo completo con métricas en los 5 mundos nuevos | ⏳ pendiente |
+| Set de **8 mundos** para variar el dataset | ✅ cargan sin errores, RTF 0.83–1.0, cámaras revisadas |
+| Colocación aleatoria que esquiva la geometría de cada mundo | ✅ validada en vivo |
+| Ciclo completo con métricas en los mundos nuevos | ⏳ pendiente (en `pallet_warehouse` 2/4: falta un planificador global para los pasillos) |
 | El ciclo de dejado a veces se traba (reportado en vivo) | 🐛 abierto |
 | Pipeline rosbag → HDF5 para ACT | ✅ validado con test sintético; falta un bag real |
 | Grabar demostraciones y entrenar el ACT | ⏳ siguiente paso |
@@ -25,13 +26,13 @@ Simulación de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**: u
 - **Pinza paralela + cámaras**: pinza de 2 dedos fija al frente (solo abre/cierra, la pieza viaja a ras de suelo), cámara RGB frontal (`/summitN/camera`) y cámara de profundidad co-localizada (`/summitN/camera/depth`). Control de los dedos con `gz_ros2_control`.
 - **Escenario aleatorio reproducible**: robots (posición y yaw), cajas de basura de 3 colores y depósitos del mismo color, con `seed` (`-1` = distinto cada vez).
 - **Ciclo de recogida autónomo** (`swarm_behavior`): planner centralizado greedy, navegación por campos potenciales que aprovecha el strafe, aproximación final por profundidad y agarre físico con `DetachableJoint` confirmado por ACK.
-- **6 mundos** vendorizados (sin Fuel ni internet), todos con la misma cámara cenital `/overhead/image`.
+- **8 mundos** vendorizados (sin Fuel ni internet), todos con la misma cámara cenital `/overhead/image`; tres de ellos generados por script (`pallet_warehouse`, `parking_lot`, `supermarket`).
 - **Teleop con mando PS5** y **conversor rosbag → HDF5** en el formato de ACT/ALOHA.
-- Herramientas de geometría: mapas occupancy/vectoriales de cada mundo, medición del hueco libre y recorte de mundos.
+- Herramientas de geometría: mapas occupancy/vectoriales de cada mundo, medición del hueco libre, recorte, repintado y generación de mundos.
 
 ## Los mundos
 
-Todos comparten nombre interno `world_demo` (salvo `empty_arena`), física `max_step_size=0.004`, los plugins Harmonic (`Sensors`, `Imu`, …) y una cámara cenital, para que el dataset salga homogéneo. Ninguno tiene techo: la cenital debe ver el suelo.
+Todos comparten nombre interno `world_demo` (salvo `empty_arena`), física `max_step_size=0.004`, los plugins Harmonic (`Sensors`, `Imu`, …) y una cámara cenital, para que el dataset salga homogéneo. Ninguno tiene techo: la cenital debe ver el suelo. En el decorado no hay verde, azul ni naranja: son los colores de la basura y los depósitos.
 
 | Mundo | Entorno | `center_x`, `center_y` | `area_half` |
 |---|---|---|---|
@@ -44,7 +45,9 @@ Todos comparten nombre interno `world_demo` (salvo `empty_arena`), física `max_
 | `parking_lot` | aparcamiento exterior, 30×50 m | 0, 0 | 24 |
 | `supermarket` | supermercado con 5 personas caminando, 30×50 m | 0, 0 | 24 |
 
-> ⚠️ En `colored_warehouse` el centro y el `area_half` **no son opcionales**: con el centro por defecto el hueco libre es mínimo (la cruz de paredes pasa por el origen). La colocación esquiva la geometría usando `maps/<mundo>.pgm` de `scripts/world_maps.py`.
+> ⚠️ En `colored_warehouse` el centro y el `area_half` **no son opcionales**: con el centro por defecto el hueco libre es mínimo (la cruz de paredes pasa por el origen).
+
+La colocación aleatoria carga `maps/<mundo>.pgm` (de `scripts/world_maps.py`) y rechaza toda pose a menos de ~1 m de un obstáculo, así que en los mundos generados se puede usar `area_half:=24` y el mapa recorta a los pasillos libres.
 
 Capturas de la simulación (izquierda: cámara cenital `/overhead/image`; derecha: cámara frontal del robot `/summit0/camera`).
 
@@ -55,7 +58,7 @@ Capturas de la simulación (izquierda: cámara cenital `/overhead/image`; derech
 <img src="docs/img/worlds/tugbot_warehouse_front.jpg" width="34%">
 </p>
 
-Almacén del Tugbot de MovAi con los obstáculos quitados: queda el edificio, sus paredes y el suelo libre. En el detalle del centro se ven los 3 robots, las cajas y los discos de depósito.
+Almacén del Tugbot de MovAi con los obstáculos y las vigas del techo quitados: queda el edificio, sus paredes y el suelo libre. En el detalle del centro se ven los 3 robots, las cajas y los discos de depósito.
 
 ### `colored_warehouse`
 <p>
@@ -71,7 +74,7 @@ Fuel `hboc/simple_colored_warehouse`: cuatro cuadrantes con estanterías de colo
 <img src="docs/img/worlds/electrical_substation_front.jpg" width="52%">
 </p>
 
-Exterior de Robotnik, recortado a 30×50 m con `crop_world.py`. En el recorte se quitó un plano de colisión infinito (el marcador AR de la estación de carga) que actuaba de muro invisible y bajaba el RTF.
+Exterior de Robotnik, recortado a 30×50 m con `crop_world.py`. En el recorte se quitó un plano de colisión infinito (el marcador AR de la estación de carga) que actuaba de muro invisible y bajaba el RTF. Repintado con `paint_worlds.py`: patio de asfalto, casa amarilla, edificios de ladrillo.
 
 ### `rubber_factory`
 <p>
@@ -79,7 +82,7 @@ Exterior de Robotnik, recortado a 30×50 m con `crop_world.py`. En el recorte se
 <img src="docs/img/worlds/rubber_factory_front.jpg" width="52%">
 </p>
 
-Nave industrial `emka_factory` de Robotnik, recortada a 30×50 m: nave abierta con una fila de máquinas.
+Nave industrial `emka_factory` de Robotnik, recortada a 30×50 m: nave abierta con una fila de máquinas. Repintada con `paint_worlds.py`: suelo de epoxi crema y cada máquina de un color.
 
 ### `empty_arena`
 <p>
@@ -88,6 +91,30 @@ Nave industrial `emka_factory` de Robotnik, recortada a 30×50 m: nave abierta c
 </p>
 
 Arena vacía de control. Su `<world>` se llama `empty_arena`, así que el ciclo de recogida necesita `world:=empty_arena`.
+
+### `pallet_warehouse`
+<p>
+<img src="docs/img/worlds/pallet_warehouse_overhead.jpg" width="45%">
+<img src="docs/img/worlds/pallet_warehouse_front.jpg" width="52%">
+</p>
+
+Almacén de paletizado generado por `gen_pallet_warehouse.py`: cuatro bloques de estanterías con pasillos de 3.4 m y una zona central con transportador, paletizador y enfardadora. El visual es una sola malla COLLADA (RTF 0.88 con 3 robots). Es el mundo que demuestra que hace falta un planificador global: con campos potenciales un robot se queda clavado contra la estantería si la pieza está en el pasillo de al lado.
+
+### `parking_lot`
+<p>
+<img src="docs/img/worlds/parking_lot_overhead.jpg" width="45%">
+<img src="docs/img/worlds/parking_lot_front.jpg" width="52%">
+</p>
+
+Aparcamiento exterior generado por `gen_parking_lot.py`: asfalto con plazas en batería, 46 coches al 65 % de ocupación, dos calles y una transversal con paso de cebra, farolas y caseta de cobro.
+
+### `supermarket`
+<p>
+<img src="docs/img/worlds/supermarket_overhead.jpg" width="45%">
+<img src="docs/img/worlds/supermarket_front.jpg" width="52%">
+</p>
+
+Supermercado generado por `gen_supermarket.py`: góndolas con producto de colores, neveras, islas de fruta, cajas de cobro y **5 personas caminando** en bucle. Las personas (`<actor>`) no tienen colisión física en Harmonic, pero el LiDAR y las cámaras sí las ven; el mapa marca su recorrido como ocupado para no colocar nada encima. La animación se recoloreó (venía con jersey verde y vaqueros azules, colores de la basura).
 
 ## Requisitos
 
@@ -185,7 +212,13 @@ Por defecto: `qpos = [yaw, ancho_pinza]` (egocéntrico, para una política compa
 /usr/bin/python3 swarm_ws/scripts/crop_world.py <mundo> --center X Y --size 30 50 [--rotate90]   # recorta a una ventana y cierra con paredes
 ```
 
-`world_geometry.py` carga toda la colisión y el visual de un SDF en frame mundo (poses 6D, STL, COLLADA, primitivas, actores), y los otros dos scripts se apoyan en él.
+```bash
+/usr/bin/python3 swarm_ws/scripts/paint_worlds.py             # paleta propia de rubber_factory y electrical_substation (después de crop_world.py)
+/usr/bin/python3 swarm_ws/scripts/gen_pallet_warehouse.py     # también gen_parking_lot.py y gen_supermarket.py
+/usr/bin/python3 swarm_ws/scripts/world_maps.py --worlds pallet_warehouse --write && (cd swarm_ws && colcon build --symlink-install)
+```
+
+`world_geometry.py` carga toda la colisión y el visual de un SDF en frame mundo (poses 6D, STL, COLLADA, primitivas, actores), y el resto de scripts se apoyan en él. Los generadores `gen_*.py` usan `world_builder.py`: el visual va a una malla COLLADA con un material por color y la colisión a primitivas. Tras generar o tocar un mundo hay que regenerar su mapa y recompilar.
 
 ## Demos anteriores (siguen en el código)
 
@@ -201,9 +234,9 @@ Por defecto: `qpos = [yaw, ancho_pinza]` (egocéntrico, para una política compa
 ```
 swarm_ws/
 ├── docker/                      # Dockerfile + compose (respaldo de portabilidad)
-├── scripts/                     # sim_native.sh, bag_to_act_hdf5.py, world_geometry/world_maps/crop_world.py
+├── scripts/                     # sim_native.sh, bag_to_act_hdf5.py, herramientas y generadores de mundos
 └── src/
-    ├── swarm_worlds/            # 6 mundos, launches, mapas, modelos vendorizados
+    ├── swarm_worlds/            # 8 mundos, launches, mapas, modelos vendorizados
     ├── swarm_behavior/          # planner, navegación, agarre RGB-D, pinza, teleop PS5, drones, RViz
     ├── swarm_description/       # minibot diff-drive
     ├── summit_xl_description/   # Summit XLS mecanum + pinza + cámaras, portado a Harmonic
