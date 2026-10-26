@@ -22,3 +22,9 @@ summit_robot_export.tar.gz
 # Config local de Claude Code
 .claude/settings.local.json
 nano.*.save
+
+# SwarmBots - resultados de simulaciones
+/swarm_ws/scripts/resultados/
+
+# Respaldos temporales
+*.bak_D*
