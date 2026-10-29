@@ -56,13 +56,18 @@ class GraspPathFollower(PathFollower):
         # Este modo permanece deshabilitado para la misión v1.1 original.
         self.declare_parameter('hybrid_enabled', False)
         self.declare_parameter('hybrid_kp', 1.1)
+        # Límite exclusivo para Bézier temporizada; no afecta D8/RGB-D ni el giro.
+        self.declare_parameter('hybrid_timed_max_speed', 2.0)
         self.hybrid_enabled = bool(self.get_parameter('hybrid_enabled').value)
         self.hybrid_kp = float(self.get_parameter('hybrid_kp').value)
+        self.hybrid_timed_max_speed = float(self.get_parameter('hybrid_timed_max_speed').value)
+        if not math.isfinite(self.hybrid_timed_max_speed) or not 0 < self.hybrid_timed_max_speed <= 2.0:
+            raise ValueError('hybrid_timed_max_speed debe estar en (0, 2.0]')
         self.timed_command = None
         self.timed_last_time = None
         self.timed_heartbeat_wall = None
         # Ventana breve solo para pausas de /clock mientras estamos ARMED.
-        # RUNNING conserva el límite de vigilancia de 1 s en tiempo real.
+        # RUNNING tolera pausas cortas de /clock; conserva STOP y timeout.
         self.timed_armed_clock_grace_s = 3.0
         self.timed_last_velocity = (0., 0.)
         self.timed_goal_since = None
@@ -83,7 +88,7 @@ class GraspPathFollower(PathFollower):
         Una interrupción temporal de /clock antes del inicio no debe consumir
         la trayectoria, pero el seguidor mantiene cmd_vel=0 durante la espera.
         Si /clock sí avanza y el lazo no se ejecuta, cancelamos a los 1 s.
-        La fase RUNNING conserva el límite estricto original de 1 s.
+        ARMED y RUNNING toleran pausas breves; bloqueos reales se cancelan.
         """
         cmd = self.timed_command
         hb = self.timed_heartbeat_wall
@@ -94,21 +99,28 @@ class GraspPathFollower(PathFollower):
             return
         now_sim = self.get_clock().now().nanoseconds / 1e9
         last_step_sim = self.timed_last_time
+        # El temporizador de control usa tiempo de simulacion y control_rate.
+        # Un avance menor que dos periodos no prueba que el lazo este bloqueado:
+        # a 20 Hz, 0.044 s de /clock todavia no son ni un ciclo completo.
+        control_period_s = 1.0 / float(self.get_parameter('control_rate').value)
+        sim_progress_s = (now_sim - last_step_sim
+                          if last_step_sim is not None else 0.0)
         sim_advanced = (last_step_sim is not None
-                        and now_sim - last_step_sim > 0.02)
+                        and sim_progress_s > 2.0 * control_period_s)
         if sim_advanced:
             # Simulación avanzando, pero el control dejó de atender el temporizador.
             self._timed_abort(
                 f'CONTROL_LOOP_STALLED: control sin ciclo {age:.2f}s; '
                 f'/clock avanzó {now_sim-last_step_sim:.3f}s')
             return
-        if not self.timed_running_reported and age < self.timed_armed_clock_grace_s:
-            # Solo ARMED: pausa corta de /clock. Pedimos STOP sin consumir
-            # ni desplazar la referencia temporal compartida de la misión.
+        # Si /clock no avanza, tolerar una pausa breve tanto
+        # en ARMED como en RUNNING, manteniendo STOP.
+        if age < self.timed_armed_clock_grace_s:
             self.stop()
             return
+
         self._timed_abort(
-            f'CLOCK_STALLED: sin progreso de /clock/control {age:.2f}s; '
+            f'CLOCK_STALLED: pausa de /clock/control de {age:.2f}s; '
             f'estado={"running" if self.timed_running_reported else "armed"}')
 
     def _timed_status(self, cmd, state, detail=''):
@@ -213,7 +225,7 @@ class GraspPathFollower(PathFollower):
         # Feedforward temporal + realimentación P en el plano mundial.
         vx=velocity[0]+self.hybrid_kp*ex
         vy=velocity[1]+self.hybrid_kp*ey
-        limit=min(self.max_speed,cmd.speed_limit_m_s)
+        limit=min(self.hybrid_timed_max_speed,cmd.speed_limit_m_s)
         length=math.hypot(vx,vy)
         if length>limit:
             vx*=limit/length;vy*=limit/length

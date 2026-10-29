@@ -173,9 +173,25 @@ def main():
 
         # Recheck pose/velocity after discovery: no stale pre-wait snapshot
         # may be used to start physical movement.
-        initial = snapshot()
+        # Esperar datos frescos de /clock y /odom
+        # después del descubrimiento de los seguidores.
+
+        fresh_deadline = time.monotonic() + 5.0
+        initial = None
+
+        while time.monotonic() < fresh_deadline:
+            rclpy.spin_once(node, timeout_sec=0.05)
+
+            initial = snapshot()
+
+            if initial:
+                break
+
         if not initial:
-            raise RuntimeError('Clock/odometry stale after follower discovery')
+            raise RuntimeError(
+                'Clock/odometry stale after follower discovery '
+                '(timeout de 5 segundos esperando datos frescos)'
+            )
         if any(x['speed_m_s'] > a.stationary_speed for x in initial.values()):
             raise RuntimeError('One or more robots moving after follower discovery')
         if any(x['error_m'] > a.max_offset for x in initial.values()):
@@ -217,8 +233,50 @@ def main():
             if not moved:
                 state='ALREADY_ALIGNED'
             else:
-                if any(pubs[r].get_subscription_count()<1 for r in moved):
-                    raise RuntimeError('planned_path subscriber missing')
+                # D9.9.22: DDS discovery puede ir retrasado aunque el seguidor
+                # ya exista. Esperar matching real del publicador, sin omitir
+                # la verificación de que el receptor sea visible.
+                subscriber_deadline = time.monotonic() + 8.0
+                while True:
+                    missing = [r for r in moved if pubs[r].get_subscription_count() < 1]
+                    if not missing:
+                        break
+                    if time.monotonic() >= subscriber_deadline:
+                        details = {
+                            r: [
+                                {'node_namespace': info.node_namespace,
+                                 'node_name': info.node_name,
+                                 'topic_type': info.topic_type}
+                                for info in node.get_subscriptions_info_by_topic(
+                                    f'/{r}/planned_path')
+                            ]
+                            for r in missing
+                        }
+                        raise RuntimeError(
+                            f'planned_path subscriber missing after 8 s: '
+                            f'robots={missing}, discovered={details}')
+                    rclpy.spin_once(node, timeout_sec=.1)
+
+                # Al esperar el grafo, no usar una instantánea antigua:
+                # refrescar /clock y odometría antes de mover ningún Summit.
+                fresh_deadline = time.monotonic() + 5.0
+                refreshed = None
+                while time.monotonic() < fresh_deadline:
+                    rclpy.spin_once(node, timeout_sec=.1)
+                    refreshed = snapshot()
+                    if refreshed:
+                        break
+                if not refreshed:
+                    raise RuntimeError('Clock/odometry stale after planned_path discovery')
+                if any(x['speed_m_s'] > a.stationary_speed for x in refreshed.values()):
+                    raise RuntimeError('Robots moving after planned_path discovery')
+                if any(x['error_m'] > a.max_offset for x in refreshed.values()):
+                    raise RuntimeError('Offset exceeds limit after planned_path discovery')
+                # No ampliar silenciosamente el conjunto de robots a mover:
+                # si cambió, abortar en vez de usar rutas antiguas.
+                if [r for r in ROBOTS if refreshed[r]['error_m'] > a.position_tolerance] != moved:
+                    raise RuntimeError('Alignment targets changed during planned_path discovery')
+                initial = refreshed
                 for r in moved:
                     send_path(r, [initial[r]['xy'], targets[r]])
                 stop_time = time.monotonic()+a.timeout

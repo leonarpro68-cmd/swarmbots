@@ -145,6 +145,10 @@ def parallel_pickup(root, report, stage, physical, nav_out, pickup_dir):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--time-scale',type=float,default=1.,help='Factor manual de navegación')
+    ap.add_argument('--auto-time-scale',action='store_true',help='Calcula automáticamente el factor común seguro para cada etapa')
+    ap.add_argument('--nav-speed-limit',type=float,default=1.2,help='m/s; también configurar hybrid_max_speed en launch')
+    ap.add_argument('--nav-accel-limit',type=float,default=1.,help='m/s²; solo navegación Bézier')
     ap.add_argument('--execute',action='store_true',help='Permite navegación y agarres/descargas reales, sin maniobra de despeje')
     ap.add_argument('--confirm-runtime-v2',action='store_true')
     ap.add_argument('--confirm-cargo-inspected',action='store_true',help='Requerido por D9.9.18: autoriza ejecutar descargas tras comprobar la carga en Gazebo')
@@ -165,6 +169,10 @@ def main():
             'physical_deliveries_verified':False,'problems':[]}
     write(root/'report.json',report)
     try:
+        if not (0.2<=a.time_scale<=2.) or not (0.1<=a.nav_speed_limit<=2.) or not (0.1<=a.nav_accel_limit<=2.):
+            raise ValueError('PARAMETROS_NAVEGACION_FUERA_DE_RANGO')
+        report['navigation_parameters']={'time_scale':a.time_scale,'auto_time_scale':a.auto_time_scale,'nav_speed_limit_m_s':a.nav_speed_limit,'nav_accel_limit_m_s2':a.nav_accel_limit}
+        write(root/'report.json',report)
         if a.execute and not a.confirm_cargo_inspected:
             raise RuntimeError('Falta --confirm-cargo-inspected requerido por módulo D9.9.18')
         if a.execute and not a.confirm_runtime_v2:
@@ -205,17 +213,18 @@ def main():
         pickup_dir.mkdir()
         for stage in STAGES:
             src=refs[stage]
+            nav_time_mode=['--auto-time-scale'] if a.auto_time_scale else ['--time-scale',str(a.time_scale)]
             align_path=root/(stage+'_alignment.json')
             step(root,report,stage+'_alignment',
                  [files['align'],'--trajectory',src,'--execute','--output',align_path],align_path,
                  {'ALIGNED','ALREADY_ALIGNED'})
             nav_dry=root/(stage+'_navigation_dry.json')
             step(root,report,stage+'_navigation_dry',
-                 [files['nav'],'--stage',stage,'--output',nav_dry],nav_dry,
+                 [files['nav'],'--stage',stage,*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--output',nav_dry],nav_dry,
                  {'PASS_GUARDED_DRY_RUN_NO_COMMANDS'})
             nav_out=root/(stage+'_navigation.json')
             step(root,report,stage+'_navigation',
-                 [files['nav'],'--stage',stage,'--execute','--confirm-runtime-v2','--output',nav_out],nav_out,
+                 [files['nav'],'--stage',stage,*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--execute','--confirm-runtime-v2','--output',nav_out],nav_out,
                  {'DONE_ALL_'+stage.upper()})
             if stage.startswith('pickup'):
                 # Recogida simultánea: los tres robots ya han terminado su
@@ -256,6 +265,26 @@ def main():
                      {'WAVE_COMPLETED_ACK_REQUIRES_GAZEBO_INSPECTION'})
             report['completed_stages'].append(stage)
             write(root/'report.json',report)
+
+            # Después del segundo agarre físico, esperar reposo
+            # antes de verificar la alineación de delivery2.
+            if stage == 'pickup2':
+                settle_out = root / 'pickup2_before_delivery2_settle.json'
+
+                step(
+                    root,
+                    report,
+                    'pickup2_before_delivery2_settle',
+                    [
+                        files['settle'],
+                        '--settle-s', '1.5',
+                        '--timeout-s', '20.0',
+                        '--speed-limit', '0.025',
+                        '--output', settle_out,
+                    ],
+                    settle_out,
+                    {'ROBOTS_SETTLED_VERIFIED'}
+                )
         report['status']='DONE_ALL_FOUR_PHYSICAL_STAGES_ACK'
         report['physical_deliveries_verified']=False
         write(root/'report.json',report)

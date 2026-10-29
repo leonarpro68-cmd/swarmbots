@@ -259,7 +259,7 @@ def decode_command(raw: str) -> TimedCommand:
     goal = _positive_float(obj.get('goal_tolerance_m'),'goal_tolerance_m')
     settle = _positive_float(obj.get('goal_settle_s'),'goal_settle_s')
     grace = _positive_float(obj.get('finish_grace_s'),'finish_grace_s')
-    if speed>1.2 or accel>1. or not .03<=error<=.25 or goal>error or grace>30:
+    if speed>2.0 or accel>2.0 or not .03<=error<=.25 or goal>error or grace>30:
         raise TimedProtocolError('Límites no autorizados')
     for j,(a,b) in enumerate(zip(pieces,pieces[1:])):
         da,db = durations[j],durations[j+1]

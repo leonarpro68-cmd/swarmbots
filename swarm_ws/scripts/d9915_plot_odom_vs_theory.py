@@ -123,6 +123,8 @@ def main():
                     help='JSON con ventanas por etapa: {stages:[{stage,trajectory,start_time_s,end_time_s}]})')
     ap.add_argument('--output', default='scripts/resultados/d9915_velocidad_aceleracion_real_vs_teorica.png')
     ap.add_argument('--mission-label', default='seed_100_run_007')
+    ap.add_argument('--nav-speed-limit', type=float, default=1.2)
+    ap.add_argument('--nav-accel-limit', type=float, default=1.0)
     args = ap.parse_args()
 
     odom = load_odom(Path(args.odom_jsonl).resolve())
@@ -160,8 +162,8 @@ def main():
                 ax_acc.plot(ra[0], ra[1], color=color, lw=1.6, ls='--', alpha=0.9,
                             label=f'{robot.replace("summit", "Summit ")} real')
 
-        ax_speed.axhline(1.2, color='0.35', ls='--', lw=1.4, label='Límite 1.2')
-        ax_acc.axhline(1.0, color='0.35', ls='--', lw=1.4, label='Límite 1')
+        ax_speed.axhline(args.nav_speed_limit, color='0.35', ls='--', lw=1.4, label=f'Límite {args.nav_speed_limit:g} m/s')
+        ax_acc.axhline(args.nav_accel_limit, color='0.35', ls='--', lw=1.4, label=f'Límite {args.nav_accel_limit:g} m/s²')
         ax_speed.set_xlabel('Tiempo de trayectoria (s)')
         ax_speed.set_ylabel('Rapidez (m/s)')
         ax_acc.set_xlabel('Tiempo de trayectoria (s)')

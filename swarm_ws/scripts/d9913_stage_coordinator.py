@@ -43,6 +43,60 @@ def prepare(a, report):
                 raise ValueError(f'{name}: INVALID_VALUES')
             data[name]=(ctrl,dur)
             report['robots'][name]={'segments':len(ctrl),'duration_s':float(sum(dur)),'start_xy':ctrl[0,0].tolist()}
+    # Reescalado temporal uniforme; puntos de control espaciales INALTERADOS.
+    # En t_nuevo=t_original/f, velocidad=f*v y aceleración=f²*a.
+    factor=float(a.time_scale)
+    if a.auto_time_scale:
+        # Cotas conservadoras sobre TODOS los tramos y robots de la etapa.
+        # La propiedad de envolvente convexa garantiza los máximos globales,
+        # aunque puede subestimar el factor realmente alcanzable.
+        peak_v = 0.0
+        peak_a = 0.0
+        for ctrl,dur in data.values():
+            v_cp=5*np.diff(ctrl,axis=1)/dur[:,None,None]
+            a_cp=20*np.diff(ctrl,n=2,axis=1)/(dur[:,None,None]**2)
+            peak_v=max(peak_v,float(np.linalg.norm(v_cp,axis=2).max()))
+            peak_a=max(peak_a,float(np.linalg.norm(a_cp,axis=2).max()))
+        k_v=float('inf') if peak_v<1e-10 else a.nav_speed_limit/peak_v
+        k_a=float('inf') if peak_a<1e-10 else math.sqrt(a.nav_accel_limit/peak_a)
+        factor=min(k_v,k_a,2.0)
+        if not math.isfinite(factor) or factor<0.2:
+            raise ValueError(f'AUTO_TIME_SCALE_NO_FEASIBLE_FACTOR k={factor}')
+        report['auto_time_scale']={
+            'active':True,'factor':factor,
+            'reference_speed_envelope_m_s':peak_v,
+            'reference_acceleration_envelope_m_s2':peak_a,
+            'velocity_constraint_factor':k_v,
+            'acceleration_constraint_factor':k_a,
+            'limiting_constraint':('speed' if k_v<=k_a and k_v<=2.0 else
+                                  'acceleration' if k_a<=2.0 else 'factor_cap_2'),
+            'method':'uniform_stage_conservative_envelope',
+            'note':'Factor único por etapa; no es el reescalado sucesivo por robots que terminan.'
+        }
+    for name,(ctrl,dur) in data.items():
+        scaled=dur/factor
+        if not np.isfinite(scaled).all() or np.min(scaled)<=1e-5:
+            raise ValueError(f'{name}: DURACIONES_INVALIDAS_REESCALADAS')
+        # Comprobación conservadora mediante envolvente convexa de derivadas
+        # de Bézier. Nunca autorizar una trayectoria cuya cota supere el límite.
+        vctrl=5*np.diff(ctrl,axis=1)/scaled[:,None,None]
+        actrl=20*np.diff(ctrl,n=2,axis=1)/(scaled[:,None,None]**2)
+        upper_v=float(np.linalg.norm(vctrl,axis=2).max())
+        upper_a=float(np.linalg.norm(actrl,axis=2).max())
+        # Para factor 1 se conserva exactamente el comportamiento histórico.
+        # Con aceleración experimental se comprueba conservadoramente el perfil.
+        if (a.auto_time_scale or factor>1) and upper_v>a.nav_speed_limit+1e-8:
+            raise ValueError(f'{name}: SPEED_PROFILE_ENVELOPE {upper_v:.3f} > {a.nav_speed_limit:.3f} m/s')
+        if (a.auto_time_scale or factor>1) and upper_a>a.nav_accel_limit+1e-8:
+            raise ValueError(f'{name}: ACCEL_PROFILE_ENVELOPE {upper_a:.3f} > {a.nav_accel_limit:.3f} m/s²')
+        data[name]=(ctrl,scaled)
+        report['robots'][name].update(duration_s=float(scaled.sum()),
+                                      control_speed_envelope_m_s=upper_v,
+                                      control_accel_envelope_m_s2=upper_a)
+    report['navigation_parameters']={
+        'time_scale':factor,'nav_speed_limit_m_s':a.nav_speed_limit,
+        'nav_acceleration_limit_m_s2':a.nav_accel_limit,
+        'note':'Los límites del seguidor ROS también deben ser >= nav_speed_limit; D8 agarre no modificado.'}
     return proto,data
 
 
@@ -118,7 +172,7 @@ def run_ros(a,proto,data,report):
             c,d=data[n]
             cmd=dict(schema=proto.SCHEMA_V2,action='start',session_id=report['session_id'],robot=n,
                      frame_id=f'{n}/odom',start_time_s=start_time,control_points_m=c.tolist(),
-                     segment_durations_s=d.tolist(),speed_limit_m_s=1.2,acceleration_limit_m_s2=1.,
+                     segment_durations_s=d.tolist(),speed_limit_m_s=a.nav_speed_limit,acceleration_limit_m_s2=a.nav_accel_limit,
                      max_tracking_error_m=.15,goal_tolerance_m=.05,goal_settle_s=.5,finish_grace_s=4.)
             raw=json.dumps(cmd,separators=(',',':'),allow_nan=False)
             proto.decode_command(raw)
@@ -152,6 +206,10 @@ def run_ros(a,proto,data,report):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--time-scale',type=float,default=1.,help='Factor manual (ignorado con --auto-time-scale)')
+    p.add_argument('--auto-time-scale',action='store_true',help='Calcula el factor común máximo por etapa desde v_max y a_max')
+    p.add_argument('--nav-speed-limit',type=float,default=1.2,help='Límite de rapidez del comando temporizado, m/s')
+    p.add_argument('--nav-accel-limit',type=float,default=1.0,help='Límite de aceleración del comando temporizado, m/s²')
     p.add_argument('--stage',choices=['pickup1','delivery1','pickup2','delivery2'],required=True)
     p.add_argument('--trajectory',default=None)
     p.add_argument('--protocol-file',default='src/swarm_behavior/swarm_behavior/swarm_planning/hybrid_refinement/timed_protocol.py')
@@ -169,6 +227,8 @@ def main():
     report={'schema':'swarm.d9913.stage.coordinator.v1','stage':a.stage,'status':'REJECT','execution_requested':a.execute,
             'commands_sent':0,'problems':[],'robots':{},'session_id':'D9913_'+uuid.uuid4().hex[:12]}
     try:
+        if not (0.2<=a.time_scale<=2.0) or not (0.1<=a.nav_speed_limit<=2.0) or not (0.1<=a.nav_accel_limit<=2.0):
+            raise ValueError('PARAMETROS_NAVEGACION_FUERA_DE_RANGO')
         if a.start_delay<5 or a.start_delay>30:raise ValueError('START_DELAY_OUT_OF_RANGE')
         proto,data=prepare(a,report)
         run_ros(a,proto,data,report)
