@@ -7,6 +7,8 @@ No reinicia Gazebo ni sustituye las rutinas originales de agarre/entrega.
 import argparse
 import json
 import subprocess
+import os
+import signal
 import time
 from datetime import datetime, timezone
 import sys
@@ -56,6 +58,7 @@ def cli():
     p.add_argument('--output-dir',type=Path,default=None,help='Carpeta de ejecución; por defecto crear mision_001, mision_002, ...')
     p.add_argument('--world-verified',action='store_true',help='Operador verificó escenario Gazebo, odom y geometría (incluida carga)')
     p.add_argument('--execute',action='store_true',help='Autoriza la ejecución física con puntos de confirmación')
+    p.add_argument('--no-record-odom',action='store_true',help='Desactiva grabación pasiva de odometría en las 4 etapas Hybrid V2')
     p.add_argument('--auto-confirm',action='store_true',help='Verificación automática de cada agarre/entrega por ACK + poses Gazebo; se detiene ante incertidumbre')
     p.add_argument('--skip-start-confirmation', action='store_true', help='Omite el SI inicial; requiere --auto-confirm, --world-verified y --execute')
     p.add_argument('--start-at',choices=STAGES,help='Opcional: reanudar solo si coincide con el ledger')
@@ -218,9 +221,46 @@ def main():
                         raise RuntimeError(f'{rob}: la carga {trash} no está cerca; no navegar')
             else:
                 checked_positions()
-        execute([py,script('run_hybrid_v2_stage_ros.py'),'--report',report,'--controls',controls,
-                 '--stage',stage,'--scenario',a.scenario,'--robot-radius','0.55',
-                 '--operational-margin','0.05','--world-verified','--execute'])
+        # Grabación pasiva: sin publicar velocidades ni cambiar el seguidor.
+        # Inicia antes de armar la trayectoria y finaliza INCLUSO si se aborta.
+        recorder = None
+        log_handle = None
+        try:
+            if not a.no_record_odom:
+                record_dir = base/'odom_record'
+                record_dir.mkdir(parents=True,exist_ok=True)
+                ready_file=record_dir/'.ready'
+                ready_file.unlink(missing_ok=True)
+                log_handle=(record_dir/'recorder.log').open('w',encoding='utf-8')
+                recorder=subprocess.Popen([py,script('record_d8_odom.py'),'--stage',stage,
+                                           '--output-dir',record_dir,'--ready-file',ready_file],
+                                          stdout=log_handle,stderr=subprocess.STDOUT)
+                deadline=time.monotonic()+15.0
+                while time.monotonic()<deadline:
+                    if recorder.poll() is not None:
+                        raise RuntimeError(f'Registrador de odometría terminó prematuramente; ver {record_dir}/recorder.log')
+                    if ready_file.is_file() and all((record_dir/f'{r}_odom.csv').is_file()
+                                                    and (record_dir/f'{r}_odom.csv').stat().st_size>200 for r in ROBOTS):
+                        # CSV tamaño >200 indica al menos una muestra después de la cabecera.
+                        break
+                    time.sleep(.10)
+                else:
+                    raise RuntimeError('Grabador sin odometría preparada tras 15s; no ejecutar sin mediciones')
+                print('[D8.11] Odometría preparada para '+stage+' (3 Summit)',flush=True)
+            execute([py,script('run_hybrid_v2_stage_ros.py'),'--report',report,'--controls',controls,
+                     '--stage',stage,'--scenario',a.scenario,'--robot-radius','0.55',
+                     '--operational-margin','0.05','--world-verified','--execute'])
+        finally:
+            if recorder is not None:
+                if recorder.poll() is None:
+                    recorder.send_signal(signal.SIGINT)
+                    try: recorder.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        recorder.terminate()
+                        try:recorder.wait(timeout=3)
+                        except subprocess.TimeoutExpired:recorder.kill();recorder.wait()
+                print(f'[D8.11] CSV de {stage}: {base / "odom_record"}',flush=True)
+            if log_handle is not None:log_handle.close()
         names=stage_targets(raw_r,stage)
         if stage.startswith('pickup'):
             before=parallel_pickup_preflight(names)

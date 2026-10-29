@@ -61,6 +61,9 @@ class GraspPathFollower(PathFollower):
         self.timed_command = None
         self.timed_last_time = None
         self.timed_heartbeat_wall = None
+        # Ventana breve solo para pausas de /clock mientras estamos ARMED.
+        # RUNNING conserva el límite de vigilancia de 1 s en tiempo real.
+        self.timed_armed_clock_grace_s = 3.0
         self.timed_last_velocity = (0., 0.)
         self.timed_goal_since = None
         self.timed_running_reported = False
@@ -75,9 +78,38 @@ class GraspPathFollower(PathFollower):
                                f'hybrid_enabled={self.hybrid_enabled}')
 
     def _timed_wall_watchdog(self):
-        if (self.timed_command is not None and self.timed_heartbeat_wall is not None
-                and time.monotonic()-self.timed_heartbeat_wall > 1.0):
-            self._timed_abort('Sin avance del controlador o /clock por más de 1 s')
+        """Supervisión STEADY_TIME independiente de /clock.
+
+        Una interrupción temporal de /clock antes del inicio no debe consumir
+        la trayectoria, pero el seguidor mantiene cmd_vel=0 durante la espera.
+        Si /clock sí avanza y el lazo no se ejecuta, cancelamos a los 1 s.
+        La fase RUNNING conserva el límite estricto original de 1 s.
+        """
+        cmd = self.timed_command
+        hb = self.timed_heartbeat_wall
+        if cmd is None or hb is None:
+            return
+        age = time.monotonic() - hb
+        if age <= 1.0:
+            return
+        now_sim = self.get_clock().now().nanoseconds / 1e9
+        last_step_sim = self.timed_last_time
+        sim_advanced = (last_step_sim is not None
+                        and now_sim - last_step_sim > 0.02)
+        if sim_advanced:
+            # Simulación avanzando, pero el control dejó de atender el temporizador.
+            self._timed_abort(
+                f'CONTROL_LOOP_STALLED: control sin ciclo {age:.2f}s; '
+                f'/clock avanzó {now_sim-last_step_sim:.3f}s')
+            return
+        if not self.timed_running_reported and age < self.timed_armed_clock_grace_s:
+            # Solo ARMED: pausa corta de /clock. Pedimos STOP sin consumir
+            # ni desplazar la referencia temporal compartida de la misión.
+            self.stop()
+            return
+        self._timed_abort(
+            f'CLOCK_STALLED: sin progreso de /clock/control {age:.2f}s; '
+            f'estado={"running" if self.timed_running_reported else "armed"}')
 
     def _timed_status(self, cmd, state, detail=''):
         self.timed_status_pub.publish(String(data=build_status(cmd.robot, cmd.session_id, state, detail)))

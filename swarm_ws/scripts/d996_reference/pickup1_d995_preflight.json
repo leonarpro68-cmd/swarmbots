@@ -1,0 +1,107 @@
+{
+  "stage": "pickup1",
+  "schema": "d99_collective_timed_quintic.preview.v1",
+  "status": "PASS_OFFLINE_READ_ONLY",
+  "ros_executable": false,
+  "gazebo_authorized": false,
+  "obstacle_map_recertified": false,
+  "failures": [],
+  "robot_checks": [
+    {
+      "robot": 0,
+      "finish_s": 8.8304212152345,
+      "C2_joins": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.425987077190101e-14,
+        "accel_m_s2": 6.517775106684481e-15
+      },
+      "speed_upper_m_s": 1.111111111375473,
+      "accel_upper_m_s2": 0.5345053584305299,
+      "position_error_upper_m": 0.0005555505994941083,
+      "velocity_error_upper_m_s": 0.0002846169784036064,
+      "accel_error_upper_m_s2": 0.008233141689685553,
+      "source_jerk_bound_m_s3": 31.291336948285057,
+      "converted_jerk_bound_m_s3": 1.641523630804813
+    },
+    {
+      "robot": 1,
+      "finish_s": 10.607543484800443,
+      "C2_joins": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.6962101193654745e-14,
+        "accel_m_s2": 4.666407440134664e-13
+      },
+      "speed_upper_m_s": 0.9001917587311332,
+      "accel_upper_m_s2": 0.7220917316274733,
+      "position_error_upper_m": 0.00045140321626147955,
+      "velocity_error_upper_m_s": 0.0004294926681675159,
+      "accel_error_upper_m_s2": 0.007569735397903838,
+      "source_jerk_bound_m_s3": 24.963566735103697,
+      "converted_jerk_bound_m_s3": 3.132759871154745
+    },
+    {
+      "robot": 2,
+      "finish_s": 12.042486932276049,
+      "C2_joins": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.5553125149938006e-14,
+        "accel_m_s2": 2.1621274779664635e-12
+      },
+      "speed_upper_m_s": 0.8821453033221773,
+      "accel_upper_m_s2": 0.7505297266471402,
+      "position_error_upper_m": 0.0004816373953498079,
+      "velocity_error_upper_m_s": 0.00043353947531570583,
+      "accel_error_upper_m_s2": 0.006961938441858625,
+      "source_jerk_bound_m_s3": 21.58775378131618,
+      "converted_jerk_bound_m_s3": 3.6099443621941063
+    }
+  ],
+  "separation_pairs": [
+    {
+      "robots": [
+        0,
+        1
+      ],
+      "sampled_m": 16.250000000000007,
+      "certified_lower_m": 16.244972791919867
+    },
+    {
+      "robots": [
+        0,
+        2
+      ],
+      "sampled_m": 19.297136459119955,
+      "certified_lower_m": 19.29215435776531
+    },
+    {
+      "robots": [
+        1,
+        2
+      ],
+      "sampled_m": 19.56559480312316,
+      "certified_lower_m": 19.56113989013464
+    }
+  ],
+  "separation_lower_m": 16.244972791919867,
+  "inherited_source_map_clearance": {
+    "original_hybrid_v2_certified": true,
+    "original_requested_margin_m": 0.05,
+    "source_obstacle_extra_clearance_m": 0.06420532006355506,
+    "source_wall_extra_clearance_m": 2.193018171206772,
+    "converted_max_position_error_upper_m": 0.0005555505994941083,
+    "remaining_obstacle_extra_margin_lower_m": 0.06364976946406095,
+    "remaining_wall_extra_margin_lower_m": 2.1924626206072775,
+    "valid_only_for_same_static_map_and_frame": true,
+    "passed": true
+  },
+  "source_duration_s": 12.042486932276049,
+  "warnings": [
+    "Obstacle clearance is inherited from original Hybrid V2 for same static map/frame; not independently re-mapped",
+    "Robot controller behavior not tested"
+  ],
+  "checked_sha256": {
+    "source": "57d7d3f532b803fb6241c13062bc4c385c87c74b537007d489777b3d4b1468b1",
+    "converted": "3235223232eb1b47e36c46cc107086c933e5020917aa7b78758b9b183985e2dd",
+    "conversion_report": "e01f515dabc48234c864cd6d3faab98404fac17c3a8f2bc12ba8979753b7cf81"
+  }
+}

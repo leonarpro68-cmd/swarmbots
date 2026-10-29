@@ -46,6 +46,81 @@ def load_stage(run: Path, stage: str):
     return row, controls, duration
 
 
+
+def sample_kinematics(controls: np.ndarray, dt_s: float, samples_per_piece: int=30):
+    """Derivadas analíticas de segmentos Bézier quínticos con dt uniforme.
+
+    En los nudos se conserva la muestra del extremo derecho del segmento
+    anterior: no se ocultan posibles discontinuidades entre segmentos.
+    """
+    if not np.isfinite(dt_s) or dt_s <= 0:
+        raise ValueError('dt_s debe ser positivo y finito')
+    if samples_per_piece < 3:
+        raise ValueError('samples_per_piece debe ser >= 3')
+    c = np.asarray(controls, dtype=float)
+    if c.ndim != 3 or c.shape[1:] != (6, 2) or not len(c) or not np.isfinite(c).all():
+        raise ValueError('Controles Bézier inválidos')
+    u = np.linspace(0.0, 1.0, samples_per_piece)
+    def bernstein(degree):
+        from math import comb
+        return np.stack([comb(degree,k)*u**k*(1-u)**(degree-k)
+                         for k in range(degree+1)], axis=1)
+    b4, b3 = bernstein(4), bernstein(3)
+    v_control = 5.0 * (c[:,1:,:] - c[:,:-1,:]) / dt_s
+    a_control = 20.0 * (c[:,2:,:] - 2*c[:,1:-1,:] + c[:,:-2,:]) / dt_s**2
+    vxy = np.einsum('sk,nkd->nsd', b4, v_control)
+    axy = np.einsum('sk,nkd->nsd', b3, a_control)
+    t = np.arange(len(c))[:,None]*dt_s + u[None,:]*dt_s
+    return t.ravel(), np.linalg.norm(vxy,axis=2).ravel(), np.linalg.norm(axy,axis=2).ravel()
+
+
+def render_kinematics(run: Path, output: Path, samples_per_piece: int=30,
+                      max_speed: float=1.20, max_accel: float=1.00):
+    if not np.isfinite(max_speed) or max_speed <= 0 or not np.isfinite(max_accel) or max_accel <= 0:
+        raise ValueError('Los límites deben ser positivos y finitos')
+    fig, axes = plt.subplots(4, 2, figsize=(17, 16), squeeze=False)
+    metrics = []
+    for j, (stage,title) in enumerate(zip(STAGES,TITLES)):
+        _, ctrls, duration = load_stage(run,stage)
+        # El tiempo por pieza es el mismo del protocolo utilizado por D.8;
+        # se lee del archivo, nunca se infiere solo de la duración de la misión.
+        npz_path=run/'mission'/stage/'protocol'/f'{stage}_protocol_controls.npz'
+        with np.load(npz_path, allow_pickle=False) as z:
+            if 'dt_s' not in z:
+                raise ValueError(f'{stage}: falta dt_s en los controles')
+            dt = float(z['dt_s'])
+        if len({len(c) for c in ctrls}) != 1:
+            raise ValueError(f'{stage}: distinta cantidad de piezas entre robots')
+        axv, axa = axes[j]
+        for i,ctrl in enumerate(ctrls):
+            t, speeds, accels = sample_kinematics(ctrl,dt,samples_per_piece)
+            color=original.ROBOT_COLORS[i]
+            axv.plot(t,speeds,color=color,label=f'Summit {i}',linewidth=1.5)
+            axa.plot(t,accels,color=color,label=f'Summit {i}',linewidth=1.5)
+            metrics.append({'stage':stage,'robot':f'summit{i}',
+                            'max_speed_m_s':float(speeds.max()),
+                            'max_accel_m_s2':float(accels.max()),
+                            'duration_s':float(t[-1])})
+        axv.axhline(max_speed,linestyle='--',color='black',alpha=.65,label=f'Límite {max_speed:g} m/s')
+        axa.axhline(max_accel,linestyle='--',color='black',alpha=.65,label=f'Límite {max_accel:g} m/s²')
+        for ax, ylabel in ((axv,'Rapidez (m/s)'),(axa,'Aceleración |a| (m/s²)')):
+            ax.set_title(f'{title} · {ylabel}',fontweight='bold')
+            ax.set_xlabel('Tiempo de trayectoria (s)')
+            ax.set_ylabel(ylabel)
+            ax.set_xlim(left=0,right=dt*len(ctrls[0]))
+            ax.set_ylim(bottom=0)
+            ax.grid(True,alpha=.25)
+        if j==0:
+            axv.legend(loc='upper right',fontsize=9,ncol=2)
+            axa.legend(loc='upper right',fontsize=9,ncol=2)
+    fig.suptitle(f'SwarmBots D.8 · velocidad y aceleración Bézier · {run.name}',fontsize=16,fontweight='bold')
+    fig.text(.03,.01,'Derivadas analíticas de las trayectorias protocol/NPZ (sin maniobras locales RGB-D). No son velocidades medidas en Gazebo.',fontsize=9)
+    fig.tight_layout(rect=(0,.02,1,.965))
+    output.parent.mkdir(parents=True,exist_ok=True)
+    fig.savefig(output,dpi=150,bbox_inches='tight')
+    plt.close(fig)
+    return metrics
+
 def render(run: Path, output: Path, show_cbs: bool=False):
     scenario_path=run/'scenario.json'
     if not scenario_path.is_file():
@@ -88,10 +163,21 @@ def main():
     ap.add_argument('--run',type=Path,required=True,help='Carpeta seed_XXX_run_YYY creada por D.8')
     ap.add_argument('--output',type=Path,help='PNG resultante; por defecto, en la carpeta run')
     ap.add_argument('--show-cbs',action='store_true')
+    ap.add_argument('--kinematics',action='store_true',help='Generar además PNG de velocidad y aceleración por etapa')
+    ap.add_argument('--kinematics-output',type=Path,help='Ruta opcional del PNG de cinemática')
+    ap.add_argument('--samples-per-piece',type=int,default=30)
+    ap.add_argument('--max-speed',type=float,default=1.20)
+    ap.add_argument('--max-accel',type=float,default=1.00)
     args=ap.parse_args()
     out=args.output or args.run/'mission_hybrid_v2.png'
     try:
         rows=render(args.run,out,args.show_cbs)
+        if args.kinematics:
+            kin_out=args.kinematics_output or args.run/'mission_hybrid_v2_cinematica.png'
+            kin_rows=render_kinematics(args.run,kin_out,args.samples_per_piece,args.max_speed,args.max_accel)
+            print('PNG cinemática:',kin_out)
+            for row in kin_rows:
+                print(f"{row['stage']} {row['robot']}: vmax={row['max_speed_m_s']:.3f} m/s, amax={row['max_accel_m_s2']:.3f} m/s²")
     except (ValueError,FileNotFoundError,KeyError) as exc:
         ap.error(str(exc))
     print('PNG:',out)

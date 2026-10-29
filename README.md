@@ -1,26 +1,30 @@
-# D.8.9 — Imágenes coherentes con escenario y ejecución real
+# D.8.10 — Cinemática de trayectorias Hybrid V2
+
+Este parche sustituye **únicamente** `swarm_ws/scripts/plot_mission_d8.py` (D.8.9).
 
 ## Instalación
-Extraer este ZIP en la carpeta `~/swarmbots` del anfitrión, respetando `swarm_ws/scripts/`.
-Los tres archivos Python se ejecutan directamente: no requieren `colcon build`.
 
-## Imagen offline (posiciones iniciales corregidas)
+Desde el host:
+
+```bash
+cd ~/swarmbots
+cp swarm_ws/scripts/plot_mission_d8.py swarm_ws/scripts/plot_mission_d8.py.bak_D8_9
+unzip -o ~/Descargas/swarm_hybrid_v2_D8_10_cinematica.zip -d ~/swarmbots
+```
+
+Dentro de Docker:
 
 ```bash
 cd ~/swarm_ws
-export PYTHONPATH="$PWD/src/swarm_behavior:$PYTHONPATH"
-python3 scripts/experimento_radio_hybrid_v2.py --scenario scripts/resultados/d8/seed_100_run_001/scenario.json --radius 0.55 --margin 0.05 --iterations 2 --output scripts/resultados/mision_100_offline_corregida.png
+export PYTHONPATH="$PWD/src/swarm_behavior:$PWD/scripts:$PYTHONPATH"
+python3 -m py_compile scripts/plot_mission_d8.py
+python3 scripts/plot_mission_d8.py --run scripts/resultados/d8/seed_100_run_001 --kinematics
 ```
 
-Ahora `plot_hybrid_v2_mission.plan_four` inicia desde `scenario.robots`, no de un spawn aleatorio antiguo. La opción `--seed 100` también funcionará, pero `--scenario` garantiza usar el JSON de una ejecución concreta.
+Se generan `mission_hybrid_v2.png` (las rutas) y `mission_hybrid_v2_cinematica.png` (cuatro filas: pickup1, delivery1, pickup2 y delivery2; columnas de rapidez y magnitud de aceleración). Se muestra cada Summit y los límites de referencia 1.20 m/s y 1.00 m/s². Para generar solamente un PNG de rutas, omitir `--kinematics`.
 
-## Imagen de las 4 etapas calculadas por D.8
+Parámetros optativos: `--kinematics-output RUTA.png`, `--samples-per-piece 50`, `--max-speed 1.20` y `--max-accel 1.00`.
 
-```bash
-python3 scripts/plot_mission_d8.py --run scripts/resultados/d8/seed_100_run_001
-```
+Se usan **derivadas analíticas** de cada Bézier quíntica y el `dt_s` del NPZ de protocolo: `v = 5(P_{k+1}-P_k)/dt`, `a = 20(P_{k+2}-2P_{k+1}+P_k)/dt²` como puntos de control de derivadas. El tiempo reinicia en cada etapa. Las muestras incluyen los extremos de cada pieza, por lo que las discontinuidades entre piezas no quedan ocultas. Las curvas representan **trayectorias planificadas**, no velocidades/odometrías realmente medidas en Gazebo; no incluyen aproximaciones RGB-D ni giros/retornos locales.
 
-PNG por defecto: `.../seed_100_run_001/mission_hybrid_v2.png`.
-El script solo lee los informes `protocol/<stage>_protocol_report.json` y los controles `protocol/<stage>_protocol_controls.npz`, por lo que NO recalcula ni sustituye CBS. Exige certificado de cada etapa. Los tramos de movimiento RGB-D y retorno local no están representados, ni tampoco la trayectoria realmente medida por odometría. En ejecuciones incompletas devuelve un error explicativo.
-
-No alterar radio, umbral de proximidad ni controles operativos.
+Este cambio no modifica la planificación, el seguidor, el controlador ni el lanzamiento D.8. La comparación con límites es visual; la certificación sigue haciéndose con el planificador original.
