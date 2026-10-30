@@ -44,6 +44,9 @@ def main():
  p.add_argument('--historical-ledger',default='scripts/resultados/d8/seed_100_run_007/mission/mision.json',type=Path)
  p.add_argument('--navigation-report',required=True,type=Path,help='JSON D9.9.13 de la etapa, no el reporte general')
  p.add_argument('--world',default='world_demo')
+ p.add_argument('--milp-assignment',type=Path,default=None)
+ p.add_argument('--milp-trajectory',type=Path,default=None)
+ p.add_argument('--milp-expected-sha256',default=None)
  p.add_argument('--execute',action='store_true')
  p.add_argument('--output',required=True,type=Path)
  a=p.parse_args()
@@ -53,21 +56,43 @@ def main():
           'utc':datetime.now(timezone.utc).isoformat(),'problems':[]}
  try:
   scenario=json.loads(a.scenario.read_text())
-  if scenario.get('seed')!=100:raise ValueError('Solo se valida seed=100 histórico')
-  historical=json.loads(a.historical_ledger.read_text())
-  # El ledger anterior define solo ASIGNACIONES, no evidencia de esta corrida.
   scenario_sha=hashlib.sha256(a.scenario.read_bytes()).hexdigest()
-  if historical.get('scenario_sha256')!=scenario_sha:raise ValueError('Escenario difiere del usado por D8 histórico')
-  src=a.reference_dir/f'{a.stage}_d994_NON_EXECUTABLE.npz'
-  if hashlib.sha256(src.read_bytes()).hexdigest()!=SHA[a.stage]:raise ValueError('Trayectoria D9.9 no coincide con la validada')
+  if a.milp_assignment is None:
+   if scenario.get('seed')!=100:raise ValueError('Solo se valida seed=100 histórico')
+   historical=json.loads(a.historical_ledger.read_text())
+   if historical.get('scenario_sha256')!=scenario_sha:
+    raise ValueError('Escenario difiere del usado por D8 histórico')
+   src=a.reference_dir/f'{a.stage}_d994_NON_EXECUTABLE.npz'
+   if hashlib.sha256(src.read_bytes()).hexdigest()!=SHA[a.stage]:
+    raise ValueError('Trayectoria D9.9 no coincide con la validada')
+   assignments=mapping(a.stage,historical,scenario)
+  else:
+   if not a.milp_trajectory or not a.milp_expected_sha256:
+    raise ValueError('MILP requiere NPZ y SHA explícitos')
+   src=a.milp_trajectory
+   if hashlib.sha256(src.read_bytes()).hexdigest()!=a.milp_expected_sha256:
+    raise ValueError('MILP NPZ hash incorrecto')
+   pre=json.loads(a.milp_assignment.read_text())
+   if (pre.get('status') not in ('MILP_PREFLIGHT_VALID_OFFLINE_ONLY', 'MILP_V3_PREFLIGHT_VALID_OFFLINE_ONLY')
+       or pre.get('seed')!=scenario.get('seed')
+       or pre.get('scenario_sha256')!=scenario_sha):
+    raise ValueError('MILP_PREFLIGHT_INVALID')
+   st=pre['stages'][a.stage]
+   if st['sha256']!=a.milp_expected_sha256 or Path(st['npz']).resolve()!=src.resolve():
+    raise ValueError('MILP ruta distinta al preflight')
+   assign=pre['assignment']
+   names=[assign[r][0 if a.stage.endswith('1') else 1] for r in ROBOTS]
+   objs={e['name']:e for e in scenario['elements'] if e['type']=='trash'}
+   if any(n not in objs for n in names) or len(set(names))!=3:
+    raise ValueError('MILP identidad inválida')
+   assignments={r:(n,'deposit_'+objs[n]['color']) for r,n in zip(ROBOTS,names)}
   nav=json.loads(a.navigation_report.read_text())
   expected='DONE_ALL_'+a.stage.upper()
   if nav.get('status')!=expected or nav.get('problems'):
    raise ValueError(f'No está acreditada la navegación D9.9 de {a.stage}: {nav.get("status")}')
-  assignments=mapping(a.stage,historical,scenario)
   trash,deposit=assignments[a.robot]
   payload.update({'trash':trash,'deposit':deposit,'mapping':assignments,
-                  'navigation_verified':expected,'historical_assignments_only':True})
+                  'navigation_verified':expected,'historical_assignments_only':a.milp_assignment is None})
   scripts=Path(__file__).resolve().parent
   if a.stage.startswith('pickup'):
    from d6_grasp_existing import snapshot_odom, gazebo_trash_positions, check_preapproach, scenario_targets

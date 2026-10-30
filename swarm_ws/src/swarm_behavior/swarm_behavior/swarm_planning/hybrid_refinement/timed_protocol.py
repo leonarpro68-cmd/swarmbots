@@ -276,3 +276,79 @@ def decode_command(raw: str) -> TimedCommand:
         if vmax>speed+1e-6 or amax>accel+1e-6:
             raise TimedProtocolError('Límites dinámicos excedidos')
     return TimedCommand('start',session,robot,frame,start,None,tuple(pieces),speed,accel,error,goal,settle,grace,durations)
+
+# D9.9.31 — protocolo V3: reloj virtual común suavemente deformado.
+# V1/V2 intactos: no se cambia el control físico ni el publicador cmd_vel.
+from .successive_clock import (MODEL as SUCCESSIVE_MODEL,
+                              clock_from_payload as _v3_clock,
+                              command_envelopes as _v3_envelopes)
+
+SCHEMA_V3 = 'swarmbots.timed_bezier.v3'
+_decode_command_v2 = decode_command
+_reference_v2 = reference
+
+class SuccessiveTimedCommand:
+    """Adaptador de TimedCommand; conserva todos los campos V2 del seguidor."""
+    def __init__(self, source, timewarp, clock):
+        self._source = source
+        self.timewarp = timewarp
+        self.clock = clock
+
+    def __getattr__(self, name):
+        return getattr(self._source, name)
+
+    @property
+    def duration_s(self):
+        return self.clock.duration_s
+
+
+def decode_command(raw: str):
+    if not isinstance(raw,str) or len(raw.encode('utf8'))>MAX_PAYLOAD_BYTES:
+        raise TimedProtocolError('V3_PAYLOAD_LIMIT')
+    try:
+        obj=json.loads(raw,parse_constant=lambda _: (_ for _ in ()).throw(ValueError('NaN')))
+    except (ValueError,TypeError) as exc:
+        raise TimedProtocolError('JSON V3 inválido') from exc
+    if not isinstance(obj,dict) or obj.get('schema')!=SCHEMA_V3:
+        return _decode_command_v2(raw)
+    # Cancel conserva la semántica V2; robots por session_id.
+    if obj.get('action')=='cancel':
+        copy=dict(obj);copy['schema']=SCHEMA_V2;copy.pop('timewarp',None)
+        return _decode_command_v2(json.dumps(copy,allow_nan=False))
+    if obj.get('action')!='start':raise TimedProtocolError('V3_ACTION_INVALID')
+    if 'timewarp' not in obj:raise TimedProtocolError('V3_CLOCK_MISSING')
+    payload=obj['timewarp']
+    try:
+        clock=_v3_clock(payload)
+    except (ValueError,KeyError,TypeError,OverflowError) as exc:
+        raise TimedProtocolError(f'V3_CLOCK_INVALID: {exc}') from exc
+    # Reutilizamos el validador completo V2: C0/C1/C2, puntos,
+    # duraciones, limites numéricos y de control del mismo seguidor.
+    copy=dict(obj);copy['schema']=SCHEMA_V2;copy.pop('timewarp',None)
+    source=_decode_command_v2(json.dumps(copy,separators=(',',':'),allow_nan=False))
+    if not source.segment_durations_s:
+        raise TimedProtocolError('V3_REQUIRES_SEGMENT_DURATIONS')
+    try:
+        vv,aa=_v3_envelopes(source.control_points,source.segment_durations_s,clock)
+    except (ValueError,TypeError,OverflowError) as exc:
+        raise TimedProtocolError(f'V3_ENVELOPES_INVALID: {exc}') from exc
+    if vv>source.speed_limit_m_s+1e-6 or aa>source.acceleration_limit_m_s2+1e-6:
+        raise TimedProtocolError(f'V3_DYNAMIC_LIMIT_EXCEEDED: v={vv:.6f}, a={aa:.6f}')
+    return SuccessiveTimedCommand(source,payload,clock)
+
+
+def reference(cmd, now_s):
+    if not isinstance(cmd,SuccessiveTimedCommand):
+        return _reference_v2(cmd,now_s)
+    wall=now_s-cmd.start_time_s
+    if wall<0:return cmd.control_points[0][0],(0.,0.),'before'
+    if wall>=cmd.duration_s:return cmd.control_points[-1][-1],(0.,0.),'after'
+    import bisect
+    tau=cmd.clock.inverse(wall)
+    cumulative=[0.]
+    for d in cmd.segment_durations_s:cumulative.append(cumulative[-1]+d)
+    i=min(len(cmd.control_points)-1,bisect.bisect_right(cumulative,tau)-1)
+    dt=cmd.segment_durations_s[i]
+    pos,vel_tau=evaluate_piece(cmd.control_points[i],(tau-cumulative[i])/dt,dt)
+    q=cmd.clock.scale(tau)
+    return pos,(vel_tau[0]*q,vel_tau[1]*q),'active'

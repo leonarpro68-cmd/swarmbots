@@ -52,7 +52,7 @@ def step(root, report, label, args, result_path, expected):
 
 
 
-def parallel_pickup(root, report, stage, physical, nav_out, pickup_dir):
+def parallel_pickup(root, report, stage, physical, nav_out, pickup_dir, extra_args=()):
     """Lanza el agarre de los tres robots a la vez; cancela los restantes si uno falla.
 
     Las tres rutas D9.9 llegan a su objetivo y se comprueban ANTES de iniciar
@@ -63,7 +63,7 @@ def parallel_pickup(root, report, stage, physical, nav_out, pickup_dir):
         for robot in ROBOTS:
             result_path = pickup_dir / f'{stage}_{robot}_execute.json'
             cmd = [sys.executable, str(physical), '--stage', stage, '--robot', robot,
-                   '--navigation-report', str(nav_out), '--execute', '--output', str(result_path)]
+                   '--navigation-report', str(nav_out), '--execute', '--output', str(result_path), *map(str,extra_args)]
             log_path = root / f'{stage}_{robot}_physical_pickup.log'
             log = log_path.open('w', encoding='utf8')
             try:
@@ -157,6 +157,10 @@ def main():
     ap.add_argument('--reference-dir',default='scripts/d996_reference')
     ap.add_argument('--ledger',default='scripts/resultados/d8/seed_100_run_007/mission/mision.json')
     ap.add_argument('--scenario',default='scripts/d996_reference/scenario.json')
+    ap.add_argument('--assignment-method',choices=('original','milp'),default='original')
+    ap.add_argument('--milp-library-dir',default='scripts/milp_library')
+    ap.add_argument('--milp-timed-dir',default=None)
+    ap.add_argument('--enable-successive-execution',action='store_true',help='Solo tras comprobar runtime V3 con prueba offline y ROS reconstruido')
     a=ap.parse_args()
     root=Path(a.output_dir).resolve()
     if root.exists(): ap.error('No se sobrescriben corridas anteriores; elige otra carpeta')
@@ -186,18 +190,42 @@ def main():
             if not p.is_file(): raise RuntimeError(f'No existe módulo {name}: {p}')
         # Verificar identidad del escenario, ledger y trayectorias antes de mover.
         scenario=Path(a.scenario).resolve()
+        milp_mode=a.assignment_method=='milp'
+        if milp_mode and not a.milp_timed_dir: raise RuntimeError('MILP_TIMED_DIR_REQUIRED')
+        if milp_mode and a.execute and not a.enable_successive_execution:
+            raise RuntimeError('SUCCESSIVE_EXECUTION_REQUIRES_EXPLICIT_OPT_IN')
+        milp_preflight=None
+        milp_extra=[]
+        if milp_mode:
+            from d9927_milp_preflight import verify as verify_milp
+            pre=verify_milp(scenario,Path(a.milp_library_dir),Path(a.milp_timed_dir))
+            # El preflight se materializa para que las rutinas físicas usen la misma identidad.
+            milp_preflight=root/'milp_preflight.json'
+            write(milp_preflight,pre)
+            milp_extra=['--milp-assignment',str(milp_preflight),'--scenario',str(scenario)]
+            report['assignment_method']='milp'
+            report['milp_assignment']=pre['assignment']
+            report['milp_scenario_sha256']=pre['scenario_sha256']
         ledger=Path(a.ledger).resolve()
         from pathlib import Path as _P
         scenario_hash=hashlib.sha256(scenario.read_bytes()).hexdigest()
-        metadata=json.loads(ledger.read_text())
-        if metadata.get('scenario_sha256')!=scenario_hash:
-            raise RuntimeError('Escenario distinto al ledger histórico')
+        if not milp_mode:
+            metadata=json.loads(ledger.read_text())
+            if metadata.get('scenario_sha256')!=scenario_hash:
+                raise RuntimeError('Escenario distinto al ledger histórico')
         refs={}
+        ref_shas={}
         for stage in STAGES:
-            p=ref/(stage+'_d994_NON_EXECUTABLE.npz')
-            if hashlib.sha256(p.read_bytes()).hexdigest()!=SHAS[stage]:
-                raise RuntimeError(f'{stage}: NPZ no coincide con referencia histórica')
+            if milp_mode:
+                p=Path(pre['stages'][stage]['npz'])
+                digest=pre['stages'][stage]['sha256']
+            else:
+                p=ref/(stage+'_d994_NON_EXECUTABLE.npz')
+                digest=SHAS[stage]
+            if hashlib.sha256(p.read_bytes()).hexdigest()!=digest:
+                raise RuntimeError(f'{stage}: NPZ no coincide con referencia de asignación')
             refs[stage]=p
+            ref_shas[stage]=digest
         report['status']='PREFLIGHT_REFERENCES_VALID'
         write(root/'report.json',report)
         if not a.execute:
@@ -213,28 +241,35 @@ def main():
         pickup_dir.mkdir()
         for stage in STAGES:
             src=refs[stage]
-            nav_time_mode=['--auto-time-scale'] if a.auto_time_scale else ['--time-scale',str(a.time_scale)]
+            if milp_mode:
+                # D9931: ejecuta reloj ya calculado, SIN --auto-time-scale.
+                nav_time_mode=['--successive-clock',pre['stages'][stage]['clock']]
+                if a.auto_time_scale or abs(a.time_scale-1.)>1e-9:
+                    raise RuntimeError('DOUBLE_TIME_SCALING_FORBIDDEN_IN_SUCCESSIVE_MODE')
+            else:
+                nav_time_mode=['--auto-time-scale'] if a.auto_time_scale else ['--time-scale',str(a.time_scale)]
             align_path=root/(stage+'_alignment.json')
             step(root,report,stage+'_alignment',
                  [files['align'],'--trajectory',src,'--execute','--output',align_path],align_path,
                  {'ALIGNED','ALREADY_ALIGNED'})
             nav_dry=root/(stage+'_navigation_dry.json')
             step(root,report,stage+'_navigation_dry',
-                 [files['nav'],'--stage',stage,*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--output',nav_dry],nav_dry,
+                 [files['nav'],'--stage',stage,'--trajectory',src,'--expected-sha256',ref_shas[stage],*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--output',nav_dry],nav_dry,
                  {'PASS_GUARDED_DRY_RUN_NO_COMMANDS'})
             nav_out=root/(stage+'_navigation.json')
             step(root,report,stage+'_navigation',
-                 [files['nav'],'--stage',stage,*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--execute','--confirm-runtime-v2','--output',nav_out],nav_out,
+                 [files['nav'],'--stage',stage,'--trajectory',src,'--expected-sha256',ref_shas[stage],*nav_time_mode,'--nav-speed-limit',str(a.nav_speed_limit),'--nav-accel-limit',str(a.nav_accel_limit),'--execute','--confirm-runtime-v2','--output',nav_out],nav_out,
                  {'DONE_ALL_'+stage.upper()})
             if stage.startswith('pickup'):
                 # Recogida simultánea: los tres robots ya han terminado su
                 # navegación D9.9 y ahora ejecutan sus rutinas físicas en paralelo.
-                parallel_pickup(root,report,stage,files['physical'],nav_out,pickup_dir)
+                parallel_pickup(root,report,stage,files['physical'],nav_out,pickup_dir,
+                                [*milp_extra,'--milp-trajectory',str(src),'--milp-expected-sha256',ref_shas[stage]] if milp_mode else [])
             else:
                 plan=root/(stage+'_wave_plan.json')
                 step(root,report,stage+'_wave_plan',
                      [files['waves'],'--stage',stage,'--navigation-report',nav_out,
-                      '--pickup-evidence-dir',pickup_dir,'--out',plan],plan,
+                      '--pickup-evidence-dir',pickup_dir,*milp_extra,'--out',plan],plan,
                      {'WAVE_PLAN_READY_NO_COMMANDS'})
                 if not a.confirm_cargo_inspected:
                     report['status']='PAUSED_CARGO_INSPECTION_REQUIRED'
@@ -248,8 +283,14 @@ def main():
                 step(root,report,stage+'_wave1',
                      [files['waves'],'--stage',stage,'--navigation-report',nav_out,
                       '--pickup-evidence-dir',pickup_dir,'--execute-wave','1',
-                      '--confirm-cargo-inspected','--out',wave1],wave1,
+                      '--confirm-cargo-inspected',*milp_extra,'--out',wave1],wave1,
                      {'WAVE_COMPLETED_ACK_REQUIRES_GAZEBO_INSPECTION'})
+                # Segunda oleada solo si existen robots pendientes.
+                wave_count=len(json.loads(plan.read_text())['waves'])
+                if wave_count==1 and milp_mode:
+                    report['completed_stages'].append(stage)
+                    write(root/'report.json',report)
+                    continue
                 # NO existe despeje: cada Summit vuelve al nodo seguro tras
                 # entregar. Esperar reposo de los tres antes de habilitar wave2.
                 rest=root/(stage+'_between_waves_settle.json')
@@ -261,7 +302,7 @@ def main():
                      [files['waves'],'--stage',stage,'--navigation-report',nav_out,
                       '--pickup-evidence-dir',pickup_dir,'--execute-wave','2',
                       '--confirm-cargo-inspected','--prior-wave-report',wave1,
-                      '--out',wave2],wave2,
+                      *milp_extra,'--out',wave2],wave2,
                      {'WAVE_COMPLETED_ACK_REQUIRES_GAZEBO_INSPECTION'})
             report['completed_stages'].append(stage)
             write(root/'report.json',report)

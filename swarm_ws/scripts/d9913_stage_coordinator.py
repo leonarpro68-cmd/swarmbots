@@ -21,8 +21,27 @@ HISTORICAL_SHAS = {'delivery1': '70bb3550dfb3a937f002f5b8e83d621ef8b229180f6a0b8
 
 
 def load_proto(path):
-    spec=importlib.util.spec_from_file_location('d9912_timed_protocol',str(path.resolve()))
-    m=importlib.util.module_from_spec(spec);sys.modules[spec.name]=m;spec.loader.exec_module(m);return m
+    """Importar protocolo V1/V2/V3 en su paquete, no como módulo huérfano.
+
+    V3 usa `from .successive_clock import ...`: importlib.spec_from_file_location
+    con nombre suelto (d9912_timed_protocol) elimina el contexto relativo.
+    Se verifica que el módulo cargado sea exactamente el archivo solicitado,
+    evitando ejecutar accidentalmente otra versión instalada del protocolo.
+    """
+    import importlib
+    path=Path(path).resolve()
+    if path.name!='timed_protocol.py' or path.parent.name!='hybrid_refinement' or path.parent.parent.name!='swarm_planning':
+        raise ValueError('INVALID_TIMED_PROTOCOL_PATH')
+    package_root=path.parents[3]
+    package_name='swarm_behavior.swarm_planning.hybrid_refinement.timed_protocol'
+    root_str=str(package_root)
+    if root_str not in sys.path:
+        sys.path.insert(0,root_str)
+    importlib.invalidate_caches()
+    module=importlib.import_module(package_name)
+    if Path(module.__file__).resolve()!=path:
+        raise ValueError(f'TIMED_PROTOCOL_VERSION_MISMATCH: {module.__file__} != {path}')
+    return module
 
 
 def prepare(a, report):
@@ -43,6 +62,30 @@ def prepare(a, report):
                 raise ValueError(f'{name}: INVALID_VALUES')
             data[name]=(ctrl,dur)
             report['robots'][name]={'segments':len(ctrl),'duration_s':float(sum(dur)),'start_xy':ctrl[0,0].tolist()}
+    # D9931 V3: no se cambia un solo control, ni se divide dt_s por otro factor.
+    if a.successive_clock is not None:
+        if a.auto_time_scale or abs(float(a.time_scale)-1.)>1e-9:
+            raise ValueError('DOUBLE_TIME_SCALING_FORBIDDEN_IN_SUCCESSIVE_MODE')
+        clock_path=Path(a.successive_clock).resolve()
+        clock=json.loads(clock_path.read_text(encoding='utf8'))
+        if clock.get('input_sha256')!=digest or clock.get('status')!='OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE':
+            raise ValueError('SUCCESSIVE_CLOCK_MISMATCH_OR_NOT_CERTIFIED')
+        if not hasattr(proto,'SCHEMA_V3'):
+            raise ValueError('V3_PROTOCOL_NOT_INSTALLED')
+        tdata={
+            'model':'common_collective_successive_v1',
+            'baseline_scale':float(clock['uniform_scale']),
+            'ramps':clock['ramps'],
+            'duration_original_s':float(clock['duration_original_s']),
+            'duration_successive_s':float(clock['duration_successive_s'])}
+        for name,(ctrl,dur) in data.items():
+            report['robots'][name]['duration_s']=float(clock['finish_times_wall_s'][name])
+        report['navigation_parameters']={'time_scale':1.,'time_model':'common_collective_successive_v1',
+            'nav_speed_limit_m_s':a.nav_speed_limit,'nav_acceleration_limit_m_s2':a.nav_accel_limit,
+            'clock_sha256':hashlib.sha256(clock_path.read_bytes()).hexdigest(),
+            'duration_successive_s':tdata['duration_successive_s']}
+        report['successive_timewarp']=tdata
+        return proto,data
     # Reescalado temporal uniforme; puntos de control espaciales INALTERADOS.
     # En t_nuevo=t_original/f, velocidad=f*v y aceleración=f²*a.
     factor=float(a.time_scale)
@@ -170,10 +213,11 @@ def run_ros(a,proto,data,report):
         report['commands_sent']=0
         for n in ROBOTS:
             c,d=data[n]
-            cmd=dict(schema=proto.SCHEMA_V2,action='start',session_id=report['session_id'],robot=n,
+            cmd=dict(schema=proto.SCHEMA_V3 if 'successive_timewarp' in report else proto.SCHEMA_V2,action='start',session_id=report['session_id'],robot=n,
                      frame_id=f'{n}/odom',start_time_s=start_time,control_points_m=c.tolist(),
                      segment_durations_s=d.tolist(),speed_limit_m_s=a.nav_speed_limit,acceleration_limit_m_s2=a.nav_accel_limit,
                      max_tracking_error_m=.15,goal_tolerance_m=.05,goal_settle_s=.5,finish_grace_s=4.)
+            if 'successive_timewarp' in report: cmd['timewarp']=report['successive_timewarp']
             raw=json.dumps(cmd,separators=(',',':'),allow_nan=False)
             proto.decode_command(raw)
             node.pubs[n].publish(String(data=raw));report['commands_sent']+=1
@@ -208,6 +252,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--time-scale',type=float,default=1.,help='Factor manual (ignorado con --auto-time-scale)')
     p.add_argument('--auto-time-scale',action='store_true',help='Calcula el factor común máximo por etapa desde v_max y a_max')
+    p.add_argument('--successive-clock',type=Path,default=None,help='D9931: JSON reloj V3 certificado; incompatible con reescalado uniforme')
     p.add_argument('--nav-speed-limit',type=float,default=1.2,help='Límite de rapidez del comando temporizado, m/s')
     p.add_argument('--nav-accel-limit',type=float,default=1.0,help='Límite de aceleración del comando temporizado, m/s²')
     p.add_argument('--stage',choices=['pickup1','delivery1','pickup2','delivery2'],required=True)

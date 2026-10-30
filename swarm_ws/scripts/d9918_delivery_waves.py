@@ -82,6 +82,7 @@ def main():
     ap.add_argument('--stage',choices=('delivery1','delivery2'),required=True)
     ap.add_argument('--scenario',type=Path,default=Path('scripts/d996_reference/scenario.json'))
     ap.add_argument('--ledger',type=Path,default=Path('scripts/resultados/d8/seed_100_run_007/mission/mision.json'))
+    ap.add_argument('--milp-assignment',type=Path,default=None)
     ap.add_argument('--navigation-report',type=Path,required=True)
     ap.add_argument('--pickup-evidence-dir',type=Path,required=True,
                     help='Carpeta con {stage_pickup}_{robot}_execute.json de ESTA sesión; exige ACK de joint')
@@ -100,10 +101,17 @@ def main():
             'commands_may_have_been_sent':False,'problems':[],'completed_robots':[]}
     try:
         scenario=json.loads(a.scenario.read_text())
-        ledger=json.loads(a.ledger.read_text())
-        if scenario.get('seed')!=100:raise RuntimeError('Solo seed 100')
-        if ledger.get('scenario_sha256')!=hashlib.sha256(a.scenario.read_bytes()).hexdigest():
-            raise RuntimeError('Ledger y escenario no coinciden')
+        if a.milp_assignment is None:
+            ledger=json.loads(a.ledger.read_text())
+            if scenario.get('seed')!=100:raise RuntimeError('Solo seed 100')
+            if ledger.get('scenario_sha256')!=hashlib.sha256(a.scenario.read_bytes()).hexdigest():
+                raise RuntimeError('Ledger y escenario no coinciden')
+        else:
+            pre=json.loads(a.milp_assignment.read_text())
+            if pre.get('status') not in ('MILP_PREFLIGHT_VALID_OFFLINE_ONLY', 'MILP_V3_PREFLIGHT_VALID_OFFLINE_ONLY') or pre.get('seed')!=scenario.get('seed') or pre.get('scenario_sha256')!=hashlib.sha256(a.scenario.read_bytes()).hexdigest():
+                raise RuntimeError('MILP_PREFLIGHT_SCENARIO_INVALID')
+            ledger={'round1_names':[pre['assignment'][r][0] for r in ROBOTS],
+                    'round2_names':[pre['assignment'][r][1] for r in ROBOTS]}
         nav=json.loads(a.navigation_report.read_text())
         if nav.get('status')!='DONE_ALL_'+a.stage.upper() or nav.get('problems'):
             raise RuntimeError('La navegación de entrega D9.9 no se completó')
