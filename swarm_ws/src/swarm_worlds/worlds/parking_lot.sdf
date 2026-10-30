@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<!--
+  parking_lot.sdf  -  APARCAMIENTO exterior 30x50 m (generado).
+  NO editar a mano: regenerar con scripts/gen_parking_lot.py y despues
+  /usr/bin/python3 scripts/world_maps.py - -worlds parking_lot - -write.
+  Spawn: center 0,0 y area_half 24 (el mapa deja solo calles y plazas libres).
+  Visual = UNA malla COLLADA (models/parking_lot/meshes); colision = primitivas.
+-->
+<sdf version="1.9">
+  <world name="world_demo">
+    <gravity>0 0 -9.8</gravity>
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <max_contacts>10</max_contacts>
+    </physics>
+    <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system"/>
+    <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
+    <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system"/>
+    <plugin name="gz::sim::systems::Imu" filename="gz-sim-imu-system"/>
+    <plugin name="gz::sim::systems::Sensors" filename="gz-sim-sensors-system">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <scene>
+      <ambient>0.65 0.65 0.65 1</ambient>
+      <background>0.55 0.70 0.88 1</background>
+      <shadows>0</shadows>
+      <grid>false</grid>
+    </scene>
+    <light type="directional" name="sun">
+      <cast_shadows>0</cast_shadows>
+      <pose>0 0 20 0 0 0</pose>
+      <diffuse>1.0 0.97 0.90 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.4 -0.3 -1</direction>
+    </light>
+
+    <model name="parking_lot">
+      <static>true</static>
+      <link name="link">
+        <collision name="floor_c"><pose>0.000 0.000 -0.050 0 0 0.0000</pose><geometry><box><size>30.600 50.600 0.100</size></box></geometry></collision>
+        <collision name="wall_n_c"><pose>0.000 25.150 0.500 0 0 0.0000</pose><geometry><box><size>30.600 0.300 1.000</size></box></geometry></collision>
+        <collision name="wall_s_c"><pose>0.000 -25.150 0.500 0 0 0.0000</pose><geometry><box><size>30.600 0.300 1.000</size></box></geometry></collision>
+        <collision name="wall_e_c"><pose>15.150 0.000 0.500 0 0 0.0000</pose><geometry><box><size>0.300 50.000 1.000</size></box></geometry></collision>
+        <collision name="wall_w_c"><pose>-15.150 0.000 0.500 0 0 0.0000</pose><geometry><box><size>0.300 50.000 1.000</size></box></geometry></collision>
+        <collision name="car0_c"><pose>-12.700 -4.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car1_c"><pose>-12.700 -6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car2_c"><pose>-12.700 -9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car3_c"><pose>-12.700 -11.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car4_c"><pose>-12.700 -14.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car5_c"><pose>-12.700 -16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car6_c"><pose>-12.700 -19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car7_c"><pose>-12.700 6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car8_c"><pose>-12.700 9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car9_c"><pose>-12.700 11.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car10_c"><pose>-12.700 16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car11_c"><pose>-12.700 19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car12_c"><pose>-12.700 21.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car13_c"><pose>-2.550 -4.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car14_c"><pose>-2.550 -6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car15_c"><pose>-2.550 -9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car16_c"><pose>-2.550 -14.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car17_c"><pose>-2.550 -16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car18_c"><pose>-2.550 -19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car19_c"><pose>-2.550 -21.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car20_c"><pose>-2.550 4.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car21_c"><pose>-2.550 9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car22_c"><pose>-2.550 14.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car23_c"><pose>-2.550 19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car24_c"><pose>-2.550 21.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car25_c"><pose>2.550 -6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car26_c"><pose>2.550 -9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car27_c"><pose>2.550 -16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car28_c"><pose>2.550 -21.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car29_c"><pose>2.550 6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car30_c"><pose>2.550 9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car31_c"><pose>2.550 16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car32_c"><pose>2.550 19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car33_c"><pose>12.700 -4.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car34_c"><pose>12.700 -9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car35_c"><pose>12.700 -11.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car36_c"><pose>12.700 -14.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car37_c"><pose>12.700 -16.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car38_c"><pose>12.700 -19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car39_c"><pose>12.700 4.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car40_c"><pose>12.700 6.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car41_c"><pose>12.700 9.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car42_c"><pose>12.700 11.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car43_c"><pose>12.700 14.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car44_c"><pose>12.700 19.250 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="car45_c"><pose>12.700 21.750 0.760 0 0 0.0000</pose><geometry><box><size>4.400 1.800 1.520</size></box></geometry></collision>
+        <collision name="island-1_c"><pose>0.000 -13.600 0.080 0 0 0.0000</pose><geometry><box><size>0.500 22.200 0.160</size></box></geometry></collision>
+        <collision name="island1_c"><pose>0.000 13.600 0.080 0 0 0.0000</pose><geometry><box><size>0.500 22.200 0.160</size></box></geometry></collision>
+        <collision name="lamp0_c"><pose>0.000 -20.000 3.000 0 0 0</pose><geometry><cylinder><radius>0.100</radius><length>6.000</length></cylinder></geometry></collision>
+        <collision name="lamp1_c"><pose>0.000 -10.000 3.000 0 0 0</pose><geometry><cylinder><radius>0.100</radius><length>6.000</length></cylinder></geometry></collision>
+        <collision name="lamp2_c"><pose>0.000 10.000 3.000 0 0 0</pose><geometry><cylinder><radius>0.100</radius><length>6.000</length></cylinder></geometry></collision>
+        <collision name="lamp3_c"><pose>0.000 20.000 3.000 0 0 0</pose><geometry><cylinder><radius>0.100</radius><length>6.000</length></cylinder></geometry></collision>
+        <collision name="booth_c"><pose>-12.200 -22.500 1.250 0 0 0.0000</pose><geometry><box><size>1.600 1.600 2.500</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><mesh><uri>model://parking_lot/meshes/parking_lot.dae</uri></mesh></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>0 0 38 0 1.5707963 0</pose>
+      <link name="link">
+        <sensor name="overhead" type="camera">
+          <topic>/overhead/image</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>1.3</horizontal_fov>
+            <image><width>900</width><height>900</height><format>R8G8B8</format></image>
+            <clip><near>0.1</near><far>80.0</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>false</visualize>
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>

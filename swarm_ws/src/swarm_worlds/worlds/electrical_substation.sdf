@@ -87,11 +87,7 @@
                 <size>500 500</size>
                 </plane>
             </geometry>
-            <material>
-                <ambient>0.8 0.8 0.8 1</ambient>
-                <diffuse>0.8 0.8 0.8 1</diffuse>
-                <specular>0.8 0.8 0.8 1</specular>
-            </material>
+            <material><ambient>0.26 0.26 0.28 1</ambient><diffuse>0.26 0.26 0.28 1</diffuse><specular>0.05 0.05 0.05 1</specular></material>
             </visual>
         </link>
     </model>
@@ -133,22 +129,22 @@
           <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
         <visual name="wall_north_visual"><pose>0 25.0 1.25 0 0 0</pose>
           <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
-          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+          <material><ambient>0.80 0.79 0.76 1</ambient><diffuse>0.80 0.79 0.76 1</diffuse><specular>0.05 0.05 0.05 1</specular></material></visual>
         <collision name="wall_south_collision"><pose>0 -25.0 1.25 0 0 0</pose>
           <geometry><box><size>30.5 0.5 2.5</size></box></geometry></collision>
         <visual name="wall_south_visual"><pose>0 -25.0 1.25 0 0 0</pose>
           <geometry><box><size>30.5 0.5 2.5</size></box></geometry>
-          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+          <material><ambient>0.80 0.79 0.76 1</ambient><diffuse>0.80 0.79 0.76 1</diffuse><specular>0.05 0.05 0.05 1</specular></material></visual>
         <collision name="wall_east_collision"><pose>15.0 0 1.25 0 0 0</pose>
           <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
         <visual name="wall_east_visual"><pose>15.0 0 1.25 0 0 0</pose>
           <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
-          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+          <material><ambient>0.80 0.79 0.76 1</ambient><diffuse>0.80 0.79 0.76 1</diffuse><specular>0.05 0.05 0.05 1</specular></material></visual>
         <collision name="wall_west_collision"><pose>-15.0 0 1.25 0 0 0</pose>
           <geometry><box><size>0.5 50.5 2.5</size></box></geometry></collision>
         <visual name="wall_west_visual"><pose>-15.0 0 1.25 0 0 0</pose>
           <geometry><box><size>0.5 50.5 2.5</size></box></geometry>
-          <material><ambient>0.62 0.62 0.6 1</ambient><diffuse>0.62 0.62 0.6 1</diffuse></material></visual>
+          <material><ambient>0.80 0.79 0.76 1</ambient><diffuse>0.80 0.79 0.76 1</diffuse><specular>0.05 0.05 0.05 1</specular></material></visual>
       </link>
     </model>
 

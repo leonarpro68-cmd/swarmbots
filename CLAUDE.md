@@ -10,14 +10,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **DIRECCIÓN ACTUAL (reestructurado 2026-07-08): SOLO Summit XLS + gripper, sin drones.** Tras una sesión que avanzó demasiado rápido y metió bugs, se volvió a la base estable y se reconstruyó paso por paso. El objetivo es entrenar un modelo **ACT** (imitation learning) que recoja basura y la lleve a depósitos. Los drones quedan **aparcados** (`n_drones=0` por defecto; el código sigue ahí para futuras demos).
 
-**Estado end-to-end (default, validado en vivo 2026-07-08):** `ros2 launch swarm_worlds sim_summit.launch.py` abre Gazebo (warehouse **vaciado**) con **N Summit XLS mecanum + gripper** en **posiciones y yaw aleatorios** (semilla reproducible), más **basura agarrable** y **depósitos** también aleatorios. Tópicos por robot: `/summitN/{cmd_vel,odom,scan,imu,encoder_odom,camera,camera/depth,joint_states}` + gripper. Cámara cenital en `/overhead/image`. Defaults: `n_robots=3`, `gripper=true`, `n_drones=0`, `n_trash=6`, `n_deposits=3`, `area_half=8`, `center=(0,0)`, `seed=42`, `world=tugbot_warehouse`. **Hay 5 mundos** (`tugbot_warehouse`, `colored_warehouse`, `electrical_substation`, `rubber_factory`, `robotnik_lab`) + `empty_arena` de control — ver "Set de 5 mundos" abajo; `colored_warehouse`, `robotnik_lab` y `empty_arena` **necesitan su `center_x`/`center_y`/`area_half`** (los dos recortados a 30×50 funcionan con los defaults, como tugbot). También disponibles: enjambre de minibots (`sim.launch.py`) y Summit XL skid-steer individual (`spawn_summit.launch.py`).
+**Estado end-to-end (default, validado en vivo 2026-07-08):** `ros2 launch swarm_worlds sim_summit.launch.py` abre Gazebo (warehouse **vaciado**) con **N Summit XLS mecanum + gripper** en **posiciones y yaw aleatorios** (semilla reproducible), más **basura agarrable** y **depósitos** también aleatorios. Tópicos por robot: `/summitN/{cmd_vel,odom,scan,imu,encoder_odom,camera,camera/depth,joint_states}` + gripper. Cámara cenital en `/overhead/image`. Defaults: `n_robots=3`, `gripper=true`, `n_drones=0`, `n_trash=6`, `n_deposits=3`, `area_half=8`, `center=(0,0)`, `seed=42`, `world=tugbot_warehouse`. **Mundos**: `tugbot_warehouse`, `colored_warehouse`, `electrical_substation`, `rubber_factory`, `pallet_warehouse` + `empty_arena` de control (`robotnik_lab` borrado 2026-10-24) — ver "Set de 5 mundos" abajo; `colored_warehouse` y `empty_arena` **necesitan su `center_x`/`center_y`/`area_half`**, `pallet_warehouse` `area_half:=24`. También disponibles: enjambre de minibots (`sim.launch.py`) y Summit XL skid-steer individual (`spawn_summit.launch.py`).
 
 Estructura:
 
 - `swarm_ws/docker/` — Pipeline Docker (Dockerfile + docker-compose + entrypoint). **No se ha construido la imagen**; en `isa` no hace falta porque la vía nativa cubre todo. Existe como fallback de portabilidad.
 - `swarm_ws/scripts/` — `sim_native.sh` (host, **primaria**; ahora compila también `swarm_behavior`), `make_warehouse_map.py` (occupancy viejo del warehouse para RViz), **`world_geometry.py`** (carga toda la colisión/visual de un SDF en frame mundo: poses 6D, STL, COLLADA con submesh, primitivas, actores), **`world_maps.py`** (mapas occupancy + vectorial de cada mundo en `swarm_worlds/maps/` e informe del hueco libre en el spawn), **`crop_world.py`** (recorta un mundo a una ventana, lo centra y lo cierra con paredes), `build.sh` + `run.sh` + `colcon_build.sh` + `sim.sh` (Docker, secundarias).
 - `swarm_ws/src/swarm_description/` — paquete propio: `urdf/minibot.urdf.xacro` (diff-drive + LiDAR 2D, plugins **nativos Harmonic**: `gz-sim-diff-drive-system`, `gz-sim-joint-state-publisher-system`).
-- `swarm_ws/src/swarm_worlds/` — paquete propio: **6 mundos** en `worlds/` (`tugbot_warehouse.sdf` **por defecto**, `colored_warehouse.sdf`, `electrical_substation.sdf`, `rubber_factory.sdf`, `robotnik_lab.sdf` y `empty_arena.sdf`; ver "Set de 5 mundos") y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
+- `swarm_ws/src/swarm_worlds/` — paquete propio: mundos en `worlds/` (`tugbot_warehouse.sdf` **por defecto**, `colored_warehouse.sdf`, `electrical_substation.sdf`, `rubber_factory.sdf`, `pallet_warehouse.sdf` y `empty_arena.sdf`; ver "Set de 5 mundos") y `worlds/empty_arena.sdf` (suelo + sol + 2 cajas; ambos con plugins de mundo, **incluido `Sensors` que va aquí UNA VEZ**, no por robot) + `launch/sim.launch.py` que spawnea N minibots en círculo y monta los bridges ROS↔Gz + `models/x3_uav/` (quadrotor X3 de Open Robotics **vendorizado** — meshes con URIs relativas, sin dependencia de Fuel/internet) + `models/warehouse/` (edificio del almacén **vendorizado con colisiones primitivas**) + `launch/spawn_drone.launch.py`.
 - `swarm_ws/src/swarm_behavior/` — paquete propio (Python): comportamiento de enjambre + ciclo de recogida. Nodos: `go_to_goal` (campos potenciales holonómico, aprovecha el strafe mecanum; **único publicador de `cmd_vel`**), `drone_go_to_goal`, `central_planner` (asignación greedy + máquina de estados con ACKs), `grasp_manager` (dedos + `DetachableJoint` con confirmación), **`visual_grasp`** (aproximación final con la cámara de profundidad) y `ps5_teleop`. Launches: `swarm_behavior.launch.py` (modos `goal`/`follow`), `swarm_collect.launch.py` (ciclo de recogida), `swarm_pairs.launch.py`, `teleop_ps5.launch.py` y `rviz.launch.py`.
 - `swarm_ws/src/{robotnik_common,robotnik_sensors,summit_xl_description,summit_xl_control}/` — paquetes externos Robotnik. **Summit ya portado a Fortress** en dos variantes propias: `robots/summit_xl_omni.urdf.xacro` (XLS mecanum/omni — **el robot del enjambre**, vía `sim_summit.launch.py`) y `robots/summit_xl_noarm.urdf.xacro` (XL skid-steer 4 ruedas con DiffDrive de joints agrupados 2L+2R, vía `spawn_summit.launch.py`). Siguen **sin portar** (y no se usan): `summit_xl_base.gazebo.xacro` (plugins Classic), `all_sensors.urdf.xacro` (Classic), `ros2_control.urdf.xacro` (declara joints de brazo inexistentes), `summit_xl_control/launch/*.launch` (XML ROS 1).
 
@@ -133,8 +133,10 @@ Objetivo: **variación de entorno** para que la política ACT aprenda la tarea y
 | `colored_warehouse` | 4 cuadrantes, estanterías de color | **4.2, 4.2** | **3.5** | 2 robots, 4 piezas | 20 m |
 | `electrical_substation` | **exterior**, **recortado a 30×50** | 0, 0 (default) | 8 | 3 robots, 6 piezas | 38 m |
 | `rubber_factory` | nave industrial, **recortada a 30×50** | 0, 0 (default) | 8 | 3 robots, 6 piezas | 38 m |
-| `robotnik_lab` | oficina con 43 puestos | **3.7, −19.0** | **4.5** | 2 robots, 4 piezas | 15 m |
 | `empty_arena` | control sin distractores | 0, 0 | 4 | — | 25 m |
+| `pallet_warehouse` | **paletizado con PASILLOS** 30×50, generado | 0, 0 (default) | **24** (el mapa recorta) | 3 robots, 6 piezas | 38 m |
+| `parking_lot` | **aparcamiento exterior** 30×50, generado | 0, 0 (default) | **24** | 3 robots, 6 piezas | 38 m |
+| `supermarket` | **supermercado con 5 personas caminando**, generado | 0, 0 (default) | **24** | 3 robots, 6 piezas | 38 m |
 
 ```bash
 ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
@@ -142,9 +144,41 @@ ros2 launch swarm_worlds sim_summit.launch.py world:=colored_warehouse \
 ros2 launch swarm_behavior swarm_collect.launch.py n_robots:=2   # world ya vale world_demo
 ```
 
-**⚠️ El `center`/`area_half` NO es opcional en `colored_warehouse` y `robotnik_lab`.** `_random_poses` esquiva robots, basura y depósitos **entre sí**, pero NO la geometría del mundo: con el centro (0,0) por defecto se spawnea dentro de una pared. Los valores de la tabla son huecos libres **medidos**, no estimados.
+**⚠️ El `center`/`area_half` NO es opcional en `colored_warehouse`.** `_random_poses` esquiva robots, basura y depósitos **entre sí**, pero NO la geometría del mundo: con el centro (0,0) por defecto se spawnea dentro de una pared. Los valores de la tabla son huecos libres **medidos**, no estimados.
 
 **⚠️ `empty_arena` es la excepción del nombre**: su `<world>` se llama `empty_arena`, no `world_demo` → al lanzar el ciclo ahí hay que pasarle `world:=empty_arena` a `swarm_collect.launch.py`. Si no, el planner no ve ninguna basura y parece que "el mundo no funciona".
+
+### Paleta propia por mundo (2026-10-24)
+
+`rubber_factory` y `electrical_substation` eran gris sobre gris y se confundían. **`scripts/paint_worlds.py`** (idempotente; **correrlo DESPUÉS de `crop_world.py`**, que regenera los `*_crop`) les da identidad: **fábrica** = suelo de epoxi crema, cada línea de máquinas de un color (rojo/amarillo/morado/blanco), pared interior de ladrillo, perímetro pizarra (la malla visual única se parte en un STL por componente conexa; la original se conserva como fuente). **Subestación** = patio de asfalto oscuro, casa amarilla, edificios de ladrillo, equipos galvanizados. RTF 0.83–0.85 con 3 robots, revisado a ojo. **Regla para cualquier mundo nuevo: nada de verde/azul/naranja en el decorado** (colores de basura/depósitos) y que el suelo contraste en luminancia con la basura.
+
+### Colocación que evita la geometría del mundo (2026-10-24)
+
+`sim_summit.launch.py` carga **`maps/<mundo>.{pgm,yaml}`** (de `world_maps.py`) con `_FreeSpace` y `_random_poses` rechaza toda pose a menos de `_CLEAR_ROBOT` (1.0 m), `_CLEAR_TRASH` (0.9) o `_CLEAR_DEPOSIT` (0.9) de un obstáculo; fuera del mapa = ocupado. Imprime `colocacion: evitando la geometria (...)`. **Mundo sin mapa → caja libre como antes.** Cambia el escenario de una semilla solo donde antes caía algo dentro de un obstáculo (en `tugbot_warehouse` rechaza el 8 % de la caja: las columnas solo-visuales). **Al tocar un mundo, regenerar su mapa** (`world_maps.py --worlds <m> --write`) y `colcon build` (un fichero nuevo en `maps/` necesita build para el symlink).
+
+### Mundos generados: `scripts/world_builder.py` (2026-10-24)
+
+Los `gen_*.py` usan `Builder`: `box`/`cyl` acumulan el visual en **una malla COLLADA con un material por color** y la colisión en primitivas; `walls()` pone el perímetro; `write()` escribe `worlds/<n>.sdf` (world_demo, plugins Harmonic, cenital 38 m) + `models/<n>/`. Tras generar: `world_maps.py --worlds <n> --write` y `colcon build`. **Sin `ground_plane`** (suelo = caja con colisión) para que fuera del recinto el mapa dé ocupado.
+
+### `supermarket`: supermercado con gente caminando (2026-10-24)
+
+`scripts/gen_supermarket.py`. Suelo en damero crema/gris de 2 m, 5 góndolas dobles (pasillos de 4 m) llenas de producto de colores con cabeceras rojas, neveras en la pared norte, islas de fruta, 4 cajas de cobro, carros. **5 personas (`<actor>`)** en bucle a 0.9 m/s: pasillo central, dos pasillos de góndolas, delante de cajas y alrededor de la fruta.
+- Animación **vendorizada y RECOLOREADA** en `models/person_{red,white}/meshes/walk.dae` (Fuel `mingfei/actor` v1): venía con **jersey verde y vaqueros azules** = colores de basura/depósitos → jersey rojo o blanco, pantalón gris oscuro. La piel sigue siendo anaranjada (área pequeña; vigilar si el ACT se confunde).
+- **Los actores NO tienen colisión física** en Harmonic: los robots los atravesarían. **El LiDAR SÍ los ve** (medido: con robots quietos, 100–170 rayos por robot varían >0.5 m en 30 s) y las cámaras también. `world_maps.py` marca su recorrido como ocupado (±1 m) → nunca se coloca basura ni robots encima.
+- ⚠️ **Gazebo NO publica la pose de los actores** en `/world/<w>/pose/info` ni en `dynamic_pose/info` (medido). Para los **repulsores virtuales** de personas (pendiente) hay que calcular su posición desde la `<trajectory>` del SDF + el tiempo de sim (bucle determinista).
+- Validado en vivo: RTF 0.87 con 3 robots, personas moviéndose (diferencia de cenitales), cenital y frontales revisadas.
+
+### `parking_lot`: aparcamiento exterior (2026-10-24)
+
+`scripts/gen_parking_lot.py`. Asfalto casi negro con plazas en batería (líneas blancas), 46 coches (rojo/blanco/negro/morado/amarillo/plata) al 65 % de ocupación, 2 calles de 4.5 m + calle transversal de 5 m con cebra amarilla, isleta central con farolas (**cortada en el cruce**: entera partía el mundo en dos, lo vio el mapa), muro bajo de hormigón de 1 m, caseta de cobro. Validado en vivo: RTF 0.87 con 3 robots, colocación en calles/plazas libres, cenital y frontales revisadas.
+
+### `pallet_warehouse`: almacén de paletizado con pasillos (2026-10-24)
+
+**Generado** por `scripts/gen_pallet_warehouse.py` (no editar el `.sdf` a mano; regenerar + mapa). 4 bloques de estanterías de palets (filas dobles, pasillos de 3.4 m entre filas, pasillo central de 4 m, laterales de 3 m) al norte y al sur; zona de paletizado central (transportador, robot paletizador, enfardadora, pilas de palets, 4 columnas). Sin `ground_plane`: el suelo es una caja 30×50 → fuera de la nave el mapa da ocupado.
+- **Paleta para el ACT (contraste)**: suelo gris oscuro, montantes rojo oscuro, cargas blancas/negras/**moradas**, amarillo solo en máquinas. **Ningún verde/azul/naranja** (son los colores de basura y depósitos: la política no debe confundir el decorado con un depósito).
+- **Visual = UNA malla COLLADA** (`models/pallet_warehouse/meshes/pallet_warehouse.dae`, un material por color, 8250 caras); colisión = 29 primitivas. Con los ~1300 visuales sueltos el RTF era **0.76**; fundidos, **0.88** (3 robots). ⚠️ Un **OBJ+MTL salía todo blanco** en Gazebo (no aplica el `.mtl`): usar COLLADA.
+- Validado en vivo: carga sin errores, robots/basura/depósitos en los pasillos, cenital y frontales revisadas.
+- **Ciclo probado (2 robots, 4 piezas, 240 s): 2/4, color OK 2/2, 0 colisiones — y destapó la limitación clave:** `go_to_goal` son campos potenciales SIN planificador global → un robot con la pieza en el pasillo de al lado se queda **clavado contra la estantería** (mínimo local; `summit0` en y=−11.8 hacia una pieza en y=−18.6). Hace falta un **planificador global (A\* sobre `maps/<mundo>.pgm`) en `central_planner` que mande waypoints** — ver Próximos pasos. (La otra pieza que falló estaba en el pasillo lateral de 2.5 m a 0.67 m de una estantería: se ensancharon los laterales a 3 m y `_CLEAR_TRASH` 0.6→0.9.)
 
 ### Qué necesita un mundo para servir aquí (checklist)
 
@@ -171,8 +205,8 @@ Añadir un mundo es solo dejar el `.sdf` en `worlds/` y pasar `world:=<nombre>`:
 `/usr/bin/python3 scripts/world_maps.py [--write] [--preview DIR]` (el `python3` de conda no tiene numpy). Banda de obstáculo z 0.04–2 m de **colisión y visual** (un visual sin colisión lo atraviesa el robot pero lo ve la cámara), suelo de colisión a |z|≤0.04, actores, raster 0.05 m y distancia de Chebyshev (`cv2 DIST_C`) = mayor cuadrado libre centrado en cada celda. Informa el hueco **para el robot** desde (0,0) y si algo tapa la cenital sobre el spawn. Escribe `maps/<mundo>.{pgm,yaml}` (nav2) y `maps/<mundo>_vector.yaml` (polígonos con agujeros que envuelven cada obstáculo, exceso ≤5 cm).
 
 **Hallazgos del análisis en mundos que se dejaron tal cual (a petición del usuario):**
-- `tugbot_warehouse`: las **columnas `celling_collum` son solo visuales** (sin colisión) y hay alguna a **7.1 m** del origen → con `area_half 8` un robot o una pieza pueden nacer "dentro" de una columna (la atraviesan; la cámara la ve). Las **vigas** a ~10 m cruzan el encuadre de la cenital (27 m² sobre el spawn). El **techo** no se ve desde arriba porque sus 8 triángulos miran hacia −z (back-face culling).
-- `robotnik_lab`: el `ground_plane` y el suelo de la malla `ROB_office` son visuales **coplanares a z=0** → **z-fighting** (rayas tramadas en la cenital). Arreglo probado y descartado por "no tocar": bajar 1 cm solo el visual del plano.
+- `tugbot_warehouse`: las **columnas `celling_collum` son solo visuales** (sin colisión) y hay alguna a **7.1 m** del origen → con `area_half 8` un robot o una pieza pueden nacer "dentro" de una columna (la atraviesan; la cámara la ve). Las **vigas** a ~10 m cruzaban el encuadre de la cenital → **QUITADAS (2026-10-24, a petición del usuario)**: eran 5 piezas (880 triángulos) dentro del mismo submesh `celling_collum` (`Cube_010-mesh`) de `models/warehouse/meshes/warehouse.dae`; se borraron solo esas componentes conexas (z 9.6–10.1), las 10 columnas siguen enteras. Solo visual, sin efecto en colisión ni mapas. El **techo** no se ve desde arriba porque sus 8 triángulos miran hacia −z (back-face culling).
+- ~~`robotnik_lab`~~ **BORRADO (2026-10-24, a petición del usuario)**: el `ground_plane` y el suelo de la malla `ROB_office` eran visuales coplanares a z=0 → **z-fighting** (parpadeo). Está en la historia de git si hiciera falta.
 - `electrical_substation` original: la losa `station_base` está a **+3 cm**; un depósito (disco con tope a z=0.02) sobre ella queda **enterrado**. El recorte pone el spawn entero a z=0.
 - `empty_arena` usa `max_step_size` **0.001** (el resto 0.004) → RTF ~0.62 con 3 robots.
 
@@ -181,7 +215,6 @@ Añadir un mundo es solo dejar el `.sdf` en `worlds/` y pasar `world:=<nombre>`:
 - **`colored_warehouse`** ← Fuel `hboc/simple_colored_warehouse` (SDF 1.7, ya nativo gz-sim). Añadido `Imu`, `render_engine` `ogre`→`ogre2` (venía afinado para WSL2), física 0.004, el `<include>` del `Sun` de Fuel → luz inline.
 - **`electrical_substation`** ← RobotnikAutomation/robotnik_gazebo_worlds `jazzy-devel` (BSD). Fuera `NavSat` y `<gui>`. **Recortado** (ver arriba): `models/electrical_substation_crop/` (124 KB, antes 3.6 MB).
 - **`rubber_factory`** ← mismo repo, modelo `emka_factory`. **Recortado** (ver arriba): `models/rubber_factory_crop/` (40 KB). El recorte es `<static>true</static>`: el original declaraba masa 1 kg sin `static`, o sea que la nave entera era un cuerpo dinámico que los robots podían empujar.
-- **`robotnik_lab`** ← mismo repo (`robotnik_lab_simplifyed.world`). Mallas en `models/office/` y `models/others/` (16 MB), **solo las que el mundo usa** (fuera `apple.stl` 7.2 MB y `ROB_work_station.stl` 5.3 MB). Quitados el `<state>` (volcado de una sesión de Gazebo Classic) y el `<gui>`; visual de las cajas de fruta `.dae`→`.stl` porque el `.dae` pide una textura que el repo origen NO incluye y Gazebo soltaba un `[Err]` en cada arranque.
 
 ### Candidatos DESCARTADOS (para no volver a investigarlo)
 
@@ -439,6 +472,9 @@ for d in demo_*; do python3 scripts/bag_to_act_hdf5.py "$d" -o "$d.hdf5"; done  
 
 ### Próximos pasos
 
+#### ⭐⭐ PLANIFICADOR GLOBAL para mundos con pasillos (2026-10-24)
+En `pallet_warehouse` los robots se clavan contra las estanterías cuando la meta está en otro pasillo (campos potenciales = solo reactivo). Plan: A\* (o Dijkstra) sobre `maps/<mundo>.pgm` inflado con el radio del robot, en `central_planner`, publicando el siguiente waypoint en `/summitN/goal_pose` en vez de la meta final. Del pedido de variedad del usuario quedan: **repulsores virtuales para las personas** del `supermarket` (pose desde la trayectoria del SDF + `/clock`, publicadas como `avoid_points`) y actualizar el mosaico del README con los mundos nuevos.
+
 #### ⭐⭐ EL CICLO DE DEJADO SE TRABA (reportado en vivo por el usuario, 2026-09-05) — SIN ARREGLAR
 El usuario lo vio y lo aparcó a propósito para priorizar tener los 5 mundos: *"no termina el ciclo de dejado se traba"*. Es **distinto** (o al menos no idéntico) al conflicto de dos robots sobre el mismo depósito, que ya tiene su arreglo (ver "Turno de descarga"). Lo que se sabe:
 - Con 2 robots y 1 solo depósito el ciclo SÍ cerró 4/4 en las dos pruebas (con y sin turnos), así que el atasco no se reprodujo en banco.
@@ -447,7 +483,7 @@ El usuario lo vio y lo aparcó a propósito para priorizar tener los 5 mundos: *
 - Primer paso recomendado: reproducirlo con el log del planner delante y mirar en qué estado se queda (`deliver`, `release`, `espera turno`) y si el `grasp_manager` está reintentando `detach`.
 
 #### ⭐ VALIDAR EL CICLO COMPLETO con métricas en los 4 mundos nuevos (2026-09-05)
-De `colored_warehouse`, `electrical_substation`, `rubber_factory` y `robotnik_lab` se verificó carga, RTF 1.00, tópicos y cámaras — pero **ninguno tiene una pasada de ciclo completo** (N/N piezas, makespan, colisiones). Los comandos exactos de cada uno están en la tabla de "Set de 5 mundos". Ojo al hacerlo: **matar siempre Gazebo entre mundo y mundo** (`pkill -f "gz sim"` y comprobar con `pgrep`); dos servidores publican el mismo `/world/world_demo/pose/info` y el planner ve basura fantasma.
+De `colored_warehouse`, `electrical_substation` y `rubber_factory` se verificó carga, RTF 1.00, tópicos y cámaras — pero **ninguno tiene una pasada de ciclo completo** (N/N piezas, makespan, colisiones). Los comandos exactos de cada uno están en la tabla de "Set de 5 mundos". Ojo al hacerlo: **matar siempre Gazebo entre mundo y mundo** (`pkill -f "gz sim"` y comprobar con `pgrep`); dos servidores publican el mismo `/world/world_demo/pose/info` y el planner ve basura fantasma.
 
 
 #### ⭐ RE-VALIDAR EN VIVO el agarre RGB-D (commit `76a3f6b`, 2026-08-22)
