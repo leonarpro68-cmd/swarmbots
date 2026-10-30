@@ -1,0 +1,124 @@
+{
+  "stage": "pickup1",
+  "schema": "d99_collective_timed_quintic.preview.v1",
+  "status": "CONVERTED_OFFLINE_CHECKS_PASSED",
+  "ros_executable": false,
+  "obstacle_map_recertified": false,
+  "source_method": "D9.9 one common q(t); phase-wide rescaling only on finishing events",
+  "source_duration_s": 12.042486932276049,
+  "converted_horizon_s": 12.042486932276049,
+  "source_finish_times_s": {
+    "0": 8.8304212152345,
+    "1": 10.607543484800443,
+    "2": 12.042486932276049
+  },
+  "events_q": [
+    8.0,
+    10.0
+  ],
+  "phase_scales": [
+    0.74,
+    0.62
+  ],
+  "source_min_separation_lower_m": 16.23889184448088,
+  "converted_separation_lower_via_source_m": 16.237854656486036,
+  "tolerances": {
+    "position_m": 0.03,
+    "velocity_m_s": 0.12,
+    "acceleration_m_s2": 0.25
+  },
+  "acceleration_error_continuous_certified": true,
+  "checks": {
+    "robot_conversions": true,
+    "separation": true
+  },
+  "source_sha256": {
+    "original_protocol_controls": "57d7d3f532b803fb6241c13062bc4c385c87c74b537007d489777b3d4b1468b1",
+    "converted_npz": "3235223232eb1b47e36c46cc107086c933e5020917aa7b78758b9b183985e2dd"
+  },
+  "robots": [
+    {
+      "sampled_position_error_m": 1.517719948885615e-14,
+      "sampled_velocity_error_m_s": 6.8989262323503e-14,
+      "sampled_accel_error_m_s2": 7.493278395610003e-13,
+      "source_jerk_upper_m_s3": 31.291336948285057,
+      "converted_jerk_upper_m_s3": 1.641523630804813,
+      "converted_speed_upper_m_s": 1.111111111375473,
+      "converted_accel_upper_m_s2": 0.5345053584305299,
+      "sample_step_max_s": 0.0004999955390552202,
+      "source_speed_upper_m_s": 1.1111111129615139,
+      "source_accel_upper_m_s2": 0.6039727122835516,
+      "position_error_upper_m": 0.0005555505994941083,
+      "velocity_error_upper_m_s": 0.0002846169784036064,
+      "accel_error_upper_m_s2": 0.008233141689685553,
+      "joins_C2": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.425987077190101e-14,
+        "accel_m_s2": 6.517775106684481e-15
+      },
+      "duration_s": 8.8304212152345,
+      "original_pieces": 8,
+      "converted_pieces": 32,
+      "time_matches_original_collective": true,
+      "dynamics_ok": true,
+      "errors_ok": true,
+      "joins_ok": true
+    },
+    {
+      "sampled_position_error_m": 9.75739686408028e-07,
+      "sampled_velocity_error_m_s": 1.619395674227082e-05,
+      "sampled_accel_error_m_s2": 0.0005459560276190675,
+      "source_jerk_upper_m_s3": 24.963566735103697,
+      "converted_jerk_upper_m_s3": 3.132759871154745,
+      "converted_speed_upper_m_s": 0.9001917587311332,
+      "converted_accel_upper_m_s2": 0.7220917316274733,
+      "sample_step_max_s": 0.00049997848250527,
+      "source_speed_upper_m_s": 0.9015956874729093,
+      "source_accel_upper_m_s2": 0.9311742623581327,
+      "position_error_upper_m": 0.00045140321626147955,
+      "velocity_error_upper_m_s": 0.0004294926681675159,
+      "accel_error_upper_m_s2": 0.007569735397903838,
+      "joins_C2": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.6962101193654745e-14,
+        "accel_m_s2": 4.666407440134664e-13
+      },
+      "duration_s": 10.607543484800443,
+      "original_pieces": 10,
+      "converted_pieces": 40,
+      "time_matches_original_collective": true,
+      "dynamics_ok": true,
+      "errors_ok": true,
+      "joins_ok": true
+    },
+    {
+      "sampled_position_error_m": 1.1872457345179189e-06,
+      "sampled_velocity_error_m_s": 1.9840969440094386e-05,
+      "sampled_accel_error_m_s2": 0.0006625207416915905,
+      "source_jerk_upper_m_s3": 21.58775378131618,
+      "converted_jerk_upper_m_s3": 3.6099443621941063,
+      "converted_speed_upper_m_s": 0.8821453033221773,
+      "converted_accel_upper_m_s2": 0.7505297266471402,
+      "sample_step_max_s": 0.0004999994574337308,
+      "source_speed_upper_m_s": 1.0396573805496074,
+      "source_accel_upper_m_s2": 0.9042660925280936,
+      "position_error_upper_m": 0.0004816373953498079,
+      "velocity_error_upper_m_s": 0.00043353947531570583,
+      "accel_error_upper_m_s2": 0.006961938441858625,
+      "joins_C2": {
+        "position_m": 0.0,
+        "velocity_m_s": 3.5553125149938006e-14,
+        "accel_m_s2": 2.1621274779664635e-12
+      },
+      "duration_s": 12.042486932276049,
+      "original_pieces": 12,
+      "converted_pieces": 48,
+      "time_matches_original_collective": true,
+      "dynamics_ok": true,
+      "errors_ok": true,
+      "joins_ok": true
+    }
+  ],
+  "npz": "/mnt/data/d99_work/d99_conversion_pickup1/pickup1_d994_NON_EXECUTABLE.npz",
+  "notes": "Non executable, source certified geometry is unchanged but converted geometry deviates; clearance to obstacles not independently checked."
+}

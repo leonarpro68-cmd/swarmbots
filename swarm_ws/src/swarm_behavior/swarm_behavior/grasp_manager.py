@@ -20,6 +20,7 @@ objetos se obtienen con una instantanea de gz topic .../pose/info (on-demand).
 import math
 import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 import rclpy
 from rclpy.node import Node
@@ -51,7 +52,7 @@ class GraspManager(Node):
         # se confirma despues, antes de que el solver pueda expulsarla.
         self.finger_grip = self.declare_parameter("finger_grip", 0.028).value
         self.close_delay = self.declare_parameter("close_delay", 0.8).value
-        self.attach_timeout = self.declare_parameter("attach_timeout", 2.5).value
+        self.attach_timeout = self.declare_parameter("attach_timeout", 5.0).value
         self.attach_retry = self.declare_parameter("attach_retry", 0.35).value
         self.pose = None      # (x, y, yaw) del robot
         self.held = None      # nombre del objeto agarrado, o None
@@ -62,7 +63,15 @@ class GraspManager(Node):
         self._release_t0 = None
         self._last_detach = None
         self._joint_state = None
+        # Timeout de attach/detach: la realidad fisica queda INCIERTA.
+        # No se permite una nueva orden hasta inspeccion/reinicio supervisado.
+        self._uncertain_joint = None  # (operacion, nombre)
+        self._uncertain_topic = None
         self.gz = GzNode()
+        self._gz_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix=f'{self.ns}_gz')
+        self._gz_publish_future = None
+        self._gz_publish_topic = None
+        self._attach_attempts = 0
         # El joint URDF arranca en 0.0 (cerrado). Repetir la orden abierta
         # mientras el robot esta libre tambien cubre el arranque tardio del
         # gripper_controller: la caja puede entrar antes de empezar a cerrar.
@@ -156,19 +165,40 @@ class GraspManager(Node):
             capture_output=True, text=True, timeout=5)
         return result.returncode == 0
 
+    def _queue_gz_empty(self, topic):
+        future = self._gz_publish_future
+        if future is not None:
+            if not future.done():
+                return False
+            try:
+                ok = future.result()
+                if not ok:
+                    self.get_logger().error(f"GZ_V2 publish devolvio error: {self._gz_publish_topic}")
+            except Exception as exc:
+                self.get_logger().error(f"GZ_V2 error publicando {self._gz_publish_topic}: {exc}")
+            self._gz_publish_future = None
+        self._gz_publish_topic = topic
+        self._gz_publish_future = self._gz_pool.submit(self._gz_empty, topic)
+        return True
+
     def _joint_state_cb(self, msg: StringMsg):
         self._joint_state = msg.data
+        if self._uncertain_joint is not None:
+            operation, name = self._uncertain_joint
+            self.get_logger().error(
+                f"GZ_V2 ACK TARDIO: {operation} '{name}' -> '{msg.data}'. "
+                "Estado BLOQUEADO; verificar joint y objeto antes de reiniciar.")
 
     def _finish_pending(self, success):
         name = self.pending
-        if name is not None:
+        if name is not None and self._uncertain_joint is None:
             self.gz.unsubscribe(f"/{self.ns}/grasp/{name}/state")
         self.pending = None
         self._grasp_t0 = None
         self._last_attach = None
         self._joint_state = None
         if not success:
-            self._keep_open = True
+            self._keep_open = False  # sin ACK, evitar reapertura automática peligrosa
         self.result_pub.publish(Int8(data=1 if success else -1))
 
     def _grasp_step(self):
@@ -184,9 +214,14 @@ class GraspManager(Node):
             return
         if elapsed > self.attach_timeout:
             failed = self.pending
-            self._move_fingers(self.finger_open)
+            # Estado DESCONOCIDO: no abrir los dedos automáticamente mientras
+            # Gazebo podria haber adjuntado la pieza sin entregar el ACK.
             self.get_logger().error(
-                f"Gazebo no confirmo el agarre de '{failed}'; se reintentara.")
+                f"GZ_V2 ESTADO INCIERTO para '{failed}': sin ACK attached tras "
+                f"{elapsed:.2f}s; intentos={self._attach_attempts}. "
+                "Se mantiene la pinza cerrada y se requiere inspeccion.")
+            self._uncertain_joint = ("attach", failed)
+            self._uncertain_topic = f"/{self.ns}/grasp/{failed}/state"
             self._finish_pending(False)
             return
         if elapsed < self.close_delay:
@@ -194,12 +229,13 @@ class GraspManager(Node):
         since_last = float("inf") if self._last_attach is None else \
             (now - self._last_attach).nanoseconds / 1e9
         if since_last >= self.attach_retry:
-            self._gz_empty(f"/{self.ns}/grasp/{self.pending}/attach")
-            self._last_attach = now
+            if self._queue_gz_empty(f"/{self.ns}/grasp/{self.pending}/attach"):
+                self._attach_attempts += 1
+                self._last_attach = now
 
     def _finish_release(self, success):
         name = self.release_pending
-        if name is not None:
+        if name is not None and self._uncertain_joint is None:
             self.gz.unsubscribe(f"/{self.ns}/grasp/{name}/state")
         if success:
             self.held = None
@@ -225,16 +261,24 @@ class GraspManager(Node):
             name = self.release_pending
             self.get_logger().error(
                 f"Gazebo no confirmo la suelta de '{name}'; robot seguira parado.")
+            self._uncertain_joint = ("detach", name)
+            self._uncertain_topic = f"/{self.ns}/grasp/{name}/state"
             self._finish_release(False)
             return
         since_last = float("inf") if self._last_detach is None else \
             (now - self._last_detach).nanoseconds / 1e9
         if since_last >= self.attach_retry:
-            self._gz_empty(f"/{self.ns}/grasp/{self.release_pending}/detach")
-            self._last_detach = now
+            if self._queue_gz_empty(f"/{self.ns}/grasp/{self.release_pending}/detach"):
+                self._last_detach = now
 
     # ---- callbacks ----
     def _grasp(self, _msg):
+        if self._uncertain_joint is not None:
+            self.get_logger().error(
+                f"AGARRE BLOQUEADO: joint incierto {self._uncertain_joint}; "
+                "inspeccion fisica requerida.")
+            self.result_pub.publish(Int8(data=-1))
+            return
         if self.held is not None or self.pending is not None:
             self.get_logger().warn(f"Ya tengo agarrado '{self.held}'. Suelta antes.")
             return
@@ -269,10 +313,17 @@ class GraspManager(Node):
         self.pending = best
         self._grasp_t0 = self.get_clock().now()
         self._last_attach = None
+        self._attach_attempts = 0
         self.get_logger().info(
             f"CERRANDO sobre '{best}' (a {best_d:.2f} m); esperando joint.")
 
     def _release(self, _msg):
+        if self._uncertain_joint is not None:
+            self.get_logger().error(
+                f"LIBERACION BLOQUEADA: joint incierto {self._uncertain_joint}; "
+                "NO abrir dedos automaticamente; inspeccion fisica requerida.")
+            self.release_result_pub.publish(Int8(data=-1))
+            return
         self._keep_open = True
         self._move_fingers(self.finger_open)
         if self.release_pending is not None:
@@ -302,8 +353,10 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        node._gz_pool.shutdown(wait=False, cancel_futures=True)
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

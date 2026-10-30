@@ -1,0 +1,484 @@
+#!/usr/bin/env python3
+"""D9.6C.2H.2B: continuous, fail-closed ROS 2 *hold-only* safety supervisor.
+
+ZERO publishers and ZERO motion commands. No TF broadcasters, no velocity stop
+actuator. STOPPED is a software state ONLY; FAULT cannot stop another controller.
+
+Monitors a freshly certified D9.2 pickup1 plan at t=0 while robots are *held
+stationary*. Does NOT attempt to follow the time-varying reference. Running
+checks use STEADY wall time, ROS /clock and stamped odometry together.
+"""
+import argparse
+import csv
+import json
+import math
+import time
+import threading
+from pathlib import Path
+
+ROBOTS = ('summit0', 'summit1', 'summit2')
+SCHEMA = 'swarm.d96c2h2b.continuous_hold_shadow.v1'
+STATES = ('DISARMED', 'ARMED', 'RUNNING_SHADOW', 'FAULT', 'STOPPED')
+CMD_TOPICS = tuple(dict.fromkeys(
+    ['/cmd_vel'] + [f'/{r}/cmd_vel' for r in ROBOTS] +
+    [f'/model/{r}/cmd_vel' for r in ROBOTS] +
+    [f'/{r}/cmd_vel_stamped' for r in ROBOTS]
+))
+
+
+def angle_delta(a, b):
+    return math.atan2(math.sin(a-b), math.cos(a-b))
+
+
+def finite_number(x):
+    return isinstance(x, (float, int)) and not isinstance(x, bool) and math.isfinite(float(x))
+
+
+def check_continuous(snapshot, starts, initial_yaws, now_wall, *,
+                     max_position_m=.05, max_speed_m_s=.03, min_separation_m=1.15,
+                     max_yaw_change_deg=3., odom_timeout_wall_s=.4,
+                     clock_timeout_wall_s=.75, graph_timeout_wall_s=2.5,
+                     graph_scan_max_duration_s=2.0):
+    """Pure safety gate. Snapshot is a point-in-time view of ROS subscriptions.
+
+    No implicit TF conversion. Expected frame labels and a previously reviewed
+    Gazebo-world/odom relationship are prerequisites, NOT proof of TF.
+    """
+    problems = []
+    clock = snapshot.get('clock', {})
+    stamp = clock.get('stamp_s')
+    receipt = clock.get('last_received_wall')
+    if (not finite_number(stamp) or not finite_number(receipt)
+            or float(stamp) < 0 or not 0 <= now_wall-float(receipt) <= clock_timeout_wall_s):
+        problems.append('CLOCK_WATCHDOG')
+    if clock.get('rewound') is True:
+        problems.append('CLOCK_REWIND')
+    progress_wall=clock.get('last_progress_wall')
+    if not finite_number(progress_wall) or not 0 <= now_wall-float(progress_wall) <= clock_timeout_wall_s:
+        problems.append('CLOCK_NOT_PROGRESSING')
+    graph = snapshot.get('graph', {})
+    updated = graph.get('last_checked_wall')
+    if not finite_number(updated) or not 0 <= now_wall-float(updated) <= graph_timeout_wall_s:
+        problems.append('GRAPH_WATCHDOG')
+    if graph.get('scan_error'):
+        problems.append('GRAPH_QUERY_ERROR')
+    if graph.get('thread_alive') is False:
+        problems.append('GRAPH_SCANNER_STOPPED')
+    started = graph.get('scan_started_wall')
+    if ((finite_number(started) and now_wall-float(started) > graph_scan_max_duration_s)
+            or (finite_number(graph.get('max_scan_duration_wall_s'))
+                and float(graph['max_scan_duration_wall_s']) > graph_scan_max_duration_s)):
+        problems.append('GRAPH_SCAN_SLOW')
+    if graph.get('query_count', 0) < 2:
+        problems.append('GRAPH_NOT_OBSERVED')
+    pubs = graph.get('publishers')
+    if not isinstance(pubs, dict) or set(pubs) != set(CMD_TOPICS):
+        problems.append('GRAPH_UNAVAILABLE')
+    elif any(bool(x) for x in pubs.values()):
+        problems.append('OTHER_VELOCITY_PUBLISHER')
+    odoms = snapshot.get('odoms', {})
+    if set(odoms) != set(ROBOTS):
+        problems.append('MISSING_ODOMETRY')
+    xyz = {}
+    for name in ROBOTS:
+        ob = odoms.get(name)
+        if not isinstance(ob, dict):
+            continue
+        if (ob.get('frame_id') != f'{name}/odom' or
+                ob.get('child_frame_id') != f'{name}/base_footprint'):
+            problems.append(f'{name}:FRAME')
+        read_stamp = ob.get('stamp_sim_s')
+        seen_wall = ob.get('last_received_wall')
+        if (not finite_number(seen_wall) or
+                not 0 <= now_wall-float(seen_wall) <= odom_timeout_wall_s or
+                not finite_number(read_stamp) or not finite_number(stamp) or
+                not 0 <= float(stamp)-float(read_stamp) <= .25):
+            problems.append(f'{name}:ODOM_WATCHDOG')
+        keys = ('x_m','y_m','yaw_rad','vx_m_s','vy_m_s','quaternion_norm')
+        if not all(finite_number(ob.get(k)) for k in keys):
+            problems.append(f'{name}:NONFINITE_ODOM')
+            continue
+        if abs(ob['quaternion_norm']-1.) > .02:
+            problems.append(f'{name}:QUATERNION')
+        if name not in starts or name not in initial_yaws:
+            problems.append(f'{name}:NO_BASELINE')
+            continue
+        point = (ob['x_m'], ob['y_m'])
+        xyz[name] = point
+        distance = math.hypot(ob['x_m']-starts[name]['x_m'],ob['y_m']-starts[name]['y_m'])
+        speed = math.hypot(ob['vx_m_s'],ob['vy_m_s'])
+        if distance > max_position_m:
+            problems.append(f'{name}:LEFT_START')
+        if speed > max_speed_m_s:
+            problems.append(f'{name}:MOVING')
+        if abs(angle_delta(ob['yaw_rad'],initial_yaws[name])) > math.radians(max_yaw_change_deg):
+            problems.append(f'{name}:YAW_CHANGED')
+    for i,a in enumerate(ROBOTS):
+        for b in ROBOTS[i+1:]:
+            if a in xyz and b in xyz and math.dist(xyz[a],xyz[b]) < min_separation_m:
+                problems.append(f'{a}-{b}:SEPARATION')
+    return sorted(set(problems))
+
+
+class GraphScanner:
+    """Read-only ROS graph scanner on a dedicated node and thread.
+
+    The subscriber thread must NEVER be blocked by eleven sequential DDS graph
+    queries. Only a fully completed successful sweep counts as a new check;
+    a slow, incomplete, or failed scan remains a fail-closed condition.
+    This is strictly for passive hold testing, NOT a motion safety actuator or
+    a mechanism for enforcing exclusive command ownership.
+    """
+    def __init__(self, node, topics=CMD_TOPICS, period_s=.35):
+        self.node=node
+        self.topics=tuple(topics)
+        self.period_s=period_s
+        self.lock=threading.Lock()
+        self.stop_event=threading.Event()
+        self.thread=None
+        self.checked_wall=None
+        self.checks=0
+        self.pubs={topic:[] for topic in self.topics}
+        self.scan_started_wall=None
+        self.last_scan_duration_wall_s=None
+        self.max_scan_duration_wall_s=0.
+        self.error=None
+
+    def scan_once(self):
+        begin=time.monotonic()
+        with self.lock:
+            self.scan_started_wall=begin
+        current={}
+        try:
+            for topic in self.topics:
+                current[topic]=sorted(set(
+                    f'{info.node_namespace.rstrip("/")}/{info.node_name}'
+                    for info in self.node.get_publishers_info_by_topic(topic)))
+        except Exception as exc:
+            with self.lock:
+                self.error=f'{type(exc).__name__}: {exc}'
+                self.scan_started_wall=None
+            return
+        completed=time.monotonic()
+        duration=completed-begin
+        with self.lock:
+            for topic, identities in current.items():
+                self.pubs[topic]=sorted(set(self.pubs[topic]).union(identities))
+            self.checked_wall=completed  # AFTER all topic queries, never before
+            self.checks+=1
+            self.last_scan_duration_wall_s=duration
+            self.max_scan_duration_wall_s=max(self.max_scan_duration_wall_s,duration)
+            self.scan_started_wall=None
+
+    def _loop(self):
+        while not self.stop_event.is_set() and self.error is None:
+            self.scan_once()
+            self.stop_event.wait(self.period_s)
+
+    def start(self):
+        self.thread=threading.Thread(target=self._loop,daemon=True,
+                                     name='d96c2h2b_readonly_graph_scan')
+        self.thread.start()
+
+    def snapshot(self):
+        with self.lock:
+            return {'last_checked_wall':self.checked_wall,
+                    'query_count':self.checks,
+                    'publishers':{key:list(val) for key,val in self.pubs.items()},
+                    'scan_started_wall':self.scan_started_wall,
+                    'last_scan_duration_wall_s':self.last_scan_duration_wall_s,
+                    'max_scan_duration_wall_s':self.max_scan_duration_wall_s,
+                    'scan_error':self.error,
+                    'thread_alive':self.thread.is_alive() if self.thread else False}
+
+    def close(self,timeout_s=3.):
+        self.stop_event.set()
+        if self.thread:
+            self.thread.join(timeout=timeout_s)
+            return not self.thread.is_alive()
+        return True
+
+
+class ShadowLifecycle:
+    """Latching finite-state safety machine; no actuator methods exist."""
+    def __init__(self):
+        self.state = 'DISARMED'
+        self.events = [{'from': None, 'to': 'DISARMED', 'reason': 'CREATED'}]
+        self.faults = []
+
+    def _set(self, state, reason):
+        self.events.append({'from':self.state,'to':state,'reason':reason})
+        self.state=state
+
+    def arm(self, initial_problems):
+        if self.state != 'DISARMED':
+            raise RuntimeError('Only DISARMED can arm')
+        if initial_problems:
+            self.fault(initial_problems)
+        else:
+            self._set('ARMED','CHECKS_PASSED_NO_EXECUTION_AUTHORITY')
+
+    def begin(self):
+        if self.state != 'ARMED':
+            raise RuntimeError('Only ARMED can enter shadow monitoring')
+        self._set('RUNNING_SHADOW','HOLD_REFERENCE_T0_NO_PUBLISHERS')
+
+    def update(self, problems):
+        if self.state == 'RUNNING_SHADOW' and problems:
+            self.fault(problems)
+
+    def fault(self, problems):
+        if self.state in ('FAULT','STOPPED'):
+            return
+        self.faults = list(sorted(set(problems))) or ['UNSPECIFIED_FAULT']
+        self._set('FAULT',','.join(self.faults))
+
+    def stop(self):
+        if self.state in ('ARMED', 'RUNNING_SHADOW'):
+            self._set('STOPPED','SHADOW_OBSERVATION_FINISHED')
+        # A FAULT remains latched. No automatic re-arm or actuator action.
+
+
+def inspect_static(run, stage, config_report, sdf_dir, dynamic_report):
+    """Reuse the previously validated independent-time plan and config gates."""
+    from d96c2h2a_safety_gate import validate_config_report, validate_manifest
+    from d96c2c_prearm_readonly import validate_static
+    from d96a_readonly_follower import sample
+    config = json.loads(config_report.read_text())
+    errs = validate_config_report(config, sdf_dir=sdf_dir, dynamic_report=dynamic_report)
+    planning, manifest, trajectories = validate_static(run, stage)
+    errs.extend(validate_manifest(manifest))
+    starts = sample(trajectories,0.0)
+    errs = sorted(set(errs))
+    return planning, manifest, starts, errs
+
+
+def capture_ros_for_hold(planning, starts, *, observe_seconds=5., warmup_seconds=2.,
+                         max_capture_age_s=120., output_csv=None):
+    """Subscribe then hold-watch, with all decisions on steady wall time.
+
+    This intentionally never instantiates a ROS publisher; graph observations
+    detect concurrent publishers but do not grant a lease or exclusivity.
+    """
+    import rclpy
+    from rclpy.node import Node
+    from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, qos_profile_sensor_data
+    from nav_msgs.msg import Odometry
+    from rosgraph_msgs.msg import Clock
+    from d96c2h2a_safety_gate import CMD_TOPICS, assess_live
+
+    clock_qos = QoSProfile(depth=10,reliability=ReliabilityPolicy.BEST_EFFORT,
+                           durability=DurabilityPolicy.VOLATILE)
+    rclpy.init(args=None)
+
+    class HoldObserver(Node):
+        def __init__(self):
+            super().__init__('d96c2h2b_hold_supervisor_no_publishers')
+            self.boot = time.monotonic()
+            self.clock_stamp=None
+            self.clock_receive=None
+            self.clock_progress_receive=None
+            self.clock_start=None
+            self.clock_messages=0
+            self.rewound=False
+            self.odom={}
+            self.subs=[self.create_subscription(Odometry,f'/{n}/odom',
+                         lambda msg,n=n:self.on_odom(n,msg),qos_profile_sensor_data) for n in ROBOTS]
+            self.subs.append(self.create_subscription(Clock,'/clock',self.on_clock,clock_qos))
+            self.get_logger().info('CONTINUOUS HOLD SHADOW, ZERO publishers / commands, no emergency stop actuator.')
+        def on_clock(self,msg):
+            t=msg.clock.sec+msg.clock.nanosec*1e-9
+            self.clock_messages+=1
+            if not math.isfinite(t):
+                self.rewound=True;return
+            if self.clock_stamp is not None and t < self.clock_stamp-1e-6:
+                self.rewound=True
+            now=time.monotonic()
+            if self.clock_stamp is None or t>self.clock_stamp+1e-7:
+                self.clock_progress_receive=now
+            self.clock_stamp=t
+            self.clock_receive=now
+            if self.clock_start is None:self.clock_start=t
+        def on_odom(self,name,msg):
+            q=msg.pose.pose.orientation
+            qnorm=math.sqrt(q.x*q.x+q.y*q.y+q.z*q.z+q.w*q.w)
+            yaw=math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
+            self.odom[name]={'x_m':float(msg.pose.pose.position.x),
+                'y_m':float(msg.pose.pose.position.y),
+                'vx_m_s':float(msg.twist.twist.linear.x),
+                'vy_m_s':float(msg.twist.twist.linear.y),
+                'quaternion_norm':qnorm,'yaw_rad':yaw,
+                'frame_id':msg.header.frame_id,'child_frame_id':msg.child_frame_id,
+                'stamp_sim_s':msg.header.stamp.sec+msg.header.stamp.nanosec*1e-9,
+                'last_received_wall':time.monotonic()}
+        def snapshot(self,graph):
+            return {'odoms':self.odom.copy(),
+                    'clock':{'stamp_s':self.clock_stamp,
+                             'last_received_wall':self.clock_receive,
+                             'last_progress_wall':self.clock_progress_receive,
+                             'rewound':self.rewound},
+                    'graph':graph}
+
+    lifecycle = ShadowLifecycle()
+    node = HoldObserver()
+    graph_node = rclpy.create_node('d96c2h2b_graph_observer_no_publishers')
+    scanner = GraphScanner(graph_node)
+    scanner.start()
+    rows=0
+    initial_yaws={}
+    fault_at=None
+    fault_details=None
+    csvfile=None
+    writer=None
+    try:
+        if output_csv is not None:
+            output_csv.parent.mkdir(parents=True,exist_ok=True)
+            csvfile=output_csv.open('w',newline='')
+            writer=csv.DictWriter(csvfile,fieldnames=(
+                'wall_since_start_s','clock_s','state','robot','x_m','y_m','yaw_rad',
+                'speed_m_s','start_error_m','odom_wall_age_s','clock_wall_age_s','faults'))
+            writer.writeheader()
+        end_warmup=time.monotonic()+warmup_seconds
+        # Initial continuous subscription warmup. Missing inputs reject, never arm.
+        while rclpy.ok() and time.monotonic()<end_warmup:
+            rclpy.spin_once(node,timeout_sec=.05)
+        t=time.monotonic()
+        ages={name:{**ob,'age_wall_s':t-ob['last_received_wall']} for name,ob in node.odom.items()}
+        window_progress=(node.clock_start is not None and node.clock_stamp is not None
+                         and node.clock_stamp-node.clock_start>.2)
+        preflight_obs={'odoms':ages,
+            'clock':{'current_sim_s':node.clock_stamp,'progressing':window_progress,
+                     'rewound':node.rewound},'graph_queries':scanner.snapshot()['query_count'],
+            'command_publishers':scanner.snapshot()['publishers']}
+        errors,preflight_detail=assess_live(planning,starts,preflight_obs,
+                                            max_capture_age_s=max_capture_age_s)
+        initial_yaws={name:ob['yaw_rad'] for name,ob in node.odom.items()}
+        errors.extend(check_continuous(node.snapshot(scanner.snapshot()),starts,initial_yaws,t))
+        lifecycle.arm(sorted(set(errors)))
+        if lifecycle.state=='ARMED':
+            lifecycle.begin()
+        deadline=time.monotonic()+observe_seconds
+        next_sample=0.
+        while rclpy.ok() and lifecycle.state=='RUNNING_SHADOW' and time.monotonic()<deadline:
+            rclpy.spin_once(node,timeout_sec=.04)
+            t=time.monotonic()
+            if t<next_sample:
+                continue
+            next_sample=t+.05
+            graph_snapshot=scanner.snapshot()
+            problems=check_continuous(node.snapshot(graph_snapshot),starts,initial_yaws,t)
+            lifecycle.update(problems)
+            if lifecycle.state=='FAULT':
+                fault_at=node.clock_stamp
+                fault_details={'graph_last_scan_age_wall_s':(
+                    t-graph_snapshot['last_checked_wall']
+                    if graph_snapshot['last_checked_wall'] is not None else None),
+                    'graph_scan_duration_wall_s':graph_snapshot['last_scan_duration_wall_s'],
+                    'graph_max_scan_duration_wall_s':graph_snapshot['max_scan_duration_wall_s'],
+                    'graph_scan_in_progress_s':(
+                        t-graph_snapshot['scan_started_wall']
+                        if graph_snapshot['scan_started_wall'] is not None else None),
+                    'graph_query_error':graph_snapshot['scan_error'],
+                    'odom_last_received_wall_ages_s':{
+                        n:(t-ob['last_received_wall']) for n,ob in node.odom.items()},
+                    'clock_last_received_wall_age_s':(
+                        t-node.clock_receive if node.clock_receive is not None else None)}
+            if writer:
+                for name in ROBOTS:
+                    ob=node.odom.get(name)
+                    if ob is None:continue
+                    writer.writerow({'wall_since_start_s':t-node.boot,
+                       'clock_s':node.clock_stamp,'state':lifecycle.state,
+                       'robot':name,'x_m':ob['x_m'],'y_m':ob['y_m'],
+                       'yaw_rad':ob['yaw_rad'],'speed_m_s':math.hypot(ob['vx_m_s'],ob['vy_m_s']),
+                       'start_error_m':math.hypot(ob['x_m']-starts[name]['x_m'],ob['y_m']-starts[name]['y_m']),
+                       'odom_wall_age_s':t-ob['last_received_wall'],
+                       'clock_wall_age_s':t-node.clock_receive if node.clock_receive is not None else '',
+                       'faults':'|'.join(lifecycle.faults)})
+                    rows+=1
+        if not rclpy.ok() and lifecycle.state=='RUNNING_SHADOW':
+            lifecycle.fault(['ROS_SHUTDOWN'])
+        graph_at_end=scanner.snapshot()
+        scanner_closed=scanner.close(timeout_s=3.)
+        if not scanner_closed:
+            lifecycle.fault(['GRAPH_SCANNER_SHUTDOWN_TIMEOUT'])
+        if lifecycle.state in ('RUNNING_SHADOW','ARMED'):
+            lifecycle.stop()
+        return {'state':lifecycle.state,'events':lifecycle.events,'faults':lifecycle.faults,
+            'initial_check_reasons':sorted(set(errors)), 'initial_check_details':preflight_detail,
+            'ros_graph':{'checks':graph_at_end['query_count'],
+                'ever_seen_command_publishers':graph_at_end['publishers'],
+                'last_scan_duration_wall_s':graph_at_end['last_scan_duration_wall_s'],
+                'max_scan_duration_wall_s':graph_at_end['max_scan_duration_wall_s'],
+                'last_scan_age_wall_s':(time.monotonic()-graph_at_end['last_checked_wall']
+                    if graph_at_end['last_checked_wall'] is not None else None),
+                'scan_error':graph_at_end['scan_error'],
+                'thread_alive_before_shutdown':graph_at_end['thread_alive'],
+                'clean_shutdown':scanner_closed},
+            'clock_messages':node.clock_messages,'clock_last_s':node.clock_stamp,
+            'clock_rewound':node.rewound,'odom_received':{n:n in node.odom for n in ROBOTS},
+            'rows_written':rows,'fault_at_clock_s':fault_at,
+            'fault_watchdog_details':fault_details,
+            'graph_scanner_mode':'background_node_thread_readonly',
+            'graph_timeout_wall_s':2.5,'graph_max_scan_duration_wall_s':2.0}
+    finally:
+        if csvfile is not None:csvfile.close()
+        scanner_closed=scanner.close(timeout_s=3.)
+        if scanner_closed:
+            graph_node.destroy_node()
+        # A thread stuck in a graph query is a failure, not authorization.
+        node.destroy_node()
+        if rclpy.ok():rclpy.shutdown()
+
+
+def main(argv=None):
+    p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--run',type=Path,required=True)
+    p.add_argument('--stage',choices=('pickup1',),default='pickup1',
+                   help='Only pickup1 is supported in the hold-only test')
+    p.add_argument('--config-report',type=Path,
+                   default=Path('scripts/resultados/d9_live/d96c2h1_configuration_report.json'))
+    p.add_argument('--sdf-dir',type=Path,default=Path('/tmp/swarm_summit'))
+    p.add_argument('--dynamic-report',type=Path,
+                   default=Path('scripts/resultados/d9_live/d96c2g_dynamic_frames.json'))
+    p.add_argument('--warmup-seconds',type=float,default=2.)
+    p.add_argument('--observe-seconds',type=float,default=5.)
+    args=p.parse_args(argv)
+    report={'schema':SCHEMA,'stage':args.stage,'status':'REJECTED',
+            'patch_revision':'H2B_FIX_GRAPH_ASYNC_1',
+            'state':'DISARMED','execution_authorized':False,'ros_executable':False,
+            'publisher_count':0,'commands_sent':0,'stop_actuator_available':False,
+            'tf_tree_certified':False,'monitoring_mode':'STATIONARY_HOLD_T0',
+            'note':'A software state transition cannot stop a robot controlled by another process. No /cmd_vel or stop actuator here.'}
+    destination=args.run/'d96c2h2b_guard'
+    try:
+        if not 1 <= args.warmup_seconds <= 15 or not 1 <= args.observe_seconds <= 30:
+            raise ValueError('warmup/observe seconds out of permitted bounds')
+        planning,manifest,starts,errors=inspect_static(args.run,args.stage,args.config_report,args.sdf_dir,args.dynamic_report)
+        if errors:
+            raise ValueError('STATIC_PRECHECK: '+'; '.join(errors))
+        from d96c2h2a_safety_gate import sha256
+        from d96a_readonly_follower import sample
+        source=args.run/'d94_conversion'/f'{args.stage}_converted_NON_EXECUTABLE.npz'
+        destination.mkdir(parents=True,exist_ok=True)
+        report.update(plan_source_sha256=sha256(source),
+                      certified_min_separation_m=manifest['separation']['conservative_lower_m'],
+                      planned_horizon_s=max(float(x['duration_s']) for x in manifest['robots'].values()))
+        observed=capture_ros_for_hold(planning,starts,
+               observe_seconds=args.observe_seconds,warmup_seconds=args.warmup_seconds,
+               output_csv=destination/f'{args.stage}_hold_observations.csv')
+        report.update(observed)
+        report['status']='PASS_CONTINUOUS_HOLD_SHADOW_ONLY' if observed['state']=='STOPPED' else 'FAULT_OR_REJECTED_SHADOW_ONLY'
+    except KeyboardInterrupt:
+        report['status']='INTERRUPTED_SHADOW_ONLY'
+    except Exception as e:
+        report['status']='REJECTED';report['error']=repr(e)
+    destination.mkdir(parents=True,exist_ok=True)
+    reportpath=destination/f'{args.stage}_guard_report.json'
+    reportpath.write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n')
+    print(json.dumps(report,indent=2,ensure_ascii=False))
+    print('Report:',reportpath)
+    return 0 if report['status']=='PASS_CONTINUOUS_HOLD_SHADOW_ONLY' else 2
+
+if __name__=='__main__':
+    raise SystemExit(main())

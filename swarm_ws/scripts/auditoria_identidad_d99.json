@@ -1,0 +1,152 @@
+{
+  "schema": "swarm.d99.identity_audit.readonly.v1",
+  "status": "STATIC_IDENTITY_PASS_NEW_LIVE_SESSION_NOT_CHECKED",
+  "safety": {
+    "gazebo_executed_now": false,
+    "runtime_tf_certified": false,
+    "execution_authorized": false,
+    "commands_sent": 0
+  },
+  "world": {
+    "world_name_base": "world_demo",
+    "world_name_run007": "world_demo",
+    "base_sdf_sha256": "519c8b9edd8a9b7fdfd2e53c37adea0708cd005f916805375107f5fb91d165b4",
+    "run007_sdf_sha256": "0d97e6beadbc05f85dd26ca2ff4932345461cb22155b8f7d058e0eb074e4cb8f",
+    "run007_scenario_sha256": "a81be6d156d1b5197ff07f8a0e108bf0162b685d9b4b03843cbc763be8f08a26",
+    "same_base_world_after_removing_nine_scenario_models": true,
+    "model_includes": [
+      [
+        "model://warehouse",
+        "warehouse",
+        "0 0 -0.09 0 0 0"
+      ]
+    ],
+    "scene_elements_count": 9,
+    "missing_scenario_models": [],
+    "unexpected_models": [],
+    "max_scenario_object_xy_error_m": 0.0,
+    "run001_same_world_bytes": true,
+    "run001_same_scenario_bytes": true,
+    "tugbot_vector_map_sha256": "8932c300060ed9b08daf2bd8220c5014b1c8c7bb6e65c326b0c14adf9e9b9fbe",
+    "warehouse_model_sdf_sha256": "176180ef9a5ae90165ef6e22242ca6774d9b40226932d236696f8af6b46b57b7",
+    "vector_map_same_as_physical_world_proven": false
+  },
+  "launch": {
+    "seed": 100,
+    "world_sdf_arg": "world_sdf:=/home/dev/swarm_ws/scripts/resultados/d8/seed_100_run_007/world.sdf",
+    "scenario_arg": "scenario:=/home/dev/swarm_ws/scripts/resultados/d8/seed_100_run_007/scenario.json",
+    "hybrid_enabled": "hybrid_enabled:=true"
+  },
+  "robots": {
+    "summit0": {
+      "scenario_xy_m": [
+        -6.25,
+        8.75
+      ],
+      "spawn_report_observed_xy_m": [
+        -6.308526179654283,
+        8.643306272635217
+      ],
+      "d8_original_protocol_start_xy_m": [
+        -6.308526179654286,
+        8.643306272635222
+      ],
+      "d99_converted_start_xy_m": [
+        -6.308526179654286,
+        8.643306272635222
+      ],
+      "scenario_to_spawn_m": 0.12169168075064193,
+      "spawn_to_D8_m": 5.9580819677934555e-15,
+      "D8_to_D99_m": 0.0,
+      "spawn_report_frame": "summit0/odom",
+      "recorded_spawn_pass": true,
+      "offline_origin_match_1mm": true
+    },
+    "summit1": {
+      "scenario_xy_m": [
+        11.25,
+        8.75
+      ],
+      "spawn_report_observed_xy_m": [
+        11.25255963444513,
+        8.747859366422446
+      ],
+      "d8_original_protocol_start_xy_m": [
+        11.25255963444513,
+        8.747859366422453
+      ],
+      "d99_converted_start_xy_m": [
+        11.25255963444513,
+        8.747859366422453
+      ],
+      "scenario_to_spawn_m": 0.0033367709849570215,
+      "spawn_to_D8_m": 7.105427357601002e-15,
+      "D8_to_D99_m": 0.0,
+      "spawn_report_frame": "summit1/odom",
+      "recorded_spawn_pass": true,
+      "offline_origin_match_1mm": true
+    },
+    "summit2": {
+      "scenario_xy_m": [
+        -11.25,
+        -10.0
+      ],
+      "spawn_report_observed_xy_m": [
+        -11.256981828793222,
+        -10.008563934140327
+      ],
+      "d8_original_protocol_start_xy_m": [
+        -11.256981828793222,
+        -10.008563934140334
+      ],
+      "d99_converted_start_xy_m": [
+        -11.256981828793222,
+        -10.008563934140334
+      ],
+      "scenario_to_spawn_m": 0.011049294152013351,
+      "spawn_to_D8_m": 7.105427357601002e-15,
+      "D8_to_D99_m": 0.0,
+      "spawn_report_frame": "summit2/odom",
+      "recorded_spawn_pass": true,
+      "offline_origin_match_1mm": true
+    }
+  },
+  "frame_hashes": {
+    "xacro_zip_sha256": "af72a22a2c317f890078f49fb025163e3eadc3ac2f69829a1f4076754134cf28",
+    "xacro_h1_sha256": "af72a22a2c317f890078f49fb025163e3eadc3ac2f69829a1f4076754134cf28",
+    "launch_zip_sha256": "dcbfe0dfe81f377fd64a3d3b2d57c4f3b2f62f5a67623b38ff47c7545b3adc49",
+    "launch_h1_sha256": "dcbfe0dfe81f377fd64a3d3b2d57c4f3b2f62f5a67623b38ff47c7545b3adc49"
+  },
+  "historical_dynamic_observation": {
+    "status": "DYNAMIC_WORLD_ODOM_CONSISTENT_OBSERVED_NOT_TF_PROVEN",
+    "coordinate_frame_equivalence_proven": false,
+    "source": "saved D9.6C.2G report; not current Gazebo",
+    "robots": {
+      "summit0": {
+        "matched_pairs": 11185,
+        "max_xy_delta_m": 0.0002420403796152672,
+        "max_yaw_delta_deg": 0.01794546192000597,
+        "frames_expected": true
+      },
+      "summit1": {
+        "matched_pairs": 11183,
+        "max_xy_delta_m": 0.00033261000648784775,
+        "max_yaw_delta_deg": 0.028325892555666882,
+        "frames_expected": true
+      },
+      "summit2": {
+        "matched_pairs": 11184,
+        "max_xy_delta_m": 0.0003592449352220331,
+        "max_yaw_delta_deg": 0.020495788852019723,
+        "frames_expected": true
+      }
+    }
+  },
+  "limitations": [
+    "No live Gazebo session queried; source ZIP and historical reports only.",
+    "The stored run007 spawn report permits 0.25 m nominal offset; a future start needs a new 0.05 m check versus the D9.9 start.",
+    "World matching excludes dynamic robot models and loaded model://warehouse resources; verify actual loaded files in runtime.",
+    "Historic world/odom comparison is not a TF-tree certification.",
+    "Static vector map may be conservative/incomplete and is not validated here against Gazebo collision geometry."
+  ]
+}

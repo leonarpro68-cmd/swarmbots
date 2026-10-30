@@ -4,6 +4,15 @@ Simulación de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**: u
 
 ![Cámara cenital de los 8 mundos](docs/img/worlds/mosaico_cenitales.jpg)
 
+### Planificación coordinada actual (MILP + A* + CBS + Bézier + V3)
+
+Además del ciclo clásico descrito más abajo, el proyecto incorpora una versión de planificación multi-robot con **asignación MILP**, **rutas A***, **resolución de conflictos CBS**, **trayectorias Bézier** y **escalado temporal colectivo sucesivo V3**. La ejecución de referencia utiliza **3 Summit, 6 basuras y 3 depósitos**.
+
+- **[Comandos para ejecutar MILP + V3](docs/README_EJECUCION_MILP_SUCESIVO_V3.md)**
+- **[Cómo funcionan MILP y el escalado sucesivo V3](docs/README_MILP_ESCALADO_SUCESIVO_V3.md)**
+
+> Las secciones de «Uso rápido» y «Ciclo de recogida» que siguen documentan el flujo clásico con `swarm_collect.launch.py`; para la versión MILP + CBS + Bézier + V3, utiliza la guía enlazada arriba.
+
 ## Estado
 
 | Pieza | Estado |

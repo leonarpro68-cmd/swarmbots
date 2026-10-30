@@ -1,14 +1,14 @@
 import os
 from glob import glob
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 package_name = "swarm_behavior"
 
 setup(
     name=package_name,
     version="0.1.0",
-    packages=[package_name],
+    packages=find_packages(include=[package_name, package_name + ".*"]),
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
@@ -29,6 +29,10 @@ setup(
             "central_planner = swarm_behavior.central_planner:main",
             "visual_grasp = swarm_behavior.visual_grasp:main",
             "ps5_teleop = swarm_behavior.ps5_teleop:main",
+            "swarm_mission = swarm_behavior.swarm_planning.ros_full_mission:main",
+            "swarm_path_follower = swarm_behavior.path_follower:main",
+            "swarm_path_follower_grasp = swarm_behavior.path_follower_grasp:main",
+            "swarm_hybrid_ros_demo = swarm_behavior.swarm_planning.hybrid_refinement.ros_hybrid_demo:main",
         ],
     },
 )
