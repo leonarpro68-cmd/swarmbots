@@ -1,0 +1,244 @@
+{
+  "schema": "swarm.d9929.collective_successive_timewarp.v1",
+  "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "input_npz": "/mnt/data/supermarket_v3_sucesivo_v1/results/seed_100_delivery1_TIMED_INPUT_OFFLINE.npz",
+  "input_sha256": "500234f35039471f15f42801d3c76ebc5686cbe4c480fac6eda98c142fdec0e3",
+  "method": "common_virtual_clock_with_C1_smooth_speed_factor",
+  "max_speed_m_s": 2.0,
+  "max_accel_m_s2": 2.0,
+  "max_scale": 2.0,
+  "transition_tau_s": 2.0,
+  "duration_original_s": 25.5,
+  "duration_uniform_s": 24.840360106962613,
+  "duration_successive_s": 22.88885939362164,
+  "saving_vs_uniform_s": 1.9515007133409732,
+  "saving_vs_original_s": 2.6111406063783598,
+  "uniform_scale": 1.0265551662776617,
+  "finish_times_virtual_s": {
+    "summit0": 25.499999999999993,
+    "summit1": 15.299999999999995,
+    "summit2": 19.379999999999995
+  },
+  "finish_times_wall_s": {
+    "summit0": 22.888859393621637,
+    "summit1": 14.904216064177561,
+    "summit2": 18.49812683092534
+  },
+  "ramps": [
+    {
+      "start_tau": 15.299999999999995,
+      "end_tau": 17.299999999999997,
+      "from_scale": 1.0265551662776617,
+      "to_scale": 1.1740779282923297,
+      "robots_finished": [
+        "summit1"
+      ]
+    },
+    {
+      "start_tau": 19.379999999999995,
+      "end_tau": 21.379999999999995,
+      "from_scale": 1.1740779282923297,
+      "to_scale": 1.4438321752926886,
+      "robots_finished": [
+        "summit2"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "finish_tau": 15.299999999999995,
+      "accepted": true,
+      "from_scale": 1.0265551662776617,
+      "to_scale": 1.1740779282923297
+    },
+    {
+      "finish_tau": 19.379999999999995,
+      "accepted": true,
+      "from_scale": 1.1740779282923297,
+      "to_scale": 1.4438321752926886
+    }
+  ],
+  "certified_envelopes": {
+    "speed_m_s": 2.0000000099999977,
+    "accel_m_s2": 1.9738350462394738,
+    "accel_witness": {
+      "robot": "summit1",
+      "segment_index": 14
+    },
+    "method": "quintic_Bernstein_convex_hull_and_chain_rule"
+  },
+  "common_time_warp": true,
+  "collision_preservation": "Preserva la coincidencia de tiempos entre robots; requiere entrada CBS válida",
+  "source_C2_checked": true,
+  "timewarp_knots": [
+    {
+      "tau_original_s": 0.0,
+      "wall_time_s": 0.0,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 1.02,
+      "wall_time_s": 0.9936144043,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 2.04,
+      "wall_time_s": 1.9872288086,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 3.06,
+      "wall_time_s": 2.9808432128,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 4.08,
+      "wall_time_s": 3.9744576171,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 5.1,
+      "wall_time_s": 4.9680720214,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 6.12,
+      "wall_time_s": 5.9616864257,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 7.14,
+      "wall_time_s": 6.9553008299,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 8.16,
+      "wall_time_s": 7.9489152342,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 9.18,
+      "wall_time_s": 8.9425296385,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 10.2,
+      "wall_time_s": 9.9361440428,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 11.22,
+      "wall_time_s": 10.9297584471,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 12.24,
+      "wall_time_s": 11.9233728513,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 13.26,
+      "wall_time_s": 12.9169872556,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 14.28,
+      "wall_time_s": 13.9106016599,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 15.3,
+      "wall_time_s": 14.9042160642,
+      "speed_factor": 1.0265551663
+    },
+    {
+      "tau_original_s": 16.32,
+      "wall_time_s": 15.8755466476,
+      "speed_factor": 1.1030818615
+    },
+    {
+      "tau_original_s": 17.3,
+      "wall_time_s": 16.7265238139,
+      "speed_factor": 1.1740779283
+    },
+    {
+      "tau_original_s": 17.34,
+      "wall_time_s": 16.7605931027,
+      "speed_factor": 1.1740779283
+    },
+    {
+      "tau_original_s": 18.36,
+      "wall_time_s": 17.6293599668,
+      "speed_factor": 1.1740779283
+    },
+    {
+      "tau_original_s": 19.38,
+      "wall_time_s": 18.4981268309,
+      "speed_factor": 1.1740779283
+    },
+    {
+      "tau_original_s": 20.4,
+      "wall_time_s": 19.3365257934,
+      "speed_factor": 1.3140115953
+    },
+    {
+      "tau_original_s": 21.38,
+      "wall_time_s": 20.0353421563,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 21.42,
+      "wall_time_s": 20.0630462071,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 22.44,
+      "wall_time_s": 20.7694995038,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 23.46,
+      "wall_time_s": 21.4759528004,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 24.48,
+      "wall_time_s": 22.182406097,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 25.5,
+      "wall_time_s": 22.8888593936,
+      "speed_factor": 1.4438321753
+    },
+    {
+      "tau_original_s": 25.5,
+      "wall_time_s": 22.8888593936,
+      "speed_factor": 1.4438321753
+    }
+  ],
+  "limitations": [
+    "Horario/ley de reloj virtual offline; NO es aún un NPZ con duración constante por pieza",
+    "La ejecución requerirá un seguidor que evalúe el reloj común sin alterar la geometría ni la sincronización",
+    "No certifica de nuevo las rutas CBS de origen ni el agarre físico"
+  ],
+  "stage": "delivery1",
+  "seed": 100,
+  "duration_choice": "common dt=max(1, vmax_cp/max_speed, sqrt(amax_cp/max_accel))*1.02; provisional physical timing",
+  "geometry_source_npz": "/mnt/data/supermarket_multigoal_hybrid_v2/results/seed_100_delivery1_refined.npz",
+  "independent_verification": {
+    "summit0": {
+      "v_bound_m_s": 2.0000000099999977,
+      "a_bound_m_s2": 1.9530647621288562
+    },
+    "summit1": {
+      "v_bound_m_s": 1.858476407042721,
+      "a_bound_m_s2": 1.9738350462394738
+    },
+    "summit2": {
+      "v_bound_m_s": 2.0,
+      "a_bound_m_s2": 1.4444346281008393
+    }
+  }
+}

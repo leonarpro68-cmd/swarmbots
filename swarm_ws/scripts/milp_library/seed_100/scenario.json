@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "seed": 100,
+  "attempt": 1,
+  "grid_step_m": 1.25,
+  "elements": [
+    {
+      "name": "trash_V1_verde",
+      "type": "trash",
+      "color": "verde",
+      "grid": [
+        14,
+        24
+      ],
+      "xy_m": [
+        3.75,
+        6.25
+      ]
+    },
+    {
+      "name": "trash_V2_verde",
+      "type": "trash",
+      "color": "verde",
+      "grid": [
+        2,
+        31
+      ],
+      "xy_m": [
+        -11.25,
+        15.0
+      ]
+    },
+    {
+      "name": "trash_N1_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "grid": [
+        6,
+        18
+      ],
+      "xy_m": [
+        -6.25,
+        -1.25
+      ]
+    },
+    {
+      "name": "trash_N2_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "grid": [
+        19,
+        34
+      ],
+      "xy_m": [
+        10.0,
+        18.75
+      ]
+    },
+    {
+      "name": "trash_A1_azul",
+      "type": "trash",
+      "color": "azul",
+      "grid": [
+        13,
+        31
+      ],
+      "xy_m": [
+        2.5,
+        15.0
+      ]
+    },
+    {
+      "name": "trash_A2_azul",
+      "type": "trash",
+      "color": "azul",
+      "grid": [
+        9,
+        11
+      ],
+      "xy_m": [
+        -2.5,
+        -10.0
+      ]
+    },
+    {
+      "name": "deposit_verde",
+      "type": "deposit",
+      "color": "verde",
+      "grid": [
+        14,
+        8
+      ],
+      "xy_m": [
+        3.75,
+        -13.75
+      ]
+    },
+    {
+      "name": "deposit_naranja",
+      "type": "deposit",
+      "color": "naranja",
+      "grid": [
+        10,
+        2
+      ],
+      "xy_m": [
+        -1.25,
+        -21.25
+      ]
+    },
+    {
+      "name": "deposit_azul",
+      "type": "deposit",
+      "color": "azul",
+      "grid": [
+        10,
+        35
+      ],
+      "xy_m": [
+        -1.25,
+        20.0
+      ]
+    }
+  ],
+  "robots": [
+    {
+      "name": "summit0",
+      "grid": [
+        6,
+        26
+      ],
+      "xy_m": [
+        -6.25,
+        8.75
+      ]
+    },
+    {
+      "name": "summit1",
+      "grid": [
+        20,
+        26
+      ],
+      "xy_m": [
+        11.25,
+        8.75
+      ]
+    },
+    {
+      "name": "summit2",
+      "grid": [
+        2,
+        11
+      ],
+      "xy_m": [
+        -11.25,
+        -10.0
+      ]
+    }
+  ]
+}

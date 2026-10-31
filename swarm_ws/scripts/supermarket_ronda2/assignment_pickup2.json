@@ -1,0 +1,48 @@
+{
+  "schema": "supermarket.pickup2.physical.assignment.v1",
+  "world": "supermarket",
+  "seed": 100,
+  "stage": "pickup2",
+  "navigation_sha256": "7f05c330ef25bb2c0b7bb84c3b1acb4661134919c39480d39cf22cf59435ed91",
+  "robots": {
+    "summit0": {
+      "trash": "trash_A1_azul",
+      "color": "azul",
+      "goal_xy_m": [
+        -6.2499999999999964,
+        -17.499999999999996
+      ],
+      "trash_xy_m": [
+        -7.98141,
+        -16.28925
+      ],
+      "planned_distance_m": 2.1127461159827052
+    },
+    "summit1": {
+      "trash": "trash_N2_naranja",
+      "color": "naranja",
+      "goal_xy_m": [
+        -1.25,
+        -5.0
+      ],
+      "trash_xy_m": [
+        0.60184,
+        -5.29747
+      ],
+      "planned_distance_m": 1.875579853405341
+    },
+    "summit2": {
+      "trash": "trash_V1_verde",
+      "color": "verde",
+      "goal_xy_m": [
+        2.5,
+        12.5
+      ],
+      "trash_xy_m": [
+        3.74877,
+        11.33933
+      ],
+      "planned_distance_m": 1.7048698958571586
+    }
+  }
+}
