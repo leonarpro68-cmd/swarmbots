@@ -1,0 +1,29 @@
+{
+  "schema": "supermarket.fixed.assignment.offline.v1",
+  "status": "FIXED_DETERMINISTIC_OFFLINE_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "world": "supermarket",
+  "seed": 2026,
+  "chosen": {
+    "summit0": {
+      "pickup1": "trash_A2_azul",
+      "delivery1": "deposit_azul",
+      "pickup2": "trash_A1_azul",
+      "delivery2": "deposit_azul"
+    },
+    "summit1": {
+      "pickup1": "trash_V2_verde",
+      "delivery1": "deposit_verde",
+      "pickup2": "trash_N2_naranja",
+      "delivery2": "deposit_naranja"
+    },
+    "summit2": {
+      "pickup1": "trash_N1_naranja",
+      "delivery1": "deposit_naranja",
+      "pickup2": "trash_V1_verde",
+      "delivery2": "deposit_verde"
+    }
+  },
+  "policy": "política de asignación FIXED seed100; sorted trash IDs per round; no MILP",
+  "note": "Baseline determinista; puede ser igual a MILP en ciertos escenarios"
+}

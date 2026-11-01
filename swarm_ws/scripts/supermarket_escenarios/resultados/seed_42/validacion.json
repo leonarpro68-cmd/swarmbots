@@ -1,0 +1,8 @@
+{
+  "geometry_and_pairwise_separation": true,
+  "connected_graph": true,
+  "trash_approach_lines_checked": true,
+  "astar_cbs_verified": false,
+  "physical_maneuvers_verified": false,
+  "gazebo_spawn_verified": false
+}

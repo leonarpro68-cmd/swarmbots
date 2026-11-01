@@ -231,15 +231,37 @@ def run_ros(a,proto,data,report):
             if all('armed' in [s for s,_ in node.statuses[n]] for n in ROBOTS):break
         else:raise RuntimeError('ARM_BARRIER_TIMEOUT')
         report['status']='ARMED_ALL'
-        deadline=time.monotonic()+max(report['robots'][n]['duration_s'] for n in ROBOTS)+a.start_delay+12.
-        while time.monotonic()<deadline:
+        # The follower's start_time_s and duration_s are in Gazebo /clock time.
+        # Do not compare them with wall time: recording the screen may reduce RTF.
+        sim_deadline=start_time+max(report['robots'][n]['duration_s'] for n in ROBOTS)+12.
+        last_sim_clock=node.clock_times[-1]
+        last_clock_progress_wall=time.monotonic()
+        wall_started=time.monotonic()
+        # Secondary watchdogs protect against a frozen or pathologically slow sim.
+        # They do not define normal navigation completion.
+        wall_watchdog_s=max(120., 5.*(a.start_delay+max(report['robots'][n]['duration_s'] for n in ROBOTS)+12.))
+        while True:
             rclpy.spin_once(node,timeout_sec=.05)
+            now_wall=time.monotonic()
+            if node.clock_times:
+                current_sim=node.clock_times[-1]
+                if current_sim < last_sim_clock-0.1:
+                    raise RuntimeError('SIM_CLOCK_JUMPED_BACKWARD')
+                if current_sim > last_sim_clock+1e-5:
+                    last_sim_clock=current_sim
+                    last_clock_progress_wall=now_wall
             states={n:[s for s,_ in node.statuses[n]] for n in ROBOTS}
             if any('failed' in states[n] or 'cancelled' in states[n] for n in ROBOTS):
                 raise RuntimeError('FOLLOWER_FAILED_OR_CANCELLED')
             if all('done' in states[n] for n in ROBOTS):
-                report['status']='DONE_ALL_'+a.stage.upper();break
-        else:raise RuntimeError('FOLLOWER_COMPLETION_TIMEOUT')
+                report['status']='DONE_ALL_'+a.stage.upper()
+                break
+            if now_wall-last_clock_progress_wall>20.:
+                raise RuntimeError('SIM_CLOCK_STALLED_20_WALL_SECONDS')
+            if now_wall-wall_started>wall_watchdog_s:
+                raise RuntimeError('FOLLOWER_WALL_WATCHDOG_TIMEOUT')
+            if last_sim_clock>sim_deadline:
+                raise RuntimeError('FOLLOWER_COMPLETION_TIMEOUT_SIM_CLOCK')
     except BaseException:
         publish_cancel()
         raise

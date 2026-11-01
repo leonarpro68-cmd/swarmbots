@@ -1,0 +1,12 @@
+{
+  "run": "fixed_seed100_prepared",
+  "status": "OBSERVATIONAL_NOT_PHYSICAL_CERTIFICATE",
+  "issues": [
+    "MISSING_EVENTS",
+    "MISSING_ODOMETRY"
+  ],
+  "stages": {},
+  "robots": {},
+  "events": {},
+  "mission_duration_sim_s": null
+}

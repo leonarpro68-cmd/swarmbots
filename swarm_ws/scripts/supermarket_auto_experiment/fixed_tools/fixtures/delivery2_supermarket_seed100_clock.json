@@ -1,0 +1,219 @@
+{
+  "schema": "swarm.d9929.collective_successive_timewarp.v1",
+  "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "input_npz": "/mnt/data/supermarket_v3_sucesivo_v1/results/seed_100_delivery2_TIMED_INPUT_OFFLINE.npz",
+  "input_sha256": "33aff6468eea915cc8f3e6da3d3df896392ca2fc996737bde7c02918dba65b70",
+  "method": "common_virtual_clock_with_C1_smooth_speed_factor",
+  "max_speed_m_s": 2.0,
+  "max_accel_m_s2": 2.0,
+  "max_scale": 2.0,
+  "transition_tau_s": 2.0,
+  "duration_original_s": 23.429708603678783,
+  "duration_uniform_s": 22.970302552626258,
+  "duration_successive_s": 20.31000026607721,
+  "saving_vs_uniform_s": 2.6603022865490473,
+  "saving_vs_original_s": 3.1197083376015726,
+  "uniform_scale": 1.02,
+  "finish_times_virtual_s": {
+    "summit0": 10.543368871655451,
+    "summit1": 23.42970860367878,
+    "summit2": 15.229310592391206
+  },
+  "finish_times_wall_s": {
+    "summit0": 10.336636148681814,
+    "summit1": 20.31000026607721,
+    "summit2": 14.365209296335337
+  },
+  "ramps": [
+    {
+      "start_tau": 10.543368871655451,
+      "end_tau": 12.543368871655451,
+      "from_scale": 1.02,
+      "to_scale": 1.2070355111536537,
+      "robots_finished": [
+        "summit0"
+      ]
+    },
+    {
+      "start_tau": 15.229310592391206,
+      "end_tau": 17.229310592391208,
+      "from_scale": 1.2070355111536537,
+      "to_scale": 1.406274233272059,
+      "robots_finished": [
+        "summit2"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "finish_tau": 10.543368871655451,
+      "accepted": true,
+      "from_scale": 1.02,
+      "to_scale": 1.2070355111536537
+    },
+    {
+      "finish_tau": 15.229310592391206,
+      "accepted": true,
+      "from_scale": 1.2070355111536537,
+      "to_scale": 1.406274233272059
+    }
+  ],
+  "certified_envelopes": {
+    "speed_m_s": 2.000000009999997,
+    "accel_m_s2": 1.9903469474602289,
+    "accel_witness": {
+      "robot": "summit1",
+      "segment_index": 19
+    },
+    "method": "quintic_Bernstein_convex_hull_and_chain_rule"
+  },
+  "common_time_warp": true,
+  "collision_preservation": "Preserva la coincidencia de tiempos entre robots; requiere entrada CBS válida",
+  "source_C2_checked": true,
+  "timewarp_knots": [
+    {
+      "tau_original_s": 0.0,
+      "wall_time_s": 0.0,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 1.1714854302,
+      "wall_time_s": 1.1485151276,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 2.3429708604,
+      "wall_time_s": 2.2970302553,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 3.5144562906,
+      "wall_time_s": 3.4455453829,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 4.6859417207,
+      "wall_time_s": 4.5940605105,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 5.8574271509,
+      "wall_time_s": 5.7425756382,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 7.0289125811,
+      "wall_time_s": 6.8910907658,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 8.2003980113,
+      "wall_time_s": 8.0396058934,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 9.3718834415,
+      "wall_time_s": 9.1881210211,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 10.5433688717,
+      "wall_time_s": 10.3366361487,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 11.7148543018,
+      "wall_time_s": 11.4424035536,
+      "speed_factor": 1.1430027021
+    },
+    {
+      "tau_original_s": 12.5433688717,
+      "wall_time_s": 12.1399709368,
+      "speed_factor": 1.2070355112
+    },
+    {
+      "tau_original_s": 12.886339732,
+      "wall_time_s": 12.4241140769,
+      "speed_factor": 1.2070355112
+    },
+    {
+      "tau_original_s": 14.0578251622,
+      "wall_time_s": 13.3946616866,
+      "speed_factor": 1.2070355112
+    },
+    {
+      "tau_original_s": 15.2293105924,
+      "wall_time_s": 14.3652092963,
+      "speed_factor": 1.2070355112
+    },
+    {
+      "tau_original_s": 16.4007960226,
+      "wall_time_s": 15.3030131186,
+      "speed_factor": 1.3380635766
+    },
+    {
+      "tau_original_s": 17.2293105924,
+      "wall_time_s": 15.9009043269,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 17.5722814528,
+      "wall_time_s": 16.1447905137,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 18.7437668829,
+      "wall_time_s": 16.9778324642,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 19.9152523131,
+      "wall_time_s": 17.8108744147,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 21.0867377433,
+      "wall_time_s": 18.6439163651,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 22.2582231735,
+      "wall_time_s": 19.4769583156,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 23.4297086037,
+      "wall_time_s": 20.3100002661,
+      "speed_factor": 1.4062742333
+    },
+    {
+      "tau_original_s": 23.4297086037,
+      "wall_time_s": 20.3100002661,
+      "speed_factor": 1.4062742333
+    }
+  ],
+  "limitations": [
+    "Horario/ley de reloj virtual offline; NO es aún un NPZ con duración constante por pieza",
+    "La ejecución requerirá un seguidor que evalúe el reloj común sin alterar la geometría ni la sincronización",
+    "No certifica de nuevo las rutas CBS de origen ni el agarre físico"
+  ],
+  "stage": "delivery2",
+  "seed": 100,
+  "duration_choice": "common dt=max(1, vmax_cp/max_speed, sqrt(amax_cp/max_accel))*1.02; provisional physical timing",
+  "geometry_source_npz": "/mnt/data/supermarket_multigoal_hybrid_v2/results/seed_100_delivery2_refined.npz",
+  "independent_verification": {
+    "summit0": {
+      "v_bound_m_s": 2.0,
+      "a_bound_m_s2": 1.8597092747201314
+    },
+    "summit1": {
+      "v_bound_m_s": 2.000000009999997,
+      "a_bound_m_s2": 1.9903469474602293
+    },
+    "summit2": {
+      "v_bound_m_s": 1.6971198202224875,
+      "a_bound_m_s2": 1.8770983686652376
+    }
+  }
+}
