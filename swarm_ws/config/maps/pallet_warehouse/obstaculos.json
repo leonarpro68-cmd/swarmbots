@@ -1,0 +1,187 @@
+{
+  "bounds": {
+    "xmin": -15.0,
+    "xmax": 15.0,
+    "ymin": -25.0,
+    "ymax": 25.0
+  },
+  "obstacles": [
+    {
+      "name": "conv_body",
+      "xmin": -12.5,
+      "xmax": -4.5,
+      "ymin": 3.75,
+      "ymax": 4.65
+    },
+    {
+      "name": "pal_out",
+      "xmin": -4.4,
+      "xmax": -3.4,
+      "ymin": 2.075,
+      "ymax": 3.125
+    },
+    {
+      "name": "pal_robot_base",
+      "xmin": -4.35,
+      "xmax": -3.45,
+      "ymin": 3.75,
+      "ymax": 4.65
+    },
+    {
+      "name": "pillar0",
+      "xmin": -6.7,
+      "xmax": -6.3,
+      "ymin": 6.3,
+      "ymax": 6.7
+    },
+    {
+      "name": "pillar1",
+      "xmin": 6.3,
+      "xmax": 6.7,
+      "ymin": 6.3,
+      "ymax": 6.7
+    },
+    {
+      "name": "pillar2",
+      "xmin": -6.7,
+      "xmax": -6.3,
+      "ymin": -6.7,
+      "ymax": -6.3
+    },
+    {
+      "name": "pillar3",
+      "xmin": 6.3,
+      "xmax": 6.7,
+      "ymin": -6.7,
+      "ymax": -6.3
+    },
+    {
+      "name": "rk_n00",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": 8.5,
+      "ymax": 10.7
+    },
+    {
+      "name": "rk_n01",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": 14.1,
+      "ymax": 16.3
+    },
+    {
+      "name": "rk_n02",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": 19.7,
+      "ymax": 21.9
+    },
+    {
+      "name": "rk_n10",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": 8.5,
+      "ymax": 10.7
+    },
+    {
+      "name": "rk_n11",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": 14.1,
+      "ymax": 16.3
+    },
+    {
+      "name": "rk_n12",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": 19.7,
+      "ymax": 21.9
+    },
+    {
+      "name": "rk_s00",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": -10.7,
+      "ymax": -8.5
+    },
+    {
+      "name": "rk_s01",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": -16.3,
+      "ymax": -14.1
+    },
+    {
+      "name": "rk_s02",
+      "xmin": -12.0,
+      "xmax": -2.0,
+      "ymin": -21.9,
+      "ymax": -19.7
+    },
+    {
+      "name": "rk_s10",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": -10.7,
+      "ymax": -8.5
+    },
+    {
+      "name": "rk_s11",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": -16.3,
+      "ymax": -14.1
+    },
+    {
+      "name": "rk_s12",
+      "xmin": 2.0,
+      "xmax": 12.0,
+      "ymin": -21.9,
+      "ymax": -19.7
+    },
+    {
+      "name": "stack0",
+      "xmin": -14.125,
+      "xmax": -13.075,
+      "ymin": -5.0,
+      "ymax": -4.0
+    },
+    {
+      "name": "stack1",
+      "xmin": -14.125,
+      "xmax": -13.075,
+      "ymin": -3.3,
+      "ymax": -2.3
+    },
+    {
+      "name": "stack2",
+      "xmin": 13.075,
+      "xmax": 14.125,
+      "ymin": 2.0,
+      "ymax": 3.0
+    },
+    {
+      "name": "stack3",
+      "xmin": 13.075,
+      "xmax": 14.125,
+      "ymin": 3.7,
+      "ymax": 4.7
+    },
+    {
+      "name": "wrap",
+      "xmin": 7.3,
+      "xmax": 10.1,
+      "ymin": -4.65,
+      "ymax": -2.35
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -25.0
+    ],
+    "neighbors": 8
+  }
+}

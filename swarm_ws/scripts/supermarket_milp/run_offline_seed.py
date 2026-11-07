@@ -11,6 +11,8 @@ import math
 import subprocess
 import sys
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import MAPS, map_files, scenario_file, generation_dir, milp_results_dir, validate_map
 
 
 def run(*argv):
@@ -65,20 +67,22 @@ def choose_stands(scenario, graph_data):
 def main():
     ap = argparse.ArgumentParser(description='Preparación offline: escenario, stands, A* y MILP')
     ap.add_argument('--seed', type=int, required=True)
+    ap.add_argument('--map',  default='supermarket', help='Mapa de navegación y obstáculos')
     ap.add_argument('--workspace', type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument('--overwrite', action='store_true', help='Recalcular y sobrescribir archivos de esta semilla (usar con cuidado)')
     args = ap.parse_args()
     ws = args.workspace.expanduser().resolve()
     gen = ws/'scripts/supermarket_escenarios/generar_escenario.py'
     milp = ws/'scripts/supermarket_milp'
-    graph = milp/'data/supermarket_grafo.json'
-    out = milp/'results'/f'seed_{args.seed}'
-    scenario_dir = ws/'scripts/supermarket_escenarios/resultados'/f'seed_{args.seed}'
-    scenario_config = ws/'config/supermarket'/f'seed_{args.seed}.json'
+    graph,obstacles=map_files(ws,args.map)
+    validate_map(graph,obstacles)
+    out=milp_results_dir(ws,args.map,args.seed)
+    scenario_dir=generation_dir(ws,args.map,args.seed)
+    scenario_config=scenario_file(ws,args.map,args.seed)
     costs = out/'astar_costs.json'
     stands_path = out/'deposit_stands.json'
     assignment = out/'assignment_milp_one_color_per_round.json'
-    for path in (gen, milp/'build_costs.py',milp/'solve_assignment.py',graph):
+    for path in (gen, milp/'build_costs.py',milp/'solve_assignment.py',graph,obstacles):
         if not path.is_file():
             ap.error(f'Falta archivo requerido: {path}')
     # La ejecución por defecto NO sobrescribe una asignación existente.
@@ -86,10 +90,13 @@ def main():
         ap.error(f'Ya existe {assignment}. No se sobrescribe. Para recalcular explícitamente usa --overwrite.')
     scenario_generated = scenario_dir/'scenario.json'
     if not scenario_generated.exists() or args.overwrite:
-        run(sys.executable, gen, '--seed', args.seed, '--output-dir', scenario_dir)
+        run(sys.executable, gen, '--seed', args.seed, '--output-dir', scenario_dir,
+            '--graph', graph, '--geometry', obstacles, '--world', args.map)
     if not scenario_generated.is_file():
         raise RuntimeError(f'Generador no produjo {scenario_generated}')
     generated = load(scenario_generated)
+    if generated.get('world') != args.map:
+        raise ValueError('Escenario generado para otro mapa')
     if generated.get('seed') != args.seed:
         raise ValueError(f'Semilla discordante en escenario: {generated.get("seed")}')
     if scenario_config.exists() and load(scenario_config) != generated and not args.overwrite:
@@ -106,6 +113,7 @@ def main():
     run(sys.executable,milp/'solve_assignment.py','--costs',costs,
         '--one-color-per-round','--output',assignment)
     print('\nOFFLINE_COMPLETADO',flush=True)
+    print('MAPA:',args.map,flush=True)
     print('ESCENARIO:',scenario_config,flush=True)
     print('RESULTADOS:',out,flush=True)
     print('NOTA: no se han generado ni certificado CBS/Bezier/V3/D8.',flush=True)

@@ -20,7 +20,10 @@ def find_scenario(prep, scripts):
  if seeds:
   seed=seeds[0]
   workspace=scripts.parent
-  candidate=workspace/'config'/'supermarket'/f'seed_{seed}.json'
+  plan_seed=next(parent for parent in (prep,*prep.parents) if parent.name==f'seed_{seed}')
+  map_name=plan_seed.parent.name if plan_seed.parent.name in ('supermarket','tugbot_warehouse') else 'supermarket'
+  candidate=(workspace/'config'/'supermarket'/f'seed_{seed}.json' if map_name=='supermarket'
+             else workspace/'config'/'scenarios'/map_name/f'seed_{seed}.json')
   if candidate.is_file():
    return candidate
   # Legacy seed100 plans sometimes hold their own exact scenario.
@@ -65,10 +68,12 @@ def main():
  plot_dir=pathlib.Path(__file__).resolve().parent
  script_route=plot_dir/'plot_routes_with_obstacles.py';script_profile=plot_dir/'plot_v3_aligned.py'
  if not script_route.is_file() or not script_profile.is_file():raise RuntimeError('New plotting scripts are missing')
- geometry=next((p for p in [plot_dir/'supermarket_obstaculos.json', scripts/'supermarket_milp_phase5'/'supermarket_obstaculos.json', scripts/'supermarket_milp_hybrid_v2_v3'/'supermarket_obstaculos.json', scripts/'supermarket_milp_corridor_fix'/'supermarket_obstaculos.json', scripts/'supermarket_auto_experiment'/'supermarket_obstaculos.json'] if p.is_file()),None)
- if geometry is None:raise RuntimeError('Missing supermarket_obstaculos.json in known locations; will not draw invented obstacles')
+ scenario_file=find_scenario(prep,scripts)
+ map_name=json.loads(scenario_file.read_text(encoding='utf-8'))['world']
+ geometry=scripts.parent/'config'/'maps'/map_name/'obstaculos.json'
+ if not geometry.is_file():raise RuntimeError(f'No se encontró la geometría del mapa activo: {geometry}')
  cmd1=[sys.executable,str(script_route),'--stage-windows',str(run/'stage_windows_v3.json'),
-       '--scenario',str(find_scenario(prep,scripts)), '--geometry',str(geometry),
+       '--scenario',str(scenario_file), '--geometry',str(geometry),
        '--output',str(plots/'rutas_teoricas.png'),'--mission-label',run.name]
  cmd2=[sys.executable,str(script_profile),'--stage-windows',str(run/'stage_windows_v3.json'),
        '--odom-jsonl',str(run/'odom_for_d9931.jsonl'),'--output',str(plots/'velocidad_aceleracion_teoria_vs_odometria.png'),

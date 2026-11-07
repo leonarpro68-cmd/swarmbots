@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import MAPS, map_files, scenario_file, milp_results_dir, plans_dir, validate_map
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 HERE=Path(__file__).resolve().parent
@@ -26,13 +28,14 @@ def launch(*args):
     print('\n$ '+' '.join(cmd),flush=True)
     env=dict(os.environ,OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1')
     subprocess.run(cmd,cwd=HERE,env=env,check=True)
-def expected_input(ws,seed,mode):
-    sc=ws/'config/supermarket'/f'seed_{seed}.json'
-    asn=(ws/'scripts/supermarket_milp/results'/f'seed_{seed}'/'assignment_milp_one_color_per_round.json' if mode=='milp' else ws/'scripts/supermarket_seed_pipeline/plans'/f'seed_{seed}'/'fixed'/'fixed_assignment.json')
+def expected_input(ws,seed,mode,map_name="supermarket"):
+    sc=scenario_file(ws,map_name,seed)
+    asn=(milp_results_dir(ws,map_name,seed)/'assignment_milp_one_color_per_round.json'
+         if mode=='milp' else plans_dir(ws,map_name,seed)/'fixed'/'fixed_assignment.json')
     for p in (sc,asn):
         if not p.is_file():raise FileNotFoundError(f'Falta archivo offline: {p}. Corre run_offline_seed.py primero.')
     scene=read(sc);assignment=read(asn)
-    if scene.get('seed')!=seed or assignment.get('seed')!=seed or scene.get('world')!='supermarket':
+    if scene.get('seed')!=seed or assignment.get('seed')!=seed or scene.get('world')!=map_name or assignment.get('world')!=map_name:
         raise ValueError('Semilla/world de escenario y asignación no concuerdan')
     if assignment.get('execution_authorized') is not False:raise ValueError('Asignación offline incompatible')
     if mode=='milp':
@@ -45,6 +48,7 @@ def expected_input(ws,seed,mode):
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--seed',type=int,required=True)
+    ap.add_argument('--map',default='supermarket')
     ap.add_argument('--assignment-mode',choices=('fixed','milp'),default='milp')
     ap.add_argument('--workspace',type=Path,default=Path(__file__).resolve().parents[2])
     ap.add_argument('--maxiter',type=int,default=450)
@@ -53,24 +57,26 @@ def main():
     ap.add_argument('--until',choices=('cbs','v3','d8'),default='d8')
     a=ap.parse_args()
     if a.seed<0:ap.error('semilla negativa')
-    if a.seed==100:ap.error('Para proteger la misión validada seed100, este automatizador solo admite semillas nuevas')
+    if a.seed==100 and a.map=='supermarket':ap.error('Para proteger la misión validada seed100, este automatizador solo admite semillas nuevas de supermarket')
     ws=a.workspace.expanduser().resolve()
     if a.assignment_mode=='fixed':
-        sc=ws/'config/supermarket'/f'seed_{a.seed}.json'
-        target=ws/'scripts/supermarket_seed_pipeline/plans'/f'seed_{a.seed}'/'fixed'/'fixed_assignment.json'
+        sc=scenario_file(ws,a.map,a.seed)
+        target=plans_dir(ws,a.map,a.seed)/'fixed'/'fixed_assignment.json'
         if not target.exists():
             if not sc.is_file():raise FileNotFoundError(sc)
             launch(sys.executable,HERE/'make_fixed_assignment.py','--scenario',sc,'--output',target)
-    scenario,assignment=expected_input(ws,a.seed,a.assignment_mode)
-    geom=HERE/'supermarket_obstaculos.json'
-    graph=HERE/'supermarket_grafo.json'
-    live_graph=ws/'scripts/supermarket_milp/data/supermarket_grafo.json'
-    live_geo=ws/'scripts/supermarket_escenarios/supermarket_obstaculos.json'
-    if not live_graph.is_file() or sha(live_graph)!=sha(graph):
-        raise ValueError('BLOCKED: el grafo MILP no coincide con el grafo del planificador CBS')
-    if not live_geo.is_file() or sha(live_geo)!=sha(geom):
-        raise ValueError('BLOCKED: los obstáculos del escenario no coinciden con Hybrid V2')
-    base=ws/'scripts/supermarket_seed_pipeline/plans'/f'seed_{a.seed}'
+    scenario,assignment=expected_input(ws,a.seed,a.assignment_mode,a.map)
+    graph,geom=map_files(ws,a.map)
+    validate_map(graph,geom)
+    # Conservamos la comprobación histórica de los cuatro JSON de supermarket.
+    if a.map=='supermarket':
+        for original,selected in ((ws/'scripts/supermarket_milp/data/supermarket_grafo.json',graph),
+                                  (HERE/'supermarket_grafo.json',graph),
+                                  (ws/'scripts/supermarket_escenarios/supermarket_obstaculos.json',geom),
+                                  (HERE/'supermarket_obstaculos.json',geom)):
+            if not original.is_file() or sha(original)!=sha(selected):
+                raise ValueError(f'BLOCKED: los datos originales difieren de config/maps/supermarket: {original}')
+    base=plans_dir(ws,a.map,a.seed)
     cbs=(base/'cbs_multigoal.json' if a.assignment_mode=='milp' else base/'fixed'/'cbs_multigoal.json')
     root=cbs.parent
     phase4=root/'phase4'
@@ -79,7 +85,10 @@ def main():
             'geometry_sha256':sha(geom),'graph_sha256':sha(graph),
             'seed':a.seed,'assignment_mode':a.assignment_mode,'max_ct':a.max_ct,'max_cbs_time':a.max_cbs_time,
             'maxiter':a.maxiter,'refinements':5,'max_speed':2.,'max_acceleration':2.}
-    if a.assignment_mode=='milp':source.pop('assignment_mode')  # legacy verified MILP manifest stays identical
+    if a.map=='supermarket' and a.assignment_mode=='milp':
+        source.pop('assignment_mode')  # manifiesto histórico exactamente igual
+    if a.map!='supermarket':
+        source['map']=a.map
     manifest=root/'inputs_manifest.json'
     if manifest.exists():
         if read(manifest)!=source:raise ValueError('BLOCKED: el escenario, MILP, geometría o parámetros cambiaron. No reutilizar planes anteriores. Crear nuevo directorio de planes.')
@@ -88,7 +97,7 @@ def main():
         if root.exists() and any(x.name not in allowed for x in root.iterdir()):raise ValueError('BLOCKED: hay archivos sin manifiesto; no se reutilizan')
         write_new(manifest,source)
     if not cbs.is_file():
-        launch(sys.executable,HERE/'plan_milp_multigoal.py','--assignment',assignment,'--scenario',scenario,'--output',cbs,'--max-time',a.max_cbs_time,'--max-ct',a.max_ct,'--assignment-mode',a.assignment_mode)
+        launch(sys.executable,HERE/'plan_milp_multigoal.py','--assignment',assignment,'--scenario',scenario,'--output',cbs,'--max-time',a.max_cbs_time,'--max-ct',a.max_ct,'--assignment-mode',a.assignment_mode,'--graph',graph)
     else:
         x=read(cbs)
         if x.get('seed')!=a.seed or x.get('inputs_sha256')!={'scenario':sha(scenario),'assignment':sha(assignment)} or x.get('status')!='OFFLINE_CBS_ONLY_NOT_EXECUTABLE':
@@ -127,6 +136,7 @@ def main():
     if x.get('status')!='PASS_STATIC_PRECHECK_NOT_EXECUTABLE' or x.get('errors') or x.get('sha256')!={'cbs':sha(cbs),'scenario':sha(scenario),'geometry':sha(geom)}:
         raise ValueError('BLOCKED: fase5 sin PASS o hash distinto')
     print('\nOFFLINE_FULL_STATIC_PASS_NOT_GAZEBO_CERTIFIED',flush=True)
+    print('MAPA:',a.map,flush=True)
     print('SEMILLA:',a.seed,flush=True)
     print('PLAN_PREPARADO:',prepared,flush=True)
     print('NO AUTORIZA iniciar Gazebo: quedan preflight ROS en vivo y validación física D8.',flush=True)

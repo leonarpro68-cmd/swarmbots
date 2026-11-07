@@ -1,0 +1,103 @@
+{
+  "bounds": {
+    "xmin": -14.75,
+    "xmax": 14.75,
+    "ymin": -24.75,
+    "ymax": 24.75
+  },
+  "obstacles": [
+    {
+      "name": "factory_collision_01",
+      "xmin": -14.291,
+      "xmax": -13.176,
+      "ymin": -25.0,
+      "ymax": -10.822
+    },
+    {
+      "name": "factory_collision_02",
+      "xmin": -13.629,
+      "xmax": -13.026,
+      "ymin": -5.625,
+      "ymax": -4.724
+    },
+    {
+      "name": "factory_collision_03",
+      "xmin": -13.568,
+      "xmax": -11.529,
+      "ymin": -4.156,
+      "ymax": -1.368
+    },
+    {
+      "name": "factory_collision_04",
+      "xmin": -13.174,
+      "xmax": -12.772,
+      "ymin": -6.065,
+      "ymax": -5.663
+    },
+    {
+      "name": "factory_collision_05",
+      "xmin": -12.71,
+      "xmax": -11.808,
+      "ymin": -6.075,
+      "ymax": -5.474
+    },
+    {
+      "name": "factory_collision_06",
+      "xmin": -12.183,
+      "xmax": -11.181,
+      "ymin": -4.883,
+      "ymax": -4.145
+    },
+    {
+      "name": "factory_collision_07",
+      "xmin": -10.59,
+      "xmax": -7.876,
+      "ymin": -25.0,
+      "ymax": -9.865
+    },
+    {
+      "name": "factory_collision_08",
+      "xmin": -5.34,
+      "xmax": -2.627,
+      "ymin": -25.0,
+      "ymax": -11.17
+    },
+    {
+      "name": "factory_collision_09",
+      "xmin": -0.24,
+      "xmax": 2.474,
+      "ymin": -25.0,
+      "ymax": -9.874
+    },
+    {
+      "name": "factory_collision_10",
+      "xmin": 5.01,
+      "xmax": 8.125,
+      "ymin": -25.0,
+      "ymax": -9.626
+    },
+    {
+      "name": "factory_collision_11",
+      "xmin": 10.71,
+      "xmax": 11.726,
+      "ymin": -25.0,
+      "ymax": -7.682
+    },
+    {
+      "name": "factory_collision_12",
+      "xmin": 12.21,
+      "xmax": 12.452,
+      "ymin": -25.0,
+      "ymax": 25.0
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -25.0
+    ],
+    "neighbors": 8
+  }
+}

@@ -15,7 +15,7 @@ from corridors_supermarket import Rectangle, corridors
 from clearance_config import RECTANGLE_CENTER_CLEARANCE_M, WALL_CENTER_CLEARANCE_M, INTERROBOT_HALFSEPARATOR_M
 from original_hybrid.slsqp import solve_all
 from original_hybrid.refinement import cost
-from refinement_supermarket import refine, certify as certify_halfspaces, halfspaces_from_curves
+from refinement_supermarket import refine, certify as certify_halfspaces
 from safety_supermarket import certify as certify_continuous, Settings
 from original_v3.d9929_sucesivo_offline import optimize_stage
 from original_v3.successive_clock import SuccessiveClock, command_envelopes
@@ -66,15 +66,15 @@ def process_stage(stage,scene,geometry,mission,output,maxiter,refinements,sample
         if not first['pass_certificate'] or any(not m['success'] or m['inequality_violation']>1e-6 or m['equality_violation']>1e-6 for m in meta):
             raise ValueError('REJECTED_INITIAL_SLSQP_OR_CERTIFICATE')
         report['initial_cost']=float(cost(baseline))
-        controls,hist=refine(pts,paths,baseline,iterations=refinements,samples=samples,maxiter=maxiter,**options)
+        controls,hist,last_hs=refine(pts,paths,baseline,iterations=refinements,samples=samples,
+                                     maxiter=maxiter,return_last_halfspaces=True,**options)
         accepted=sum(bool(x.get('accepted')) for x in hist[1:]);report['refinement_history']=hist
         report['refinements_accepted']=accepted;report['final_cost']=float(cost(controls))
         if accepted != refinements:raise ValueError(f'REJECTED_INCOMPLETE_REFINEMENT_{accepted}_OF_{refinements}')
-        last_hs=halfspaces_from_curves(controls,rectangles=rects,bounds=bounds,
-                static_clearance_m=RECTANGLE_CENTER_CLEARANCE_M,
-                wall_clearance_m=WALL_CENTER_CLEARANCE_M,
-                robot_radius_m=INTERROBOT_HALFSEPARATOR_M,
-                circles_by_robot=circles,samples=samples)
+        if last_hs is None:
+            raise ValueError('REJECTED_MISSING_LAST_ACCEPTED_CORRIDORS')
+        # Reuse the actual final SLSQP constraints. The continuous certificate
+        # also checks direct hull-to-obstacle and hull-to-robot distances.
         cert=certify_continuous(controls,pts,paths,rects,bounds,RECTANGLE_CENTER_CLEARANCE_M,circles,last_hs,
                 wall_clearance_m=WALL_CENTER_CLEARANCE_M,robot_radius_m=INTERROBOT_HALFSEPARATOR_M,
                 settings=Settings(margin_m=0.0,max_speed_m_s=speed,max_acceleration_m_s2=accel))

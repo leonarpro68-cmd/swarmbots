@@ -561,11 +561,15 @@ def _launch_setup(context, *args, **kwargs):
     scenario_path = LaunchConfiguration("scenario_json").perform(context)
     if not scenario_path:
         raise ValueError("Falta scenario_json:=/ruta/absoluta/seed_100.json (nunca usar spawn aleatorio)")
-    if world != "supermarket":
-        raise ValueError("Este launch dedicado solo admite world:=supermarket")
+    if not re.fullmatch(r'[a-z][a-z0-9_]*',world):
+        raise ValueError('Nombre de mundo inválido')
     if seed < 0:
         raise ValueError("La semilla debe coincidir con el JSON; -1 no está permitido")
-    scenario = load_scenario(scenario_path, expected_seed=seed)
+    map_geometry=LaunchConfiguration("map_geometry_json").perform(context)
+    if world!="supermarket" and not map_geometry:
+        raise ValueError('Se requiere map_geometry_json para tugbot_warehouse')
+    scenario = load_scenario(scenario_path, expected_seed=seed,
+                             expected_world=world,geometry_path=map_geometry or None)
     if (n_robots, n_trash, n_deposits) != (3, 6, 3):
         raise ValueError("El escenario tiene exactamente 3 robots, 6 basuras, 3 depósitos")
     if not gripper:
@@ -573,6 +577,7 @@ def _launch_setup(context, *args, **kwargs):
 
     worlds_share = get_package_share_directory("swarm_worlds")
     world_path = os.path.join(worlds_share, "worlds", f"{world}.sdf")
+    if not os.path.isfile(world_path):raise FileNotFoundError(world_path)
 
     # Los mundos referencian modelos vendorizados vía model:// (p.ej. el
     # warehouse). Exportar antes de lanzar Gazebo; hereda a todos los hijos.
@@ -682,6 +687,7 @@ def generate_launch_description():
         DeclareLaunchArgument("n_robots", default_value="3", description="Number of Summit XLS to spawn"),
         DeclareLaunchArgument("n_drones", default_value="0", description="Number of X3 drones (0 = ninguno, -1 = same as n_robots)"),
         DeclareLaunchArgument("world", default_value="supermarket", description="World file (sin .sdf) en swarm_worlds/worlds/"),
+        DeclareLaunchArgument("map_geometry_json", default_value="", description="obstaculos.json del mapa seleccionado"),
         DeclareLaunchArgument("center_x", default_value="0.0", description="Centro X del área de aparición aleatoria"),
         DeclareLaunchArgument("center_y", default_value="0.0", description="Centro Y del área de aparición (0 = centro del almacén vaciado, bajo la cámara cenital)"),
         DeclareLaunchArgument("headless", default_value="false", description="Run Gazebo server only (no GUI)"),

@@ -1,0 +1,15 @@
+{
+  "scenario_sha256": "6bc33b2ac0a4debad089416de23bbfa2638ac2a772dac1af13d3d2badccb075e",
+  "assignment_sha256": "a24b2574ea97fc52a47bb524a34c30ef66691c230247f5b368967dd36fd161cf",
+  "geometry_sha256": "56494e5c6806ca01250cac20358e1abd67313439a7158cd8841084f6b27dcfb3",
+  "graph_sha256": "69c63e021609a3316e150291402c8cfeb010c1fba9a78706fd1b1a287af8653d",
+  "seed": 123,
+  "assignment_mode": "milp",
+  "max_ct": 6000,
+  "max_cbs_time": 110,
+  "maxiter": 450,
+  "refinements": 5,
+  "max_speed": 2.0,
+  "max_acceleration": 2.0,
+  "map": "electrical_substation"
+}

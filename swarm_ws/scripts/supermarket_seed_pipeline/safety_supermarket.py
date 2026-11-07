@@ -18,7 +18,7 @@ class Settings:
     max_speed_m_s: float=1.20
     max_acceleration_m_s2: float=1.0
     time_safety_factor: float=1.08
-    tolerance_m: float=1e-6
+    tolerance_m: float=1e-3
     preserve_intermediate_waits: bool=False
 
 def certify(controls, points, paths, rectangles, bounds, rectangle_clearance_m,

@@ -276,7 +276,7 @@ def main():
     if a.mode=='execute':
         subprocess.run([sys.executable,'scripts/supermarket_experiment/analyze_run.py','--run-dir',str(run)],check=False)
         if not a.no_plots:
-            plot_script=pathlib.Path(__file__).with_name('plot_experiment.py')
+            plot_script=pathlib.Path(__file__).resolve().parents[1]/'supermarket_auto_experiment'/'plot_experiment.py'
             result=subprocess.run([sys.executable,str(plot_script),'--prepared',str(prepared),'--run-dir',str(run)],capture_output=True,text=True)
             (run/'plots.log').write_text(result.stdout+'\n'+result.stderr)
             print('PLOTS:', 'PASS' if result.returncode==0 else 'FAILED (review plots.log)',flush=True)

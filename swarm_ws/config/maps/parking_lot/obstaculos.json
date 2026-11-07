@@ -1,0 +1,390 @@
+{
+  "bounds": {
+    "xmin": -15.0,
+    "xmax": 15.0,
+    "ymin": -25.0,
+    "ymax": 25.0
+  },
+  "obstacles": [
+    {
+      "name": "booth",
+      "xmin": -13.0,
+      "xmax": -11.4,
+      "ymin": -23.3,
+      "ymax": -21.7
+    },
+    {
+      "name": "car0",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -5.15,
+      "ymax": -3.35
+    },
+    {
+      "name": "car1",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -7.65,
+      "ymax": -5.85
+    },
+    {
+      "name": "car10",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 15.85,
+      "ymax": 17.65
+    },
+    {
+      "name": "car11",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 18.35,
+      "ymax": 20.15
+    },
+    {
+      "name": "car12",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 20.85,
+      "ymax": 22.65
+    },
+    {
+      "name": "car13",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -5.15,
+      "ymax": -3.35
+    },
+    {
+      "name": "car14",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -7.65,
+      "ymax": -5.85
+    },
+    {
+      "name": "car15",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -10.15,
+      "ymax": -8.35
+    },
+    {
+      "name": "car16",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -15.15,
+      "ymax": -13.35
+    },
+    {
+      "name": "car17",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -17.65,
+      "ymax": -15.85
+    },
+    {
+      "name": "car18",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -20.15,
+      "ymax": -18.35
+    },
+    {
+      "name": "car19",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": -22.65,
+      "ymax": -20.85
+    },
+    {
+      "name": "car2",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -10.15,
+      "ymax": -8.35
+    },
+    {
+      "name": "car20",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": 3.35,
+      "ymax": 5.15
+    },
+    {
+      "name": "car21",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": 8.35,
+      "ymax": 10.15
+    },
+    {
+      "name": "car22",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": 13.35,
+      "ymax": 15.15
+    },
+    {
+      "name": "car23",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": 18.35,
+      "ymax": 20.15
+    },
+    {
+      "name": "car24",
+      "xmin": -4.75,
+      "xmax": -0.35,
+      "ymin": 20.85,
+      "ymax": 22.65
+    },
+    {
+      "name": "car25",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": -7.65,
+      "ymax": -5.85
+    },
+    {
+      "name": "car26",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": -10.15,
+      "ymax": -8.35
+    },
+    {
+      "name": "car27",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": -17.65,
+      "ymax": -15.85
+    },
+    {
+      "name": "car28",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": -22.65,
+      "ymax": -20.85
+    },
+    {
+      "name": "car29",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": 5.85,
+      "ymax": 7.65
+    },
+    {
+      "name": "car3",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -12.65,
+      "ymax": -10.85
+    },
+    {
+      "name": "car30",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": 8.35,
+      "ymax": 10.15
+    },
+    {
+      "name": "car31",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": 15.85,
+      "ymax": 17.65
+    },
+    {
+      "name": "car32",
+      "xmin": 0.35,
+      "xmax": 4.75,
+      "ymin": 18.35,
+      "ymax": 20.15
+    },
+    {
+      "name": "car33",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -5.15,
+      "ymax": -3.35
+    },
+    {
+      "name": "car34",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -10.15,
+      "ymax": -8.35
+    },
+    {
+      "name": "car35",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -12.65,
+      "ymax": -10.85
+    },
+    {
+      "name": "car36",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -15.15,
+      "ymax": -13.35
+    },
+    {
+      "name": "car37",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -17.65,
+      "ymax": -15.85
+    },
+    {
+      "name": "car38",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": -20.15,
+      "ymax": -18.35
+    },
+    {
+      "name": "car39",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 3.35,
+      "ymax": 5.15
+    },
+    {
+      "name": "car4",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -15.15,
+      "ymax": -13.35
+    },
+    {
+      "name": "car40",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 5.85,
+      "ymax": 7.65
+    },
+    {
+      "name": "car41",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 8.35,
+      "ymax": 10.15
+    },
+    {
+      "name": "car42",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 10.85,
+      "ymax": 12.65
+    },
+    {
+      "name": "car43",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 13.35,
+      "ymax": 15.15
+    },
+    {
+      "name": "car44",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 18.35,
+      "ymax": 20.15
+    },
+    {
+      "name": "car45",
+      "xmin": 10.5,
+      "xmax": 14.9,
+      "ymin": 20.85,
+      "ymax": 22.65
+    },
+    {
+      "name": "car5",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -17.65,
+      "ymax": -15.85
+    },
+    {
+      "name": "car6",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": -20.15,
+      "ymax": -18.35
+    },
+    {
+      "name": "car7",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 5.85,
+      "ymax": 7.65
+    },
+    {
+      "name": "car8",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 8.35,
+      "ymax": 10.15
+    },
+    {
+      "name": "car9",
+      "xmin": -14.9,
+      "xmax": -10.5,
+      "ymin": 10.85,
+      "ymax": 12.65
+    },
+    {
+      "name": "island-1",
+      "xmin": -0.25,
+      "xmax": 0.25,
+      "ymin": -24.7,
+      "ymax": -2.5
+    },
+    {
+      "name": "island1",
+      "xmin": -0.25,
+      "xmax": 0.25,
+      "ymin": 2.5,
+      "ymax": 24.7
+    },
+    {
+      "name": "lamp0",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": -20.1,
+      "ymax": -19.9
+    },
+    {
+      "name": "lamp1",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": -10.1,
+      "ymax": -9.9
+    },
+    {
+      "name": "lamp2",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": 9.9,
+      "ymax": 10.1
+    },
+    {
+      "name": "lamp3",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": 19.9,
+      "ymax": 20.1
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -25.0
+    ],
+    "neighbors": 8
+  }
+}

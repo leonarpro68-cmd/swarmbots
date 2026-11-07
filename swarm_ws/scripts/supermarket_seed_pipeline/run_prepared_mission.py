@@ -11,6 +11,8 @@ import pathlib
 import subprocess
 import sys
 import uuid
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
+from swarm_maps import MAPS, map_files, scenario_file, milp_results_dir, plans_dir
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 HERE=pathlib.Path(__file__).resolve().parent
@@ -18,25 +20,25 @@ HERE=pathlib.Path(__file__).resolve().parent
 def sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(pathlib.Path(p).read_text(encoding='utf-8'))
 
-def validate(ws,seed,mode="milp"):
-    if seed==100 or seed<0:raise ValueError('Usar launch seed100 para semilla 100; nuevas semillas deben ser no negativas')
-    scene=ws/'config/supermarket'/f'seed_{seed}.json'
-    base=HERE/'plans'/f'seed_{seed}'
+def validate(ws,seed,mode="milp",map_name="supermarket"):
+    if seed<0 or (seed==100 and map_name=='supermarket'):raise ValueError('Semilla no permitida: se protege supermarket seed100')
+    scene=scenario_file(ws,map_name,seed)
+    base=plans_dir(ws,map_name,seed)
     root=base if mode=='milp' else base/'fixed'
     prepared=root/'prepared'
     manifest=root/'inputs_manifest.json'
     pre=prepared/'phase5_static_preflight.json'
     cbs=root/'cbs_multigoal.json'
-    assign=(ws/'scripts/supermarket_milp/results'/f'seed_{seed}'/'assignment_milp_one_color_per_round.json' if mode=='milp' else root/'fixed_assignment.json')
-    geometry=HERE/'supermarket_obstaculos.json'
-    graph=HERE/'supermarket_grafo.json'
+    assign=(milp_results_dir(ws,map_name,seed)/'assignment_milp_one_color_per_round.json' if mode=='milp' else root/'fixed_assignment.json')
+    graph,geometry=map_files(ws,map_name)
     for p in (scene,manifest,pre,cbs,assign,geometry,graph):
         if not p.is_file():raise FileNotFoundError(p)
-    if read(scene).get('seed')!=seed or read(scene).get('world')!='supermarket':raise ValueError('Escenario semilla/world incompatible')
+    if read(scene).get('seed')!=seed or read(scene).get('world')!=map_name or read(assign).get('world')!=map_name:
+        raise ValueError('Escenario/asignación de otro mapa o semilla')
     m=read(manifest)
     for k,p in [('scenario_sha256',scene),('assignment_sha256',assign),('geometry_sha256',geometry),('graph_sha256',graph)]:
         if m.get(k)!=sha(p):raise ValueError(f'HASH MISMATCH: {k}')
-    if m.get('seed')!=seed or (mode=='fixed' and m.get('assignment_mode')!='fixed'):
+    if m.get('seed')!=seed or (map_name!='supermarket' and m.get('map')!=map_name) or (mode=='fixed' and m.get('assignment_mode')!='fixed'):
         raise ValueError('Manifiesto de otra semilla o modo')
     if mode=='milp' and m.get('assignment_mode','milp')!='milp':raise ValueError('Manifiesto MILP alterado')
     cr=read(cbs)
@@ -79,19 +81,21 @@ def unique_dir(root,seed,mode="milp"):
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--seed',type=int,required=True)
+    ap.add_argument('--map',default='supermarket')
     ap.add_argument('--assignment-mode',choices=('fixed','milp'),default='milp')
     ap.add_argument('--workspace',type=pathlib.Path,required=True)
     ap.add_argument('--results-root',type=pathlib.Path,required=True)
     ap.add_argument('--readiness-seconds',type=int,default=180)
     a=ap.parse_args()
     ws=a.workspace.expanduser().resolve()
-    scene,prepared=validate(ws,a.seed,a.assignment_mode)
+    scene,prepared=validate(ws,a.seed,a.assignment_mode,a.map)
     sys.path.insert(0,str(ws/'scripts/supermarket_one_launch'))
     from run_unique_mission import check_live  # reuse working read-only ROS preflight
     check_live(ws,scene,a.readiness_seconds)
     root=a.results_root.expanduser().resolve()
+    if a.map!='supermarket':root=root/a.map
     run=unique_dir(root,a.seed,a.assignment_mode)
-    meta={'seed':a.seed,'mode':a.assignment_mode,'scenario':str(scene),'prepared':str(prepared),
+    meta={'seed':a.seed,'map':a.map,'mode':a.assignment_mode,'scenario':str(scene),'prepared':str(prepared),
           'scenario_sha256':sha(scene),'status':'STARTED_SUPERVISED_NOT_PHYSICAL_CERTIFICATE'}
     (root/(run.name+'.metadata.json')).write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     print('RESULTS_DIRECTORY:',run,flush=True)

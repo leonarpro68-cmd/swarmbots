@@ -20,6 +20,8 @@ def plan(assignment, scenario, *, max_ct=6000, max_time=110):
         raise ValueError('Se requiere una asignación offline reconocida')
     if assignment.get('seed')!=scenario.get('seed') or not isinstance(scenario.get('seed'), int) or scenario['seed'] < 0:
         raise ValueError('Semillas de asignación/escenario distintas o inválidas')
+    if assignment.get('world')!=scenario.get('world'):
+        raise ValueError('La asignación pertenece a otro mapa')
     chosen=assignment['chosen']
     if tuple(sorted(chosen))!=ROBOTS:raise ValueError('Los tres robots no coinciden')
     bytrash={t['name']:t for t in scenario['trash']}
@@ -89,6 +91,7 @@ def main():
     p.add_argument('--assignment',type=Path,default=here/'assignment_milp_reference.json')
     p.add_argument('--scenario',type=Path,default=here/'seed_100_reference.json')
     p.add_argument('--output',type=Path,default=here/'results/milp_cbs_multigoal_seed100.json')
+    p.add_argument('--graph',type=Path,help='Grafo del mapa seleccionado (sin copiarlo al directorio CBS)')
     p.add_argument('--max-time',type=int,default=110)
     p.add_argument('--max-ct',type=int,default=6000)
     a=p.parse_args()
@@ -96,6 +99,7 @@ def main():
     assignment=read(a.assignment)
     expected=('OPTIMAL_ASTAR_PROXY_OFFLINE_NOT_EXECUTABLE' if a.assignment_mode=='milp' else 'FIXED_DETERMINISTIC_OFFLINE_NOT_EXECUTABLE')
     if assignment.get('status')!=expected:raise ValueError('Modo y asignación no coinciden')
+    if a.graph:geometry.use_graph(a.graph)
     report=plan(assignment,read(a.scenario),max_time=a.max_time,max_ct=a.max_ct)
     report['assignment_mode']=a.assignment_mode
     report['inputs_sha256']={'assignment':sha(a.assignment),'scenario':sha(a.scenario)}

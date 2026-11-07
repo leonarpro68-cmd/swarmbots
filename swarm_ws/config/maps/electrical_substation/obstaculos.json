@@ -1,0 +1,152 @@
+{
+  "bounds": {
+    "xmin": -14.75,
+    "xmax": 14.75,
+    "ymin": -24.75,
+    "ymax": 24.75
+  },
+  "obstacles": [
+    {
+      "name": "station_buildings",
+      "xmin": 12.494,
+      "xmax": 15.001,
+      "ymin": -25.001,
+      "ymax": -1.001
+    },
+    {
+      "name": "station_electrical_stuff_part_1",
+      "xmin": 14.136,
+      "xmax": 14.437,
+      "ymin": 24.594,
+      "ymax": 25.001
+    },
+    {
+      "name": "station_house",
+      "xmin": -12.931,
+      "xmax": 6.71,
+      "ymin": 15.802,
+      "ymax": 25.001
+    },
+    {
+      "name": "station_robothouse",
+      "xmin": 11.569,
+      "xmax": 12.771,
+      "ymin": 21.044,
+      "ymax": 22.545
+    },
+    {
+      "name": "summit_docking_station",
+      "xmin": 11.661,
+      "xmax": 12.021,
+      "ymin": 21.511,
+      "ymax": 22.027
+    },
+    {
+      "name": "fence_segment_01",
+      "xmin": 14.308,
+      "xmax": 15.001,
+      "ymin": 12.626,
+      "ymax": 13.001
+    },
+    {
+      "name": "fence_segment_02",
+      "xmin": 13.808,
+      "xmax": 14.919,
+      "ymin": 12.999,
+      "ymax": 13.501
+    },
+    {
+      "name": "fence_segment_03",
+      "xmin": 13.308,
+      "xmax": 14.228,
+      "ymin": 13.499,
+      "ymax": 14.001
+    },
+    {
+      "name": "fence_segment_04",
+      "xmin": 12.808,
+      "xmax": 13.728,
+      "ymin": 13.999,
+      "ymax": 14.501
+    },
+    {
+      "name": "fence_segment_05",
+      "xmin": 12.491,
+      "xmax": 13.228,
+      "ymin": 14.499,
+      "ymax": 15.001
+    },
+    {
+      "name": "fence_segment_06",
+      "xmin": 12.236,
+      "xmax": 12.824,
+      "ymin": 14.999,
+      "ymax": 15.501
+    },
+    {
+      "name": "fence_segment_07",
+      "xmin": 11.981,
+      "xmax": 12.57,
+      "ymin": 15.499,
+      "ymax": 16.001
+    },
+    {
+      "name": "fence_segment_08",
+      "xmin": 11.727,
+      "xmax": 12.315,
+      "ymin": 15.999,
+      "ymax": 16.501
+    },
+    {
+      "name": "fence_segment_09",
+      "xmin": 11.566,
+      "xmax": 12.06,
+      "ymin": 16.499,
+      "ymax": 17.001
+    },
+    {
+      "name": "fence_segment_10",
+      "xmin": 11.487,
+      "xmax": 11.867,
+      "ymin": 16.999,
+      "ymax": 17.501
+    },
+    {
+      "name": "fence_segment_11",
+      "xmin": 11.408,
+      "xmax": 11.788,
+      "ymin": 17.499,
+      "ymax": 18.001
+    },
+    {
+      "name": "fence_segment_12",
+      "xmin": 11.329,
+      "xmax": 11.709,
+      "ymin": 17.999,
+      "ymax": 18.501
+    },
+    {
+      "name": "fence_segment_13",
+      "xmin": 11.249,
+      "xmax": 11.63,
+      "ymin": 18.499,
+      "ymax": 19.001
+    },
+    {
+      "name": "fence_segment_14",
+      "xmin": 11.239,
+      "xmax": 11.55,
+      "ymin": 18.999,
+      "ymax": 25.001
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -25.0
+    ],
+    "neighbors": 8
+  }
+}

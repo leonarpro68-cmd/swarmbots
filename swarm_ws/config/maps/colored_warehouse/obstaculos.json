@@ -1,0 +1,117 @@
+{
+  "bounds": {
+    "xmin": -14.85,
+    "xmax": 14.85,
+    "ymin": -11.85,
+    "ymax": 11.85
+  },
+  "obstacles": [
+    {
+      "name": "Rojo",
+      "xmin": -11.0,
+      "xmax": -9.0,
+      "ymin": 7.5,
+      "ymax": 8.5
+    },
+    {
+      "name": "Azul",
+      "xmin": 9.0,
+      "xmax": 11.0,
+      "ymin": 7.5,
+      "ymax": 8.5
+    },
+    {
+      "name": "Verde",
+      "xmin": -11.0,
+      "xmax": -9.0,
+      "ymin": -8.5,
+      "ymax": -7.5
+    },
+    {
+      "name": "Amarillo",
+      "xmin": 9.0,
+      "xmax": 11.0,
+      "ymin": -8.5,
+      "ymax": -7.5
+    },
+    {
+      "name": "A1",
+      "xmin": 4.5,
+      "xmax": 9.5,
+      "ymin": 8.7,
+      "ymax": 8.9
+    },
+    {
+      "name": "A2",
+      "xmin": 4.5,
+      "xmax": 9.5,
+      "ymin": -5.6,
+      "ymax": -5.4
+    },
+    {
+      "name": "A3",
+      "xmin": -9.5,
+      "xmax": -4.5,
+      "ymin": -8.9,
+      "ymax": -8.7
+    },
+    {
+      "name": "A4",
+      "xmin": -9.5,
+      "xmax": -4.5,
+      "ymin": 5.4,
+      "ymax": 5.6
+    },
+    {
+      "name": "B1",
+      "xmin": -14.85,
+      "xmax": -2.0,
+      "ymin": -0.1,
+      "ymax": 0.1
+    },
+    {
+      "name": "B2",
+      "xmin": 2.0,
+      "xmax": 14.85,
+      "ymin": -0.1,
+      "ymax": 0.1
+    },
+    {
+      "name": "C1",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": 8.0,
+      "ymax": 11.85
+    },
+    {
+      "name": "C2",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": 1.0,
+      "ymax": 6.0
+    },
+    {
+      "name": "C3",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": -6.0,
+      "ymax": -1.0
+    },
+    {
+      "name": "C4",
+      "xmin": -0.1,
+      "xmax": 0.1,
+      "ymin": -11.85,
+      "ymax": -8.0
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -12.5
+    ],
+    "neighbors": 8
+  }
+}

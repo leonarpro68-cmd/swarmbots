@@ -11,36 +11,45 @@ from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 import os
+import re
 
 
 def setup(context,*args,**kwargs):
     seedstr=LaunchConfiguration('seed').perform(context)
     mode=LaunchConfiguration('assignment_mode').perform(context).lower()
+    map_name=LaunchConfiguration('map').perform(context).lower()
+    if not re.fullmatch(r'[a-z][a-z0-9_]*',map_name):
+        raise ValueError('Nombre de mapa inválido')
     if mode not in ('fixed','milp'):raise ValueError('assignment_mode debe ser fixed o milp')
     if not seedstr.isdigit():raise ValueError('Se requiere seed no negativa')
     seed=int(seedstr)
-    if seed==100:raise ValueError('Para seed100 utiliza el lanzamiento ya validado supermarket_full_experiment.launch.py')
+    if seed==100 and map_name=='supermarket':raise ValueError('Para seed100 utiliza el lanzamiento ya validado supermarket_full_experiment.launch.py')
     ws=Path(LaunchConfiguration('workspace').perform(context)).expanduser().resolve()
-    scene=ws/'config/supermarket'/f'seed_{seed}.json'
-    base=ws/'scripts/supermarket_seed_pipeline/plans'/f'seed_{seed}'
+    scene=(ws/'config/supermarket'/f'seed_{seed}.json' if map_name=='supermarket'
+           else ws/'config/scenarios'/map_name/f'seed_{seed}.json')
+    base=ws/'scripts/supermarket_seed_pipeline/plans'
+    if map_name!='supermarket':base=base/map_name
+    base=base/f'seed_{seed}'
+    map_geometry=ws/'config/maps'/map_name/'obstaculos.json'
+    map_graph=ws/'config/maps'/map_name/'grafo.json'
     prepared=(base if mode=='milp' else base/'fixed')/'prepared'
     runner=ws/'scripts/supermarket_seed_pipeline/run_prepared_mission.py'
-    for f in (scene,prepared/'phase5_static_preflight.json',runner,ws/'scripts/supermarket_seed_pipeline/run_auto_experiment_seed.py'):
+    for f in (scene,map_graph,map_geometry,prepared/'phase5_static_preflight.json',runner,ws/'scripts/supermarket_seed_pipeline/run_auto_experiment_seed.py'):
         if not f.is_file():raise FileNotFoundError(f'No se puede lanzar una misión sin plan preparado: {f}')
     import sys
     sys.path.insert(0,str(ws/'scripts/supermarket_seed_pipeline'))
     from run_prepared_mission import validate
-    validate(ws,seed,mode)  # blocking gate BEFORE starting Gazebo
+    validate(ws,seed,mode,map_name)  # blocking gate BEFORE starting Gazebo
     pkg=Path(get_package_share_directory('swarm_worlds'))/'launch'
     launch_world=pkg/'sim_summit_supermarket.launch.py'
     launch_support=pkg/'supermarket_support.launch.py'
     if not launch_world.is_file() or not launch_support.is_file():raise FileNotFoundError('Launch de mundo/soporte no encontrado')
     gazebo=IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch_world)), launch_arguments={
-        'world':'supermarket','scenario_json':str(scene),'seed':str(seed),'n_robots':'3','n_drones':'0',
+        'world':map_name,'map_geometry_json':str(map_geometry),'scenario_json':str(scene),'seed':str(seed),'n_robots':'3','n_drones':'0',
         'n_trash':'6','n_deposits':'3','gripper':'true','headless':LaunchConfiguration('headless')}.items())
     support=IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch_support)),
         launch_arguments={'n_robots':'3','world_name':'world_demo'}.items())
-    worker=ExecuteProcess(cmd=['python3',str(runner),'--workspace',str(ws),'--seed',str(seed),'--assignment-mode',mode,
+    worker=ExecuteProcess(cmd=['python3',str(runner),'--workspace',str(ws),'--seed',str(seed),'--map',map_name,'--assignment-mode',mode,
         '--results-root',LaunchConfiguration('results_root'),'--readiness-seconds',LaunchConfiguration('readiness_seconds')],
         cwd=str(ws),output='screen',name='supermarket_prepared_seed_controller')
     return [gazebo,TimerAction(period=5.,actions=[support]),TimerAction(period=8.,actions=[worker])]
@@ -50,6 +59,7 @@ def generate_launch_description():
     home=os.path.expanduser('~')
     return LaunchDescription([
         DeclareLaunchArgument('seed',default_value='42'),
+        DeclareLaunchArgument('map',default_value='supermarket'),
         DeclareLaunchArgument('assignment_mode',default_value='milp'),
         DeclareLaunchArgument('workspace',default_value=os.path.join(home,'swarm_ws')),
         DeclareLaunchArgument('headless',default_value='false'),

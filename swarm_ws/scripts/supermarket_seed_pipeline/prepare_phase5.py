@@ -84,7 +84,7 @@ def audit_local(start, center, stage, target, pending, scene, geom):
 
 def prepare(cbs,scene,geom,results,orig_cbs,orig_scenario,orig_geom):
     errors=[]
-    if scene.get('world')!='supermarket' or not isinstance(scene.get('seed'),int) or scene['seed']<0:errors.append('Escenario supermarket o semilla inválidos')
+    if not isinstance(scene.get('world'),str) or not scene.get('world') or not isinstance(scene.get('seed'),int) or scene['seed']<0:errors.append('Mapa o semilla del escenario inválidos')
     if (cbs.get('seed'),cbs.get('status'),cbs.get('execution_authorized'))!=(scene.get('seed'),'OFFLINE_CBS_ONLY_NOT_EXECUTABLE',False):
         errors.append('Estado CBS incompatible o no offline')
     if list(cbs.get('stage_sequence',[]))!=list(STAGES):errors.append('Secuencia de etapas incorrecta')
@@ -167,7 +167,7 @@ def prepare(cbs,scene,geom,results,orig_cbs,orig_scenario,orig_geom):
             robots[r]={'trash':config[r]['pickup'+stage[-1]],'color':item[config[r]['pickup'+stage[-1]]]['color'],
                        'goal_xy_m':stage_ends[i], 'target':target,'target_xy_m':center,
                        'distance_m':round(dist,6)}
-        assignments[stage]={'schema':'supermarket.milp.physical.assignment.offline.v1','world':'supermarket','seed':scene['seed'],
+        assignments[stage]={'schema':'supermarket.milp.physical.assignment.offline.v1','world':scene['world'],'seed':scene['seed'],
                             'stage':stage,'navigation_sha256':digest,'robots':robots,
                             'execution_authorized':False}
         nav[stage]={'stage':stage,'trajectory':str(npz.absolute()),'successive_clock':str(clockpath.absolute()),

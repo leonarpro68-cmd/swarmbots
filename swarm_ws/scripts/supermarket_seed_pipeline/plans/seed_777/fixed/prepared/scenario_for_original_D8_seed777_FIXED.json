@@ -1,0 +1,351 @@
+{
+  "version": "supermarket_offline_v1",
+  "world": "supermarket",
+  "seed": 777,
+  "attempt": 1,
+  "units": "m",
+  "trash_spawn_rectangle": {
+    "xmin": -13.75,
+    "xmax": 13.75,
+    "ymin": -23.75,
+    "ymax": 22.5
+  },
+  "rules": {
+    "min_pair_separation_m": 5.0,
+    "trash_obstacle_clearance_m": 0.75,
+    "robots_deposits_on_graph": true,
+    "trash_continuous_xy": true
+  },
+  "robots": [
+    {
+      "name": "summit0",
+      "xy_m": [
+        12.5,
+        -13.75
+      ],
+      "grid": [
+        22,
+        9
+      ]
+    },
+    {
+      "name": "summit1",
+      "xy_m": [
+        -12.5,
+        17.5
+      ],
+      "grid": [
+        2,
+        34
+      ]
+    },
+    {
+      "name": "summit2",
+      "xy_m": [
+        7.5,
+        -3.75
+      ],
+      "grid": [
+        18,
+        17
+      ]
+    }
+  ],
+  "deposits": [
+    {
+      "name": "deposit_verde",
+      "type": "deposit",
+      "color": "verde",
+      "xy_m": [
+        2.5,
+        -18.75
+      ],
+      "grid": [
+        14,
+        5
+      ]
+    },
+    {
+      "name": "deposit_naranja",
+      "type": "deposit",
+      "color": "naranja",
+      "xy_m": [
+        -12.5,
+        -13.75
+      ],
+      "grid": [
+        2,
+        9
+      ]
+    },
+    {
+      "name": "deposit_azul",
+      "type": "deposit",
+      "color": "azul",
+      "xy_m": [
+        -6.25,
+        -15.0
+      ],
+      "grid": [
+        7,
+        8
+      ]
+    }
+  ],
+  "trash": [
+    {
+      "name": "trash_V1_verde",
+      "type": "trash",
+      "color": "verde",
+      "xy_m": [
+        -10.1016,
+        -23.17153
+      ],
+      "approach_node_xy_m": [
+        -10.0,
+        -23.75
+      ],
+      "approach_grid": [
+        4,
+        1
+      ]
+    },
+    {
+      "name": "trash_V2_verde",
+      "type": "trash",
+      "color": "verde",
+      "xy_m": [
+        11.29365,
+        16.96317
+      ],
+      "approach_node_xy_m": [
+        11.25,
+        17.5
+      ],
+      "approach_grid": [
+        21,
+        34
+      ]
+    },
+    {
+      "name": "trash_N1_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        -0.25291,
+        20.58273
+      ],
+      "approach_node_xy_m": [
+        0.0,
+        21.25
+      ],
+      "approach_grid": [
+        12,
+        37
+      ]
+    },
+    {
+      "name": "trash_N2_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        -10.55805,
+        -5.24773
+      ],
+      "approach_node_xy_m": [
+        -11.25,
+        -5.0
+      ],
+      "approach_grid": [
+        3,
+        16
+      ]
+    },
+    {
+      "name": "trash_A1_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        6.71269,
+        12.1066
+      ],
+      "approach_node_xy_m": [
+        7.5,
+        12.5
+      ],
+      "approach_grid": [
+        18,
+        30
+      ]
+    },
+    {
+      "name": "trash_A2_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        12.77963,
+        10.68378
+      ],
+      "approach_node_xy_m": [
+        12.5,
+        11.25
+      ],
+      "approach_grid": [
+        22,
+        29
+      ]
+    }
+  ],
+  "validation": {
+    "geometry_and_pairwise_separation": true,
+    "connected_graph": true,
+    "trash_approach_lines_checked": true,
+    "astar_cbs_verified": false,
+    "physical_maneuvers_verified": false,
+    "gazebo_spawn_verified": false
+  },
+  "elements": [
+    {
+      "name": "trash_V1_verde",
+      "type": "trash",
+      "color": "verde",
+      "xy_m": [
+        -10.1016,
+        -23.17153
+      ],
+      "approach_node_xy_m": [
+        -10.0,
+        -23.75
+      ],
+      "approach_grid": [
+        4,
+        1
+      ]
+    },
+    {
+      "name": "trash_V2_verde",
+      "type": "trash",
+      "color": "verde",
+      "xy_m": [
+        11.29365,
+        16.96317
+      ],
+      "approach_node_xy_m": [
+        11.25,
+        17.5
+      ],
+      "approach_grid": [
+        21,
+        34
+      ]
+    },
+    {
+      "name": "trash_N1_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        -0.25291,
+        20.58273
+      ],
+      "approach_node_xy_m": [
+        0.0,
+        21.25
+      ],
+      "approach_grid": [
+        12,
+        37
+      ]
+    },
+    {
+      "name": "trash_N2_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        -10.55805,
+        -5.24773
+      ],
+      "approach_node_xy_m": [
+        -11.25,
+        -5.0
+      ],
+      "approach_grid": [
+        3,
+        16
+      ]
+    },
+    {
+      "name": "trash_A1_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        6.71269,
+        12.1066
+      ],
+      "approach_node_xy_m": [
+        7.5,
+        12.5
+      ],
+      "approach_grid": [
+        18,
+        30
+      ]
+    },
+    {
+      "name": "trash_A2_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        12.77963,
+        10.68378
+      ],
+      "approach_node_xy_m": [
+        12.5,
+        11.25
+      ],
+      "approach_grid": [
+        22,
+        29
+      ]
+    },
+    {
+      "name": "deposit_verde",
+      "type": "deposit",
+      "color": "verde",
+      "xy_m": [
+        2.5,
+        -18.75
+      ],
+      "grid": [
+        14,
+        5
+      ]
+    },
+    {
+      "name": "deposit_naranja",
+      "type": "deposit",
+      "color": "naranja",
+      "xy_m": [
+        -12.5,
+        -13.75
+      ],
+      "grid": [
+        2,
+        9
+      ]
+    },
+    {
+      "name": "deposit_azul",
+      "type": "deposit",
+      "color": "azul",
+      "xy_m": [
+        -6.25,
+        -15.0
+      ],
+      "grid": [
+        7,
+        8
+      ]
+    }
+  ],
+  "milp_origin": "assignment from CBS multigoal, not static preassigned mission"
+}

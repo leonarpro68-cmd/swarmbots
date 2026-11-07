@@ -8,7 +8,7 @@ import numpy as np
 from shapely.geometry import Point, MultiPoint
 from shapely.ops import nearest_points
 from corridors_supermarket import rectangle_halfspace
-from original_hybrid.geometry_corridors import bernstein, disk_halfspace
+from original_hybrid.geometry_corridors import bernstein
 from original_hybrid.slsqp import solve_all
 from original_hybrid.refinement import cost
 
@@ -56,10 +56,20 @@ def halfspaces_from_curves(controls, *, rectangles, bounds, static_clearance_m,
                 a,b=nearest_points(shapes[i],Point(center))
                 pa=np.asarray(a.coords[0]); pb=np.asarray(b.coords[0]); delta=pb-pa
                 dist=np.linalg.norm(delta)
-                if dist<=radius+margin+1e-8:
-                    raise ValueError(f'R{i} k{k}: basura/depósito sin separador convexo')
+                exclusion = radius + margin
+                # Tangency is a valid supporting separator; reject only real
+                # intrusion. Keep a tiny rounding tolerance (1e-10 m), not a
+                # smaller safety margin. Validate the entire sampled hull.
+                if dist <= 1e-12 or dist < exclusion - 1e-10:
+                    raise ValueError(f'R{i} k{k}: basura/depósito sin separador convexo '
+                                     f'(d={dist:.12g}, exclusion={exclusion:.12g})')
                 n=delta/dist
-                h.append((n,float(n@np.asarray(center)-radius-margin)))
+                bound=float(n@np.asarray(center)-exclusion)
+                max_violation=float(np.max(segment@n-bound))
+                if max_violation > 1e-10:
+                    raise ValueError(f'R{i} k{k}: separación circular inválida '
+                                     f'(violación={max_violation:.12g})')
+                h.append((n,bound))
         for i in range(N):
             for j in range(i+1,N):
                 a,b=nearest_points(shapes[i],shapes[j]);pa=np.asarray(a.coords[0]);pb=np.asarray(b.coords[0]);delta=pb-pa
@@ -91,9 +101,11 @@ def certify(controls, hs, points, paths, tol=1e-6):
 
 def refine(points, paths, baseline, *, rectangles,bounds,static_clearance_m,
            circles_by_robot,wall_clearance_m,robot_radius_m,iterations=5,
-           samples=32,margin=0.,maxiter=450,require_improvement=True):
+           samples=32,margin=0.,maxiter=450,require_improvement=True,
+           return_last_halfspaces=False):
     current=[np.array(c,copy=True) for c in baseline]
     history=[dict(iteration=0,accepted=True,cost=cost(current))]
+    last_accepted_halfspaces=None
     for iteration in range(1,iterations+1):
         old_cost=cost(current)
         try:
@@ -114,8 +126,15 @@ def refine(points, paths, baseline, *, rectangles,bounds,static_clearance_m,
                 history.append(dict(iteration=iteration,accepted=False,reason='cost increased',candidate_cost=newcost,previous_cost=old_cost,certificate=cert))
                 break
             current=new
+            # These are the exact halfspaces against which the accepted
+            # Bernstein control points have been certified. They must be
+            # reused by the final continuous certificate; regenerated
+            # sample-based planes can differ and need not contain the controls.
+            last_accepted_halfspaces=hs
             history.append(dict(iteration=iteration,accepted=True,cost=newcost,certificate=cert,solver=stats))
         except Exception as exc:
             history.append(dict(iteration=iteration,accepted=False,reason=f'{type(exc).__name__}: {exc}'))
             break
+    if return_last_halfspaces:
+        return current,history,last_accepted_halfspaces
     return current,history

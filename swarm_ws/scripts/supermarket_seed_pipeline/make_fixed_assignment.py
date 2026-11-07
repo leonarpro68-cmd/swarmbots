@@ -5,7 +5,7 @@ import argparse,json
 from pathlib import Path
 
 def generate(scene):
-    if scene.get('world')!='supermarket' or not isinstance(scene.get('seed'),int):
+    if not isinstance(scene.get('world'),str) or not scene.get('world') or not isinstance(scene.get('seed'),int):
         raise ValueError('Escenario incompatible')
     robots=sorted(r['name'] for r in scene['robots'])
     if robots!=['summit0','summit1','summit2']:raise ValueError('Se requieren exactamente tres Summit')
@@ -28,7 +28,7 @@ def generate(scene):
         c1=all_trash[first]['color'];c2=all_trash[second]['color']
         chosen[robot]={'pickup1':first,'delivery1':'deposit_'+c1,'pickup2':second,'delivery2':'deposit_'+c2}
     return {'schema':'supermarket.fixed.assignment.offline.v1','status':'FIXED_DETERMINISTIC_OFFLINE_NOT_EXECUTABLE',
-       'execution_authorized':False,'world':'supermarket','seed':scene['seed'],'chosen':chosen,
+       'execution_authorized':False,'world':scene['world'],'seed':scene['seed'],'chosen':chosen,
        'policy':'política de asignación FIXED seed100; sorted trash IDs per round; no MILP',
        'note':'Baseline determinista; puede ser igual a MILP en ciertos escenarios'}
 
