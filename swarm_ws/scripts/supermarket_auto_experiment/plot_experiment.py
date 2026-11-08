@@ -7,38 +7,93 @@ import argparse,csv,json,math,pathlib,re,subprocess,sys
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 
 def find_scenario(prep, scripts):
- """Resolve the exact scenario for legacy seed100 and prepared per-seed plans.
+ """Identify the exact map and seed from the prepared-plan directory.
 
- Do not silently use seed100 or an unrelated scenario for a different seed.
+ Supported layouts:
+   plans/seed_N[/fixed]/prepared                  (supermarket)
+   plans/<map>/seed_N[/fixed]/prepared            (other maps)
+ No implicit fallback to supermarket for an unrecognized map.
  """
- seeds=[]
- for parent in (prep, *prep.parents):
-  m=re.fullmatch(r'seed_(\d+)',parent.name)
-  if m:
-   seeds.append(int(m.group(1)))
-   break
- if seeds:
-  seed=seeds[0]
-  workspace=scripts.parent
-  plan_seed=next(parent for parent in (prep,*prep.parents) if parent.name==f'seed_{seed}')
-  map_name=plan_seed.parent.name if plan_seed.parent.name in ('supermarket','tugbot_warehouse') else 'supermarket'
-  candidate=(workspace/'config'/'supermarket'/f'seed_{seed}.json' if map_name=='supermarket'
-             else workspace/'config'/'scenarios'/map_name/f'seed_{seed}.json')
+ from swarm_maps import scenario_file, map_files
+
+ workspace = scripts.parent
+ plans_root = (scripts / 'supermarket_seed_pipeline' / 'plans').resolve()
+ prep = pathlib.Path(prep).resolve()
+ try:
+  rel = prep.relative_to(plans_root)
+ except ValueError:
+  rel = None
+
+ if rel is not None:
+  parts = rel.parts
+  if parts and re.fullmatch(r'seed_(\d+)', parts[0]):
+   map_name = 'supermarket'
+   seed = int(parts[0][5:])
+  elif len(parts) >= 2 and re.fullmatch(r'seed_(\d+)', parts[1]):
+   map_name = parts[0]
+   seed = int(parts[1][5:])
+  else:
+   raise ValueError(f'No se pudo identificar mapa/semilla de los planes: {prep}')
+
+  # Validate that the selected map has its own data, instead of silently
+  # reading supermarket or an unrelated scenario with the same seed.
+  map_files(workspace, map_name)
+  candidate = scenario_file(workspace, map_name, seed)
   if candidate.is_file():
+   scenario = json.loads(candidate.read_text(encoding='utf-8'))
+   if scenario.get('world') != map_name or scenario.get('seed') != seed:
+    raise ValueError(f'Escenario no corresponde a {map_name}/seed_{seed}: {candidate}')
    return candidate
-  # Legacy seed100 plans sometimes hold their own exact scenario.
-  if seed==100:
-   older=sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
-   if len(older)==1:return older[0]
-  raise FileNotFoundError(f'Escenario de semilla {seed} no encontrado: {candidate}')
- legacy=sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
- if len(legacy)==1:return legacy[0]
- if len(legacy)>1:raise RuntimeError(f'Múltiples escenarios legacy en {prep}; especificar uno no ambiguo')
- raise FileNotFoundError(f'No se pudo identificar semilla desde {prep}; no se elegirá un escenario arbitrario')
+  if seed == 100 and map_name == 'supermarket':
+   legacy = sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
+   if len(legacy) == 1:
+    return legacy[0]
+  raise FileNotFoundError(f'Escenario de {map_name}/seed_{seed} no encontrado: {candidate}')
+
+ # Preserve support for original D9.9 seed100 runs with no standard plan tree.
+ legacy = sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
+ if len(legacy) == 1:
+  return legacy[0]
+ if len(legacy) > 1:
+  raise RuntimeError(f'Múltiples escenarios legacy en {prep}; no se elegirá uno arbitrariamente')
+ raise FileNotFoundError(f'No se pudo identificar mapa y semilla desde {prep}')
+
+def generate_routes(prep, run, scripts):
+ """Plot routes against the actual scenario and collision geometry of its map."""
+ from swarm_maps import map_files
+ scenario_path=find_scenario(prep,scripts)
+ map_name=json.loads(scenario_path.read_text(encoding='utf-8'))['world']
+ _,geometry=map_files(scripts.parent,map_name)
+ stage_windows=run/'stage_windows_v3.json'
+ if not stage_windows.is_file():
+  raise FileNotFoundError(f'No existe el registro de etapas: {stage_windows}')
+ script=pathlib.Path(__file__).resolve().parent/'plot_routes_with_obstacles.py'
+ output=run/'plots'/'rutas_teoricas.png'
+ output.parent.mkdir(parents=True,exist_ok=True)
+ subprocess.run([sys.executable,str(script),'--stage-windows',str(stage_windows),
+                 '--scenario',str(scenario_path),'--geometry',str(geometry),
+                 '--output',str(output),'--mission-label',run.name],check=True)
+ return output
 
 def main():
- p=argparse.ArgumentParser();p.add_argument('--prepared',required=True);p.add_argument('--run-dir',required=True);p.add_argument('--scripts-dir',default='scripts');a=p.parse_args()
- prep=pathlib.Path(a.prepared).resolve();run=pathlib.Path(a.run_dir).resolve();scripts=pathlib.Path(a.scripts_dir).resolve()
+ p=argparse.ArgumentParser()
+ p.add_argument('--prepared',required=True)
+ p.add_argument('--run-dir',required=True)
+ p.add_argument('--scripts-dir',default='scripts')
+ p.add_argument('--only-routes',action='store_true',
+                help='Regenera solo rutas_teoricas.png; reutiliza stage_windows_v3.json y no requiere ROS/Gazebo')
+ a=p.parse_args()
+ prep=pathlib.Path(a.prepared).resolve()
+ run=pathlib.Path(a.run_dir).resolve()
+ scripts=pathlib.Path(a.scripts_dir).resolve()
+ sys.path.insert(0,str(scripts))
+
+ if a.only_routes:
+  output=generate_routes(prep,run,scripts)
+  print(json.dumps({'status':'ROUTES_PLOT_GENERATED','map':json.loads(find_scenario(prep,scripts).read_text())['world'],
+                    'files':[str(output)]},ensure_ascii=False))
+  return
+
  conf=json.loads((prep/'phase5_static_preflight.json').read_text());events={}
  with (run/'events.csv').open(newline='') as f:
   for e in csv.DictReader(f):
@@ -64,20 +119,15 @@ def main():
         'vx_m_s':wx,'vy_m_s':wy,'speed_m_s':math.hypot(vx,vy)}
    g.write(json.dumps(row)+'\n');count+=1
  if count<12:raise RuntimeError('Insufficient odometry records')
- plots=run/'plots';plots.mkdir(exist_ok=True)
- plot_dir=pathlib.Path(__file__).resolve().parent
- script_route=plot_dir/'plot_routes_with_obstacles.py';script_profile=plot_dir/'plot_v3_aligned.py'
- if not script_route.is_file() or not script_profile.is_file():raise RuntimeError('New plotting scripts are missing')
- scenario_file=find_scenario(prep,scripts)
- map_name=json.loads(scenario_file.read_text(encoding='utf-8'))['world']
- geometry=scripts.parent/'config'/'maps'/map_name/'obstaculos.json'
- if not geometry.is_file():raise RuntimeError(f'No se encontró la geometría del mapa activo: {geometry}')
- cmd1=[sys.executable,str(script_route),'--stage-windows',str(run/'stage_windows_v3.json'),
-       '--scenario',str(scenario_file), '--geometry',str(geometry),
-       '--output',str(plots/'rutas_teoricas.png'),'--mission-label',run.name]
- cmd2=[sys.executable,str(script_profile),'--stage-windows',str(run/'stage_windows_v3.json'),
-       '--odom-jsonl',str(run/'odom_for_d9931.jsonl'),'--output',str(plots/'velocidad_aceleracion_teoria_vs_odometria.png'),
-       '--nav-speed-limit','2.0','--nav-accel-limit','2.0','--alignment-report',str(run/'plots'/'alineacion_temporal.json')]
- for cmd in (cmd1,cmd2):subprocess.run(cmd,check=True)
- print(json.dumps({'status':'PLOTS_GENERATED','files':[str(plots/'rutas_teoricas.png'),str(plots/'velocidad_aceleracion_teoria_vs_odometria.png')]}))
+ output=generate_routes(prep,run,scripts)
+ plots=run/'plots'
+ script_profile=pathlib.Path(__file__).resolve().parent/'plot_v3_aligned.py'
+ if not script_profile.is_file():raise RuntimeError('Profile plotting script is missing')
+ subprocess.run([sys.executable,str(script_profile),'--stage-windows',str(run/'stage_windows_v3.json'),
+                 '--odom-jsonl',str(run/'odom_for_d9931.jsonl'),
+                 '--output',str(plots/'velocidad_aceleracion_teoria_vs_odometria.png'),
+                 '--nav-speed-limit','2.0','--nav-accel-limit','2.0',
+                 '--alignment-report',str(plots/'alineacion_temporal.json')],check=True)
+ print(json.dumps({'status':'PLOTS_GENERATED','files':[str(output),
+             str(plots/'velocidad_aceleracion_teoria_vs_odometria.png')]},ensure_ascii=False))
 if __name__=='__main__':main()

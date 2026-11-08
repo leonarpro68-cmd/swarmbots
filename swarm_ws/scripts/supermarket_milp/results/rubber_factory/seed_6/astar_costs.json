@@ -1,0 +1,4649 @@
+{
+  "schema": "supermarket.milp.phase1.astar_costs.v1",
+  "status": "OFFLINE_COSTS_NOT_CBS_NOT_EXECUTABLE",
+  "world": "rubber_factory",
+  "seed": 6,
+  "model": {
+    "speed_for_proxy_m_s": 2.0,
+    "length_metric": "A* edge Euclidean lengths",
+    "objective_estimate": "sum of synchronized per-stage max travel times, no handling times",
+    "method": "fixed approach nodes and fixed per-color delivery stand-off",
+    "limitations": [
+      "A* solo: no CBS ni espera por conflictos",
+      "Nodos de aproximacion a basura del escenario: no necesariamente los objetivos CBS definitivos",
+      "Paradas de deposito fijas, aproximadas para segundas entregas",
+      "No incluye tiempos de manipulacion, friccion ni transporte fisico",
+      "No representa la duracion real de Bezier / V3 ni prueba seguridad dinamica"
+    ]
+  },
+  "graph": {
+    "nodes": 574,
+    "edges": 2075,
+    "metadata": {
+      "resolution_m": 1.25,
+      "origin": [
+        -15.0,
+        -25.0
+      ],
+      "map_name": "rubber_factory",
+      "clearance_m": 0.936,
+      "status": "V1_CONNECTED_CANDIDATE",
+      "source": "rubber_factory_crop collision STL projected to 2D; bounding boxes of 12 connected footprint parts",
+      "note": "Only physical obstacles, not raster-expanded vector outlines. 8-neighbor segment safety distance >= clearance. Removed 39 nodes in eastern strip physically isolated by an uninterrupted wall."
+    }
+  },
+  "robots": {
+    "summit0": [
+      -10.0,
+      8.75
+    ],
+    "summit1": [
+      -1.25,
+      -8.75
+    ],
+    "summit2": [
+      10.0,
+      15.0
+    ]
+  },
+  "trash": {
+    "trash_A1_azul": {
+      "color": "azul",
+      "xy_m": [
+        5.48757,
+        0.02378
+      ],
+      "approach_xy_m": [
+        5.0,
+        0.0
+      ]
+    },
+    "trash_A2_azul": {
+      "color": "azul",
+      "xy_m": [
+        -7.50829,
+        23.05032
+      ],
+      "approach_xy_m": [
+        -7.5,
+        22.5
+      ]
+    },
+    "trash_N1_naranja": {
+      "color": "naranja",
+      "xy_m": [
+        3.46822,
+        -10.76816
+      ],
+      "approach_xy_m": [
+        3.75,
+        -11.25
+      ]
+    },
+    "trash_N2_naranja": {
+      "color": "naranja",
+      "xy_m": [
+        0.14359,
+        18.22303
+      ],
+      "approach_xy_m": [
+        0.0,
+        18.75
+      ]
+    },
+    "trash_V1_verde": {
+      "color": "verde",
+      "xy_m": [
+        -8.78605,
+        2.05697
+      ],
+      "approach_xy_m": [
+        -8.75,
+        2.5
+      ]
+    },
+    "trash_V2_verde": {
+      "color": "verde",
+      "xy_m": [
+        -5.47794,
+        14.32278
+      ],
+      "approach_xy_m": [
+        -5.0,
+        13.75
+      ]
+    }
+  },
+  "deposit_stands": {
+    "azul": {
+      "deposit_center_xy_m": [
+        -1.25,
+        2.5
+      ],
+      "navigation_stand_xy_m": [
+        -1.25,
+        3.75
+      ]
+    },
+    "naranja": {
+      "deposit_center_xy_m": [
+        1.25,
+        23.75
+      ],
+      "navigation_stand_xy_m": [
+        1.25,
+        22.5
+      ]
+    },
+    "verde": {
+      "deposit_center_xy_m": [
+        -2.5,
+        8.75
+      ],
+      "navigation_stand_xy_m": [
+        -3.75,
+        7.5
+      ]
+    }
+  },
+  "stages": [
+    "pickup1",
+    "delivery1",
+    "pickup2",
+    "delivery2"
+  ],
+  "pairs": [
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_A2_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 18.624369,
+        "delivery1": 7.803301,
+        "pickup2": 21.338835,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 9.312185,
+        "delivery1": 3.901651,
+        "pickup2": 10.669417,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 69.10534
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 18.624369,
+        "delivery1": 7.803301,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 9.312185,
+        "delivery1": 3.901651,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 78.284272
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 18.624369,
+        "delivery1": 7.803301,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 9.312185,
+        "delivery1": 3.901651,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 46.213204
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 18.624369,
+        "delivery1": 7.803301,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 9.312185,
+        "delivery1": 3.901651,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 41.516505
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 18.624369,
+        "delivery1": 7.803301,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 9.312185,
+        "delivery1": 3.901651,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 44.748738
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_A1_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 14.785534,
+        "delivery1": 21.338835,
+        "pickup2": 7.803301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.392767,
+        "delivery1": 10.669417,
+        "pickup2": 3.901651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 51.730971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 14.785534,
+        "delivery1": 21.338835,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.392767,
+        "delivery1": 10.669417,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 87.980971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 14.785534,
+        "delivery1": 21.338835,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.392767,
+        "delivery1": 10.669417,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 55.909903
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 14.785534,
+        "delivery1": 21.338835,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.392767,
+        "delivery1": 10.669417,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 51.213204
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 14.785534,
+        "delivery1": 21.338835,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.392767,
+        "delivery1": 10.669417,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 54.445437
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 25.695436,
+        "delivery1": 34.785534,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.847718,
+        "delivery1": 17.392767,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 92.337572
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 25.695436,
+        "delivery1": 34.785534,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.847718,
+        "delivery1": 17.392767,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 90.569805
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_N2_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 25.695436,
+        "delivery1": 34.785534,
+        "pickup2": 4.267767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.847718,
+        "delivery1": 17.392767,
+        "pickup2": 2.133884,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 69.016504
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 25.695436,
+        "delivery1": 34.785534,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.847718,
+        "delivery1": 17.392767,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 91.694174
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 25.695436,
+        "delivery1": 34.785534,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.847718,
+        "delivery1": 17.392767,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 78.587572
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 14.142136,
+        "delivery1": 4.267767,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.071068,
+        "delivery1": 2.133884,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 50.266505
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 14.142136,
+        "delivery1": 4.267767,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.071068,
+        "delivery1": 2.133884,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 48.498738
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_N1_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 14.142136,
+        "delivery1": 4.267767,
+        "pickup2": 34.785534,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.071068,
+        "delivery1": 2.133884,
+        "pickup2": 17.392767,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 87.980971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 14.142136,
+        "delivery1": 4.267767,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.071068,
+        "delivery1": 2.133884,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 49.623107
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 14.142136,
+        "delivery1": 4.267767,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.071068,
+        "delivery1": 2.133884,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 36.516505
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 6.767767,
+        "delivery1": 7.071068,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.383884,
+        "delivery1": 3.535534,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 33.498738
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 6.767767,
+        "delivery1": 7.071068,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.383884,
+        "delivery1": 3.535534,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 51.730971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 6.767767,
+        "delivery1": 7.071068,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.383884,
+        "delivery1": 3.535534,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 70.480971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 6.767767,
+        "delivery1": 7.071068,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.383884,
+        "delivery1": 3.535534,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 30.909903
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_V2_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 6.767767,
+        "delivery1": 7.071068,
+        "pickup2": 6.767767,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.383884,
+        "delivery1": 3.535534,
+        "pickup2": 3.383884,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 27.374369
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 7.071068,
+        "delivery1": 6.767767,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.535534,
+        "delivery1": 3.383884,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 33.498738
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 7.071068,
+        "delivery1": 6.767767,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.535534,
+        "delivery1": 3.383884,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 51.730971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 7.071068,
+        "delivery1": 6.767767,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.535534,
+        "delivery1": 3.383884,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 70.480971
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 7.071068,
+        "delivery1": 6.767767,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.535534,
+        "delivery1": 3.383884,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 30.909903
+    },
+    {
+      "robot": "summit0",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_V1_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 7.071068,
+        "delivery1": 6.767767,
+        "pickup2": 7.071068,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.535534,
+        "delivery1": 3.383884,
+        "pickup2": 3.535534,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 27.980971
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_A2_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 11.338835,
+        "delivery1": 7.803301,
+        "pickup2": 21.338835,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.669417,
+        "delivery1": 3.901651,
+        "pickup2": 10.669417,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 61.819806
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 11.338835,
+        "delivery1": 7.803301,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.669417,
+        "delivery1": 3.901651,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 70.998738
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 11.338835,
+        "delivery1": 7.803301,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.669417,
+        "delivery1": 3.901651,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 38.92767
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 11.338835,
+        "delivery1": 7.803301,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.669417,
+        "delivery1": 3.901651,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 34.230971
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 11.338835,
+        "delivery1": 7.803301,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.669417,
+        "delivery1": 3.901651,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 37.463204
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_A1_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 33.838835,
+        "delivery1": 21.338835,
+        "pickup2": 7.803301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 16.919418,
+        "delivery1": 10.669417,
+        "pickup2": 3.901651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 70.784272
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 33.838835,
+        "delivery1": 21.338835,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 16.919418,
+        "delivery1": 10.669417,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 107.034272
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 33.838835,
+        "delivery1": 21.338835,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 16.919418,
+        "delivery1": 10.669417,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 74.963204
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 33.838835,
+        "delivery1": 21.338835,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 16.919418,
+        "delivery1": 10.669417,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 70.266505
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 33.838835,
+        "delivery1": 21.338835,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 16.919418,
+        "delivery1": 10.669417,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 73.498738
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 7.5,
+        "delivery1": 34.785534,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.75,
+        "delivery1": 17.392767,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 74.142136
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 7.5,
+        "delivery1": 34.785534,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.75,
+        "delivery1": 17.392767,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 72.374369
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_N2_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 7.5,
+        "delivery1": 34.785534,
+        "pickup2": 4.267767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.75,
+        "delivery1": 17.392767,
+        "pickup2": 2.133884,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 50.821068
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 7.5,
+        "delivery1": 34.785534,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.75,
+        "delivery1": 17.392767,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 73.498738
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 7.5,
+        "delivery1": 34.785534,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 3.75,
+        "delivery1": 17.392767,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 60.392136
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 28.017767,
+        "delivery1": 4.267767,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.008883,
+        "delivery1": 2.133884,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 64.142136
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 28.017767,
+        "delivery1": 4.267767,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.008883,
+        "delivery1": 2.133884,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 62.374369
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_N1_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 28.017767,
+        "delivery1": 4.267767,
+        "pickup2": 34.785534,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.008883,
+        "delivery1": 2.133884,
+        "pickup2": 17.392767,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 101.856602
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 28.017767,
+        "delivery1": 4.267767,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.008883,
+        "delivery1": 2.133884,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 63.498738
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 28.017767,
+        "delivery1": 4.267767,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.008883,
+        "delivery1": 2.133884,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 50.392136
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 14.356602,
+        "delivery1": 7.071068,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.178301,
+        "delivery1": 3.535534,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 41.087573
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 14.356602,
+        "delivery1": 7.071068,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.178301,
+        "delivery1": 3.535534,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 59.319806
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 14.356602,
+        "delivery1": 7.071068,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.178301,
+        "delivery1": 3.535534,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 78.069806
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 14.356602,
+        "delivery1": 7.071068,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.178301,
+        "delivery1": 3.535534,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 38.498738
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_V2_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 14.356602,
+        "delivery1": 7.071068,
+        "pickup2": 6.767767,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.178301,
+        "delivery1": 3.535534,
+        "pickup2": 3.383884,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 34.963204
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 24.053301,
+        "delivery1": 6.767767,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.026651,
+        "delivery1": 3.383884,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 50.480971
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 24.053301,
+        "delivery1": 6.767767,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.026651,
+        "delivery1": 3.383884,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 68.713204
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 24.053301,
+        "delivery1": 6.767767,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.026651,
+        "delivery1": 3.383884,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 87.463204
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 24.053301,
+        "delivery1": 6.767767,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.026651,
+        "delivery1": 3.383884,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 47.892136
+    },
+    {
+      "robot": "summit1",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_V1_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 24.053301,
+        "delivery1": 6.767767,
+        "pickup2": 7.071068,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 12.026651,
+        "delivery1": 3.383884,
+        "pickup2": 3.535534,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 44.963204
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_A2_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 17.071068,
+        "delivery1": 7.803301,
+        "pickup2": 21.338835,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 8.535534,
+        "delivery1": 3.901651,
+        "pickup2": 10.669417,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 67.552039
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 17.071068,
+        "delivery1": 7.803301,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 8.535534,
+        "delivery1": 3.901651,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 76.730971
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 17.071068,
+        "delivery1": 7.803301,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 8.535534,
+        "delivery1": 3.901651,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 44.659903
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 17.071068,
+        "delivery1": 7.803301,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 8.535534,
+        "delivery1": 3.901651,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 39.963204
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A1_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 17.071068,
+        "delivery1": 7.803301,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 8.535534,
+        "delivery1": 3.901651,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 43.195437
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_A1_azul",
+      "color1": "azul",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 20.606602,
+        "delivery1": 21.338835,
+        "pickup2": 7.803301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 10.303301,
+        "delivery1": 10.669417,
+        "pickup2": 3.901651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 57.552039
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N1_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 20.606602,
+        "delivery1": 21.338835,
+        "pickup2": 17.071068,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 10.303301,
+        "delivery1": 10.669417,
+        "pickup2": 8.535534,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 93.802039
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_N2_naranja",
+      "color1": "azul",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 20.606602,
+        "delivery1": 21.338835,
+        "pickup2": 15.517767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 10.303301,
+        "delivery1": 10.669417,
+        "pickup2": 7.758883,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 61.730971
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V1_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 20.606602,
+        "delivery1": 21.338835,
+        "pickup2": 8.017767,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 10.303301,
+        "delivery1": 10.669417,
+        "pickup2": 4.008883,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 57.034272
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_A2_azul",
+      "pickup2": "trash_V2_verde",
+      "color1": "azul",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 20.606602,
+        "delivery1": 21.338835,
+        "pickup2": 11.553301,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 10.303301,
+        "delivery1": 10.669417,
+        "pickup2": 5.77665,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 60.266505
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 28.838835,
+        "delivery1": 34.785534,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.419417,
+        "delivery1": 17.392767,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 95.480971
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 28.838835,
+        "delivery1": 34.785534,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.419417,
+        "delivery1": 17.392767,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 93.713204
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_N2_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 28.838835,
+        "delivery1": 34.785534,
+        "pickup2": 4.267767,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.419417,
+        "delivery1": 17.392767,
+        "pickup2": 2.133884,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 72.159903
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 28.838835,
+        "delivery1": 34.785534,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.419417,
+        "delivery1": 17.392767,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 94.837573
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N1_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 28.838835,
+        "delivery1": 34.785534,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 14.419417,
+        "delivery1": 17.392767,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 81.730971
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A1_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 11.553301,
+        "delivery1": 4.267767,
+        "pickup2": 24.053301,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.77665,
+        "delivery1": 2.133884,
+        "pickup2": 12.026651,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 47.67767
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_A2_azul",
+      "color1": "naranja",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 11.553301,
+        "delivery1": 4.267767,
+        "pickup2": 8.75,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.77665,
+        "delivery1": 2.133884,
+        "pickup2": 4.375,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 45.909903
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_N1_naranja",
+      "color1": "naranja",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 11.553301,
+        "delivery1": 4.267767,
+        "pickup2": 34.785534,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.77665,
+        "delivery1": 2.133884,
+        "pickup2": 17.392767,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 85.392136
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V1_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 11.553301,
+        "delivery1": 4.267767,
+        "pickup2": 24.142136,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.77665,
+        "delivery1": 2.133884,
+        "pickup2": 12.071068,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 47.034272
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_N2_naranja",
+      "pickup2": "trash_V2_verde",
+      "color1": "naranja",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 11.553301,
+        "delivery1": 4.267767,
+        "pickup2": 11.338835,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 5.77665,
+        "delivery1": 2.133884,
+        "pickup2": 5.669417,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 33.92767
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 23.92767,
+        "delivery1": 7.071068,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 11.963835,
+        "delivery1": 3.535534,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 50.658641
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 23.92767,
+        "delivery1": 7.071068,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 11.963835,
+        "delivery1": 3.535534,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 68.890874
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 23.92767,
+        "delivery1": 7.071068,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 11.963835,
+        "delivery1": 3.535534,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 87.640874
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 23.92767,
+        "delivery1": 7.071068,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 11.963835,
+        "delivery1": 3.535534,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 48.069806
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V1_verde",
+      "pickup2": "trash_V2_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 23.92767,
+        "delivery1": 7.071068,
+        "pickup2": 6.767767,
+        "delivery2": 6.767767
+      },
+      "time_by_stage_s": {
+        "pickup1": 11.963835,
+        "delivery1": 3.535534,
+        "pickup2": 3.383884,
+        "delivery2": 3.383884
+      },
+      "total_distance_m": 44.534272
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A1_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 15.517767,
+        "delivery1": 6.767767,
+        "pickup2": 11.856602,
+        "delivery2": 7.803301
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.758883,
+        "delivery1": 3.383884,
+        "pickup2": 5.928301,
+        "delivery2": 3.901651
+      },
+      "total_distance_m": 41.945437
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_A2_azul",
+      "color1": "verde",
+      "color2": "azul",
+      "distance_by_stage_m": {
+        "pickup1": 15.517767,
+        "delivery1": 6.767767,
+        "pickup2": 16.553301,
+        "delivery2": 21.338835
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.758883,
+        "delivery1": 3.383884,
+        "pickup2": 8.276651,
+        "delivery2": 10.669417
+      },
+      "total_distance_m": 60.17767
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N1_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 15.517767,
+        "delivery1": 6.767767,
+        "pickup2": 21.856602,
+        "delivery2": 34.785534
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.758883,
+        "delivery1": 3.383884,
+        "pickup2": 10.928301,
+        "delivery2": 17.392767
+      },
+      "total_distance_m": 78.92767
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_N2_naranja",
+      "color1": "verde",
+      "color2": "naranja",
+      "distance_by_stage_m": {
+        "pickup1": 15.517767,
+        "delivery1": 6.767767,
+        "pickup2": 12.803301,
+        "delivery2": 4.267767
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.758883,
+        "delivery1": 3.383884,
+        "pickup2": 6.40165,
+        "delivery2": 2.133884
+      },
+      "total_distance_m": 39.356602
+    },
+    {
+      "robot": "summit2",
+      "pickup1": "trash_V2_verde",
+      "pickup2": "trash_V1_verde",
+      "color1": "verde",
+      "color2": "verde",
+      "distance_by_stage_m": {
+        "pickup1": 15.517767,
+        "delivery1": 6.767767,
+        "pickup2": 7.071068,
+        "delivery2": 7.071068
+      },
+      "time_by_stage_s": {
+        "pickup1": 7.758883,
+        "delivery1": 3.383884,
+        "pickup2": 3.535534,
+        "delivery2": 3.535534
+      },
+      "total_distance_m": 36.42767
+    }
+  ],
+  "routes": {
+    "summit0 -> trash_A1_azul": {
+      "distance_m": 18.624369,
+      "estimated_s": 9.312184,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -8.75,
+          7.5
+        ],
+        [
+          -7.5,
+          6.25
+        ],
+        [
+          -6.25,
+          5.0
+        ],
+        [
+          -5.0,
+          5.0
+        ],
+        [
+          -3.75,
+          3.75
+        ],
+        [
+          -2.5,
+          3.75
+        ],
+        [
+          -1.25,
+          2.5
+        ],
+        [
+          0.0,
+          2.5
+        ],
+        [
+          1.25,
+          1.25
+        ],
+        [
+          2.5,
+          1.25
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "summit0 -> trash_A2_azul": {
+      "distance_m": 14.785534,
+      "estimated_s": 7.392767,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 12,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -10.0,
+          10.0
+        ],
+        [
+          -10.0,
+          11.25
+        ],
+        [
+          -10.0,
+          12.5
+        ],
+        [
+          -10.0,
+          13.75
+        ],
+        [
+          -10.0,
+          15.0
+        ],
+        [
+          -10.0,
+          16.25
+        ],
+        [
+          -10.0,
+          17.5
+        ],
+        [
+          -8.75,
+          18.75
+        ],
+        [
+          -8.75,
+          20.0
+        ],
+        [
+          -8.75,
+          21.25
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "summit0 -> trash_N1_naranja": {
+      "distance_m": 25.695436,
+      "estimated_s": 12.847718,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 17,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -8.75,
+          7.5
+        ],
+        [
+          -7.5,
+          6.25
+        ],
+        [
+          -6.25,
+          5.0
+        ],
+        [
+          -5.0,
+          3.75
+        ],
+        [
+          -3.75,
+          2.5
+        ],
+        [
+          -2.5,
+          1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          0.0,
+          -2.5
+        ],
+        [
+          0.0,
+          -3.75
+        ],
+        [
+          1.25,
+          -5.0
+        ],
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          2.5,
+          -7.5
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "summit0 -> trash_N2_naranja": {
+      "distance_m": 14.142136,
+      "estimated_s": 7.071068,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 9,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -8.75,
+          10.0
+        ],
+        [
+          -7.5,
+          11.25
+        ],
+        [
+          -6.25,
+          12.5
+        ],
+        [
+          -5.0,
+          13.75
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -2.5,
+          16.25
+        ],
+        [
+          -1.25,
+          17.5
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "summit0 -> trash_V1_verde": {
+      "distance_m": 6.767767,
+      "estimated_s": 3.383883,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 6,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -10.0,
+          7.5
+        ],
+        [
+          -10.0,
+          6.25
+        ],
+        [
+          -10.0,
+          5.0
+        ],
+        [
+          -10.0,
+          3.75
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    },
+    "summit0 -> trash_V2_verde": {
+      "distance_m": 7.071068,
+      "estimated_s": 3.535534,
+      "start_xy_m": [
+        -10.0,
+        8.75
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 5,
+      "path_xy_m": [
+        [
+          -10.0,
+          8.75
+        ],
+        [
+          -8.75,
+          10.0
+        ],
+        [
+          -7.5,
+          11.25
+        ],
+        [
+          -6.25,
+          12.5
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "summit1 -> trash_A1_azul": {
+      "distance_m": 11.338835,
+      "estimated_s": 5.669417,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 8,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          0.0,
+          -7.5
+        ],
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          2.5,
+          -5.0
+        ],
+        [
+          3.75,
+          -3.75
+        ],
+        [
+          3.75,
+          -2.5
+        ],
+        [
+          3.75,
+          -1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "summit1 -> trash_A2_azul": {
+      "distance_m": 33.838835,
+      "estimated_s": 16.919417,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 26,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          -1.25,
+          -7.5
+        ],
+        [
+          -1.25,
+          -6.25
+        ],
+        [
+          -1.25,
+          -5.0
+        ],
+        [
+          -1.25,
+          -3.75
+        ],
+        [
+          -1.25,
+          -2.5
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          1.25
+        ],
+        [
+          -1.25,
+          2.5
+        ],
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -1.25,
+          7.5
+        ],
+        [
+          -1.25,
+          8.75
+        ],
+        [
+          -1.25,
+          10.0
+        ],
+        [
+          -2.5,
+          11.25
+        ],
+        [
+          -2.5,
+          12.5
+        ],
+        [
+          -3.75,
+          13.75
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -5.0,
+          16.25
+        ],
+        [
+          -5.0,
+          17.5
+        ],
+        [
+          -6.25,
+          18.75
+        ],
+        [
+          -6.25,
+          20.0
+        ],
+        [
+          -6.25,
+          21.25
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "summit1 -> trash_N1_naranja": {
+      "distance_m": 7.5,
+      "estimated_s": 3.75,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 7,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          0.0,
+          -8.75
+        ],
+        [
+          1.25,
+          -8.75
+        ],
+        [
+          2.5,
+          -8.75
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "summit1 -> trash_N2_naranja": {
+      "distance_m": 28.017767,
+      "estimated_s": 14.008883,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 23,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          -1.25,
+          -7.5
+        ],
+        [
+          -1.25,
+          -6.25
+        ],
+        [
+          -1.25,
+          -5.0
+        ],
+        [
+          -1.25,
+          -3.75
+        ],
+        [
+          -1.25,
+          -2.5
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          1.25
+        ],
+        [
+          -1.25,
+          2.5
+        ],
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -1.25,
+          7.5
+        ],
+        [
+          -1.25,
+          8.75
+        ],
+        [
+          -1.25,
+          10.0
+        ],
+        [
+          -1.25,
+          11.25
+        ],
+        [
+          -1.25,
+          12.5
+        ],
+        [
+          -1.25,
+          13.75
+        ],
+        [
+          -1.25,
+          15.0
+        ],
+        [
+          -1.25,
+          16.25
+        ],
+        [
+          -1.25,
+          17.5
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "summit1 -> trash_V1_verde": {
+      "distance_m": 14.356602,
+      "estimated_s": 7.178301,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 10,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          -2.5,
+          -7.5
+        ],
+        [
+          -3.75,
+          -6.25
+        ],
+        [
+          -5.0,
+          -5.0
+        ],
+        [
+          -6.25,
+          -3.75
+        ],
+        [
+          -6.25,
+          -2.5
+        ],
+        [
+          -7.5,
+          -1.25
+        ],
+        [
+          -7.5,
+          0.0
+        ],
+        [
+          -7.5,
+          1.25
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    },
+    "summit1 -> trash_V2_verde": {
+      "distance_m": 24.053301,
+      "estimated_s": 12.02665,
+      "start_xy_m": [
+        -1.25,
+        -8.75
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 19,
+      "path_xy_m": [
+        [
+          -1.25,
+          -8.75
+        ],
+        [
+          -1.25,
+          -7.5
+        ],
+        [
+          -1.25,
+          -6.25
+        ],
+        [
+          -1.25,
+          -5.0
+        ],
+        [
+          -1.25,
+          -3.75
+        ],
+        [
+          -1.25,
+          -2.5
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          1.25
+        ],
+        [
+          -1.25,
+          2.5
+        ],
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -2.5,
+          7.5
+        ],
+        [
+          -2.5,
+          8.75
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "summit2 -> trash_A1_azul": {
+      "distance_m": 17.071068,
+      "estimated_s": 8.535534,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          10.0,
+          13.75
+        ],
+        [
+          10.0,
+          12.5
+        ],
+        [
+          10.0,
+          11.25
+        ],
+        [
+          10.0,
+          10.0
+        ],
+        [
+          8.75,
+          8.75
+        ],
+        [
+          8.75,
+          7.5
+        ],
+        [
+          7.5,
+          6.25
+        ],
+        [
+          7.5,
+          5.0
+        ],
+        [
+          6.25,
+          3.75
+        ],
+        [
+          6.25,
+          2.5
+        ],
+        [
+          6.25,
+          1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "summit2 -> trash_A2_azul": {
+      "distance_m": 20.606602,
+      "estimated_s": 10.303301,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 15,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          8.75,
+          15.0
+        ],
+        [
+          7.5,
+          16.25
+        ],
+        [
+          6.25,
+          16.25
+        ],
+        [
+          5.0,
+          16.25
+        ],
+        [
+          3.75,
+          17.5
+        ],
+        [
+          2.5,
+          17.5
+        ],
+        [
+          1.25,
+          18.75
+        ],
+        [
+          0.0,
+          18.75
+        ],
+        [
+          -1.25,
+          20.0
+        ],
+        [
+          -2.5,
+          20.0
+        ],
+        [
+          -3.75,
+          21.25
+        ],
+        [
+          -5.0,
+          21.25
+        ],
+        [
+          -6.25,
+          21.25
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "summit2 -> trash_N1_naranja": {
+      "distance_m": 28.838835,
+      "estimated_s": 14.419417,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 22,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          10.0,
+          13.75
+        ],
+        [
+          10.0,
+          12.5
+        ],
+        [
+          10.0,
+          11.25
+        ],
+        [
+          10.0,
+          10.0
+        ],
+        [
+          10.0,
+          8.75
+        ],
+        [
+          10.0,
+          7.5
+        ],
+        [
+          10.0,
+          6.25
+        ],
+        [
+          10.0,
+          5.0
+        ],
+        [
+          10.0,
+          3.75
+        ],
+        [
+          10.0,
+          2.5
+        ],
+        [
+          10.0,
+          1.25
+        ],
+        [
+          8.75,
+          0.0
+        ],
+        [
+          8.75,
+          -1.25
+        ],
+        [
+          7.5,
+          -2.5
+        ],
+        [
+          7.5,
+          -3.75
+        ],
+        [
+          6.25,
+          -5.0
+        ],
+        [
+          6.25,
+          -6.25
+        ],
+        [
+          5.0,
+          -7.5
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "summit2 -> trash_N2_naranja": {
+      "distance_m": 11.553301,
+      "estimated_s": 5.77665,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 9,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          8.75,
+          15.0
+        ],
+        [
+          7.5,
+          15.0
+        ],
+        [
+          6.25,
+          16.25
+        ],
+        [
+          5.0,
+          16.25
+        ],
+        [
+          3.75,
+          17.5
+        ],
+        [
+          2.5,
+          17.5
+        ],
+        [
+          1.25,
+          17.5
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "summit2 -> trash_V1_verde": {
+      "distance_m": 23.92767,
+      "estimated_s": 11.963835,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 16,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          8.75,
+          13.75
+        ],
+        [
+          7.5,
+          12.5
+        ],
+        [
+          6.25,
+          11.25
+        ],
+        [
+          5.0,
+          10.0
+        ],
+        [
+          3.75,
+          8.75
+        ],
+        [
+          2.5,
+          7.5
+        ],
+        [
+          1.25,
+          7.5
+        ],
+        [
+          0.0,
+          6.25
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -2.5,
+          5.0
+        ],
+        [
+          -3.75,
+          5.0
+        ],
+        [
+          -5.0,
+          3.75
+        ],
+        [
+          -6.25,
+          3.75
+        ],
+        [
+          -7.5,
+          3.75
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    },
+    "summit2 -> trash_V2_verde": {
+      "distance_m": 15.517767,
+      "estimated_s": 7.758883,
+      "start_xy_m": [
+        10.0,
+        15.0
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          10.0,
+          15.0
+        ],
+        [
+          8.75,
+          15.0
+        ],
+        [
+          7.5,
+          15.0
+        ],
+        [
+          6.25,
+          15.0
+        ],
+        [
+          5.0,
+          15.0
+        ],
+        [
+          3.75,
+          15.0
+        ],
+        [
+          2.5,
+          15.0
+        ],
+        [
+          1.25,
+          15.0
+        ],
+        [
+          0.0,
+          15.0
+        ],
+        [
+          -1.25,
+          15.0
+        ],
+        [
+          -2.5,
+          15.0
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "trash_A1_azul -> deposit_stand_azul": {
+      "distance_m": 7.803301,
+      "estimated_s": 3.90165,
+      "start_xy_m": [
+        5.0,
+        0.0
+      ],
+      "end_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "node_count": 6,
+      "path_xy_m": [
+        [
+          5.0,
+          0.0
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          2.5,
+          2.5
+        ],
+        [
+          1.25,
+          2.5
+        ],
+        [
+          0.0,
+          2.5
+        ],
+        [
+          -1.25,
+          3.75
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_A2_azul": {
+      "distance_m": 21.338835,
+      "estimated_s": 10.669417,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 16,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -1.25,
+          7.5
+        ],
+        [
+          -1.25,
+          8.75
+        ],
+        [
+          -1.25,
+          10.0
+        ],
+        [
+          -2.5,
+          11.25
+        ],
+        [
+          -2.5,
+          12.5
+        ],
+        [
+          -3.75,
+          13.75
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -5.0,
+          16.25
+        ],
+        [
+          -5.0,
+          17.5
+        ],
+        [
+          -6.25,
+          18.75
+        ],
+        [
+          -6.25,
+          20.0
+        ],
+        [
+          -6.25,
+          21.25
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_N1_naranja": {
+      "distance_m": 17.071068,
+      "estimated_s": 8.535534,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          2.5
+        ],
+        [
+          -1.25,
+          1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          0.0,
+          -2.5
+        ],
+        [
+          0.0,
+          -3.75
+        ],
+        [
+          1.25,
+          -5.0
+        ],
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          2.5,
+          -7.5
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_N2_naranja": {
+      "distance_m": 15.517767,
+      "estimated_s": 7.758883,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -1.25,
+          7.5
+        ],
+        [
+          -1.25,
+          8.75
+        ],
+        [
+          -1.25,
+          10.0
+        ],
+        [
+          -1.25,
+          11.25
+        ],
+        [
+          -1.25,
+          12.5
+        ],
+        [
+          -1.25,
+          13.75
+        ],
+        [
+          -1.25,
+          15.0
+        ],
+        [
+          -1.25,
+          16.25
+        ],
+        [
+          -1.25,
+          17.5
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_V1_verde": {
+      "distance_m": 8.017767,
+      "estimated_s": 4.008883,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 7,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -2.5,
+          3.75
+        ],
+        [
+          -3.75,
+          3.75
+        ],
+        [
+          -5.0,
+          3.75
+        ],
+        [
+          -6.25,
+          3.75
+        ],
+        [
+          -7.5,
+          3.75
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_V2_verde": {
+      "distance_m": 11.553301,
+      "estimated_s": 5.77665,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 9,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -2.5,
+          7.5
+        ],
+        [
+          -2.5,
+          8.75
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "trash_A2_azul -> deposit_stand_azul": {
+      "distance_m": 21.338835,
+      "estimated_s": 10.669417,
+      "start_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "end_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "node_count": 16,
+      "path_xy_m": [
+        [
+          -7.5,
+          22.5
+        ],
+        [
+          -6.25,
+          21.25
+        ],
+        [
+          -6.25,
+          20.0
+        ],
+        [
+          -6.25,
+          18.75
+        ],
+        [
+          -5.0,
+          17.5
+        ],
+        [
+          -5.0,
+          16.25
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -3.75,
+          13.75
+        ],
+        [
+          -2.5,
+          12.5
+        ],
+        [
+          -2.5,
+          11.25
+        ],
+        [
+          -1.25,
+          10.0
+        ],
+        [
+          -1.25,
+          8.75
+        ],
+        [
+          -1.25,
+          7.5
+        ],
+        [
+          -1.25,
+          6.25
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          -1.25,
+          3.75
+        ]
+      ]
+    },
+    "deposit_stand_azul -> trash_A1_azul": {
+      "distance_m": 7.803301,
+      "estimated_s": 3.90165,
+      "start_xy_m": [
+        -1.25,
+        3.75
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 6,
+      "path_xy_m": [
+        [
+          -1.25,
+          3.75
+        ],
+        [
+          0.0,
+          2.5
+        ],
+        [
+          1.25,
+          2.5
+        ],
+        [
+          2.5,
+          2.5
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "trash_N1_naranja -> deposit_stand_naranja": {
+      "distance_m": 34.785534,
+      "estimated_s": 17.392767,
+      "start_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "end_xy_m": [
+        1.25,
+        22.5
+      ],
+      "node_count": 28,
+      "path_xy_m": [
+        [
+          3.75,
+          -11.25
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -7.5
+        ],
+        [
+          3.75,
+          -6.25
+        ],
+        [
+          3.75,
+          -5.0
+        ],
+        [
+          3.75,
+          -3.75
+        ],
+        [
+          3.75,
+          -2.5
+        ],
+        [
+          3.75,
+          -1.25
+        ],
+        [
+          3.75,
+          0.0
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          3.75,
+          2.5
+        ],
+        [
+          3.75,
+          3.75
+        ],
+        [
+          3.75,
+          5.0
+        ],
+        [
+          3.75,
+          6.25
+        ],
+        [
+          3.75,
+          7.5
+        ],
+        [
+          3.75,
+          8.75
+        ],
+        [
+          3.75,
+          10.0
+        ],
+        [
+          3.75,
+          11.25
+        ],
+        [
+          3.75,
+          12.5
+        ],
+        [
+          3.75,
+          13.75
+        ],
+        [
+          3.75,
+          15.0
+        ],
+        [
+          3.75,
+          16.25
+        ],
+        [
+          3.75,
+          17.5
+        ],
+        [
+          2.5,
+          18.75
+        ],
+        [
+          2.5,
+          20.0
+        ],
+        [
+          2.5,
+          21.25
+        ],
+        [
+          1.25,
+          22.5
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_A1_azul": {
+      "distance_m": 24.053301,
+      "estimated_s": 12.02665,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 19,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          1.25,
+          21.25
+        ],
+        [
+          1.25,
+          20.0
+        ],
+        [
+          1.25,
+          18.75
+        ],
+        [
+          1.25,
+          17.5
+        ],
+        [
+          1.25,
+          16.25
+        ],
+        [
+          1.25,
+          15.0
+        ],
+        [
+          1.25,
+          13.75
+        ],
+        [
+          1.25,
+          12.5
+        ],
+        [
+          1.25,
+          11.25
+        ],
+        [
+          1.25,
+          10.0
+        ],
+        [
+          1.25,
+          8.75
+        ],
+        [
+          1.25,
+          7.5
+        ],
+        [
+          2.5,
+          6.25
+        ],
+        [
+          2.5,
+          5.0
+        ],
+        [
+          3.75,
+          3.75
+        ],
+        [
+          3.75,
+          2.5
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_A2_azul": {
+      "distance_m": 8.75,
+      "estimated_s": 4.375,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 8,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          0.0,
+          22.5
+        ],
+        [
+          -1.25,
+          22.5
+        ],
+        [
+          -2.5,
+          22.5
+        ],
+        [
+          -3.75,
+          22.5
+        ],
+        [
+          -5.0,
+          22.5
+        ],
+        [
+          -6.25,
+          22.5
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_N2_naranja": {
+      "distance_m": 4.267767,
+      "estimated_s": 2.133883,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 4,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          1.25,
+          21.25
+        ],
+        [
+          1.25,
+          20.0
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_V1_verde": {
+      "distance_m": 24.142136,
+      "estimated_s": 12.071068,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 17,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          0.0,
+          21.25
+        ],
+        [
+          -1.25,
+          20.0
+        ],
+        [
+          -1.25,
+          18.75
+        ],
+        [
+          -2.5,
+          17.5
+        ],
+        [
+          -2.5,
+          16.25
+        ],
+        [
+          -2.5,
+          15.0
+        ],
+        [
+          -3.75,
+          13.75
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -5.0,
+          11.25
+        ],
+        [
+          -5.0,
+          10.0
+        ],
+        [
+          -6.25,
+          8.75
+        ],
+        [
+          -6.25,
+          7.5
+        ],
+        [
+          -7.5,
+          6.25
+        ],
+        [
+          -7.5,
+          5.0
+        ],
+        [
+          -7.5,
+          3.75
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_V2_verde": {
+      "distance_m": 11.338835,
+      "estimated_s": 5.669417,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 8,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          0.0,
+          21.25
+        ],
+        [
+          -1.25,
+          20.0
+        ],
+        [
+          -2.5,
+          18.75
+        ],
+        [
+          -3.75,
+          17.5
+        ],
+        [
+          -3.75,
+          16.25
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "trash_N2_naranja -> deposit_stand_naranja": {
+      "distance_m": 4.267767,
+      "estimated_s": 2.133883,
+      "start_xy_m": [
+        0.0,
+        18.75
+      ],
+      "end_xy_m": [
+        1.25,
+        22.5
+      ],
+      "node_count": 4,
+      "path_xy_m": [
+        [
+          0.0,
+          18.75
+        ],
+        [
+          1.25,
+          20.0
+        ],
+        [
+          1.25,
+          21.25
+        ],
+        [
+          1.25,
+          22.5
+        ]
+      ]
+    },
+    "deposit_stand_naranja -> trash_N1_naranja": {
+      "distance_m": 34.785534,
+      "estimated_s": 17.392767,
+      "start_xy_m": [
+        1.25,
+        22.5
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 28,
+      "path_xy_m": [
+        [
+          1.25,
+          22.5
+        ],
+        [
+          2.5,
+          21.25
+        ],
+        [
+          2.5,
+          20.0
+        ],
+        [
+          2.5,
+          18.75
+        ],
+        [
+          3.75,
+          17.5
+        ],
+        [
+          3.75,
+          16.25
+        ],
+        [
+          3.75,
+          15.0
+        ],
+        [
+          3.75,
+          13.75
+        ],
+        [
+          3.75,
+          12.5
+        ],
+        [
+          3.75,
+          11.25
+        ],
+        [
+          3.75,
+          10.0
+        ],
+        [
+          3.75,
+          8.75
+        ],
+        [
+          3.75,
+          7.5
+        ],
+        [
+          3.75,
+          6.25
+        ],
+        [
+          3.75,
+          5.0
+        ],
+        [
+          3.75,
+          3.75
+        ],
+        [
+          3.75,
+          2.5
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          3.75,
+          0.0
+        ],
+        [
+          3.75,
+          -1.25
+        ],
+        [
+          3.75,
+          -2.5
+        ],
+        [
+          3.75,
+          -3.75
+        ],
+        [
+          3.75,
+          -5.0
+        ],
+        [
+          3.75,
+          -6.25
+        ],
+        [
+          3.75,
+          -7.5
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "trash_V1_verde -> deposit_stand_verde": {
+      "distance_m": 7.071068,
+      "estimated_s": 3.535534,
+      "start_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "end_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "node_count": 5,
+      "path_xy_m": [
+        [
+          -8.75,
+          2.5
+        ],
+        [
+          -7.5,
+          3.75
+        ],
+        [
+          -6.25,
+          5.0
+        ],
+        [
+          -5.0,
+          6.25
+        ],
+        [
+          -3.75,
+          7.5
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_A1_azul": {
+      "distance_m": 11.856602,
+      "estimated_s": 5.928301,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        5.0,
+        0.0
+      ],
+      "node_count": 8,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -2.5,
+          6.25
+        ],
+        [
+          -1.25,
+          5.0
+        ],
+        [
+          0.0,
+          3.75
+        ],
+        [
+          1.25,
+          2.5
+        ],
+        [
+          2.5,
+          1.25
+        ],
+        [
+          3.75,
+          1.25
+        ],
+        [
+          5.0,
+          0.0
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_A2_azul": {
+      "distance_m": 16.553301,
+      "estimated_s": 8.27665,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        -7.5,
+        22.5
+      ],
+      "node_count": 13,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -3.75,
+          8.75
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -3.75,
+          13.75
+        ],
+        [
+          -3.75,
+          15.0
+        ],
+        [
+          -5.0,
+          16.25
+        ],
+        [
+          -5.0,
+          17.5
+        ],
+        [
+          -6.25,
+          18.75
+        ],
+        [
+          -6.25,
+          20.0
+        ],
+        [
+          -6.25,
+          21.25
+        ],
+        [
+          -7.5,
+          22.5
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_N1_naranja": {
+      "distance_m": 21.856602,
+      "estimated_s": 10.928301,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        3.75,
+        -11.25
+      ],
+      "node_count": 16,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -3.75,
+          6.25
+        ],
+        [
+          -3.75,
+          5.0
+        ],
+        [
+          -2.5,
+          3.75
+        ],
+        [
+          -2.5,
+          2.5
+        ],
+        [
+          -2.5,
+          1.25
+        ],
+        [
+          -1.25,
+          0.0
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          0.0,
+          -2.5
+        ],
+        [
+          0.0,
+          -3.75
+        ],
+        [
+          1.25,
+          -5.0
+        ],
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          2.5,
+          -7.5
+        ],
+        [
+          3.75,
+          -8.75
+        ],
+        [
+          3.75,
+          -10.0
+        ],
+        [
+          3.75,
+          -11.25
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_N2_naranja": {
+      "distance_m": 12.803301,
+      "estimated_s": 6.40165,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        0.0,
+        18.75
+      ],
+      "node_count": 10,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -3.75,
+          8.75
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -2.5,
+          12.5
+        ],
+        [
+          -2.5,
+          13.75
+        ],
+        [
+          -1.25,
+          15.0
+        ],
+        [
+          -1.25,
+          16.25
+        ],
+        [
+          -1.25,
+          17.5
+        ],
+        [
+          0.0,
+          18.75
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_V2_verde": {
+      "distance_m": 6.767767,
+      "estimated_s": 3.383883,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "node_count": 6,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -3.75,
+          8.75
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -5.0,
+          13.75
+        ]
+      ]
+    },
+    "trash_V2_verde -> deposit_stand_verde": {
+      "distance_m": 6.767767,
+      "estimated_s": 3.383883,
+      "start_xy_m": [
+        -5.0,
+        13.75
+      ],
+      "end_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "node_count": 6,
+      "path_xy_m": [
+        [
+          -5.0,
+          13.75
+        ],
+        [
+          -3.75,
+          12.5
+        ],
+        [
+          -3.75,
+          11.25
+        ],
+        [
+          -3.75,
+          10.0
+        ],
+        [
+          -3.75,
+          8.75
+        ],
+        [
+          -3.75,
+          7.5
+        ]
+      ]
+    },
+    "deposit_stand_verde -> trash_V1_verde": {
+      "distance_m": 7.071068,
+      "estimated_s": 3.535534,
+      "start_xy_m": [
+        -3.75,
+        7.5
+      ],
+      "end_xy_m": [
+        -8.75,
+        2.5
+      ],
+      "node_count": 5,
+      "path_xy_m": [
+        [
+          -3.75,
+          7.5
+        ],
+        [
+          -5.0,
+          6.25
+        ],
+        [
+          -6.25,
+          5.0
+        ],
+        [
+          -7.5,
+          3.75
+        ],
+        [
+          -8.75,
+          2.5
+        ]
+      ]
+    }
+  },
+  "input_sha256": {
+    "scenario": "701f9a1c91db40dda63be26e0a191fe06b1d286dd7e28db119d374360b8b79de",
+    "graph": "fca541b14332dae0d309ac4e9c2f2671767f03b493812c078b797d1d28dafa84"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "scenario_sha256": "bf520b712154edf5e5a5f3ccfe7d32b5af53d06264b6d210f22426bfb59d0b25",
+  "assignment_sha256": "68e227f80a9285c3b7b35332af72453fb8a70b73e0b70a6d47d3ebab0f97b61b",
+  "geometry_sha256": "15cca71e441bce8ba0d621442d833d1659bbe989f3ed7eae5ed701992dba8205",
+  "graph_sha256": "fca541b14332dae0d309ac4e9c2f2671767f03b493812c078b797d1d28dafa84",
+  "seed": 1,
+  "assignment_mode": "milp",
+  "max_ct": 6000,
+  "max_cbs_time": 110,
+  "maxiter": 450,
+  "refinements": 5,
+  "max_speed": 2.0,
+  "max_acceleration": 2.0,
+  "map": "rubber_factory"
+}

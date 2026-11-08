@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Rectangle
 import numpy as np
 
@@ -55,7 +56,7 @@ def draw_scenario(ax, scenario):
 
 
 def draw_obstacles(ax, geometry):
-    """Draw *actual* supermarket axis-aligned shelf footprints from geometry JSON."""
+    """Draw obstacle footprints and axis limits for the selected world."""
     if geometry is None:
         return
     for ob in geometry.get('obstacles', []):
@@ -75,7 +76,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--stage-windows', required=True)
     ap.add_argument('--scenario', default=None)
-    ap.add_argument('--geometry', required=True, help='supermarket_obstaculos.json real')
+    ap.add_argument('--geometry', required=True, help='obstaculos.json del mundo activo')
     ap.add_argument('--output', required=True)
     ap.add_argument('--mission-label', default='seed_100_run_007')
     args = ap.parse_args()
@@ -112,18 +113,20 @@ def main():
                 ax.scatter(*xy[-1],marker='*',s=105,color=color,zorder=7)
         ax.set_title(f'{label} · Hybrid V2 + D9.9 · {float(window["max_duration_s"]):.1f} s',
                      fontsize=10.3,fontweight='bold')
-        # Axis bounds come from the documented supermarket geometry, not hardcoded defaults.
-        ax.set_xticks([-10,-5,0,5,10]); ax.set_yticks([-20,-10,0,10,20])
+        # Adapt ticks to each map's actual bounds.
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=7))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=7))
         ax.set_xlabel('X (m)',fontsize=9); ax.set_ylabel('Y (m)',fontsize=9)
         ax.grid(alpha=.18)
         ax.set_aspect('equal',adjustable='box')
         for spine in ax.spines.values(): spine.set_linewidth(1.1)
-    legend=[Rectangle((0,0),1,1,facecolor='#78828c',edgecolor='#36434e',label='Estanterías / obstáculos'),
+    legend=[Rectangle((0,0),1,1,facecolor='#78828c',edgecolor='#36434e',label='Obstáculos del mapa'),
             Line2D([0],[0],color='#444',lw=2,label='Bézier planificada'),
             Line2D([0],[0],marker='s',color='#333',linestyle='None',markersize=6,label='Inicio etapa'),
             Line2D([0],[0],marker='*',color='#333',linestyle='None',markersize=9,label='Fin etapa')]
     fig.legend(handles=legend,loc='upper center',bbox_to_anchor=(.5,.973),ncol=3,fontsize=9)
-    fig.suptitle(f'SwarmBots D9.9 · trayectorias planificadas · {args.mission_label}',
+    world_label = scenario.get('world', 'mapa no indicado') if scenario else 'mapa no indicado'
+    fig.suptitle(f'SwarmBots · {world_label} · trayectorias planificadas · {args.mission_label}',
                  fontsize=14,fontweight='bold',y=.991)
     fig.text(.5,.008,'Curvas planificadas ejecutadas en D9.9.22; no son recorridos medidos en Gazebo.',
              fontsize=8,ha='center',color='#444')
