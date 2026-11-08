@@ -54,10 +54,10 @@ def audit(cbs_path,scene_path,output,geometry_path):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);here=Path(__file__).resolve().parent
-    p.add_argument('--cbs',type=Path,default=here/'reference_milp_cbs_seed100.json')
-    p.add_argument('--scenario',type=Path,default=here/'reference_seed100.json')
-    p.add_argument('--geometry',type=Path,default=map_files(here.parents[1], 'supermarket')[1])
-    p.add_argument('--output',type=Path,default=here/'results/geometry_audit.json')
+    p.add_argument('--cbs',type=Path,required=True)
+    p.add_argument('--scenario',type=Path,required=True)
+    p.add_argument('--geometry',type=Path,required=True)
+    p.add_argument('--output',type=Path,required=True)
     a=p.parse_args()
     return audit(a.cbs,a.scenario,a.output,a.geometry)
 if __name__=='__main__':sys.exit(main())

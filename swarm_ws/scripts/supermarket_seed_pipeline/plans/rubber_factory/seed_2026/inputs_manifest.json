@@ -5,11 +5,12 @@
   "graph_sha256": "fca541b14332dae0d309ac4e9c2f2671767f03b493812c078b797d1d28dafa84",
   "seed": 2026,
   "assignment_mode": "milp",
-  "max_ct": 6000,
+  "max_ct": 10000,
   "max_cbs_time": 110,
   "maxiter": 450,
   "refinements": 5,
   "max_speed": 2.0,
   "max_acceleration": 2.0,
-  "map": "rubber_factory"
+  "map": "rubber_factory",
+  "deposit_center_exclusion_m": 1.1
 }

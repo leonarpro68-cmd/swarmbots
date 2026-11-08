@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Independent, supervised new-seed supermarket launch. Does NOT plan while Gazebo runs.
+"""Supervised multimapa launch using verified, seed-scoped offline artifacts.
 
-Unlike supermarket_full_experiment.launch.py, this reads seed-scoped, complete
-and verified offline artifacts. The old, validated launch is untouched.
+Does NOT run planners while Gazebo executes the prepared mission.
 """
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, ExecuteProcess, TimerAction
@@ -18,6 +17,9 @@ def setup(context,*args,**kwargs):
     seedstr=LaunchConfiguration('seed').perform(context)
     mode=LaunchConfiguration('assignment_mode').perform(context).lower()
     map_name=LaunchConfiguration('map').perform(context).lower()
+    timing_profile=LaunchConfiguration('timing_profile').perform(context).lower()
+    if timing_profile not in ('normal','fast'):
+        raise ValueError('timing_profile debe ser normal o fast')
     if not re.fullmatch(r'[a-z][a-z0-9_]*',map_name):
         raise ValueError('Nombre de mapa inválido')
     if mode not in ('fixed','milp'):raise ValueError('assignment_mode debe ser fixed o milp')
@@ -48,7 +50,7 @@ def setup(context,*args,**kwargs):
     support=IncludeLaunchDescription(PythonLaunchDescriptionSource(str(launch_support)),
         launch_arguments={'n_robots':'3','world_name':'world_demo'}.items())
     worker=ExecuteProcess(cmd=['python3',str(runner),'--workspace',str(ws),'--seed',str(seed),'--map',map_name,'--assignment-mode',mode,
-        '--results-root',LaunchConfiguration('results_root'),'--readiness-seconds',LaunchConfiguration('readiness_seconds')],
+        '--results-root',LaunchConfiguration('results_root'),'--readiness-seconds',LaunchConfiguration('readiness_seconds'),'--timing-profile',timing_profile],
         cwd=str(ws),output='screen',name='supermarket_prepared_seed_controller')
     return [gazebo,TimerAction(period=5.,actions=[support]),TimerAction(period=8.,actions=[worker])]
 
@@ -62,6 +64,7 @@ def generate_launch_description():
         DeclareLaunchArgument('workspace',default_value=os.path.join(home,'swarm_ws')),
         DeclareLaunchArgument('headless',default_value='false'),
         DeclareLaunchArgument('readiness_seconds',default_value='180'),
+        DeclareLaunchArgument('timing_profile',default_value='normal',description='normal (8/15/8/3 s) o fast (3/5/4/1 s); tiempos críticos sin cambios'),
         DeclareLaunchArgument('results_root',default_value=os.path.join(home,'swarm_ws','scripts','resultados','experiments')),
         OpaqueFunction(function=setup),
     ])

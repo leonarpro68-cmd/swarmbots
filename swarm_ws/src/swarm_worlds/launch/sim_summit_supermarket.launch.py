@@ -1,7 +1,7 @@
 """Launcher DEDICADO a supermarket (copia conservadora de sim_summit.launch.py).
 
 Sincroniza exactamente 3 robots + 6 basuras + 3 depósitos a partir de
-scenario_json (offline, seed 100). Nunca randomiza poses en este launcher.
+scenario_json (offline, semilla indicada por el usuario). Nunca randomiza poses en este launcher.
 
 Conserva la cadena de Gazebo original: xacro -> URDF -> SDF inyectado fdir1,
 robot_state_publisher, puentes ROS-Gazebo, pinza y DetachableJoint.
@@ -9,7 +9,7 @@ Las basuras y depósitos se inyectan ANTES del spawn de los tres robots.
 
 Uso (luego de instalar ambos .py en swarm_worlds/launch/):
   ros2 launch swarm_worlds sim_summit_supermarket.launch.py \
-      scenario_json:=/ruta/absoluta/seed_100.json seed:=100 headless:=false
+      scenario_json:=/ruta/absoluta/seed_2026.json seed:=2026 headless:=false
 
 No activa navegação CBS, Bézier ni cmd_vel. Solo genera escenario y spawns.
 """
@@ -560,14 +560,14 @@ def _launch_setup(context, *args, **kwargs):
     seed = int(LaunchConfiguration("seed").perform(context))
     scenario_path = LaunchConfiguration("scenario_json").perform(context)
     if not scenario_path:
-        raise ValueError("Falta scenario_json:=/ruta/absoluta/seed_100.json (nunca usar spawn aleatorio)")
+        raise ValueError("Falta scenario_json:=/ruta/absoluta/seed_N.json (nunca usar spawn aleatorio)")
     if not re.fullmatch(r'[a-z][a-z0-9_]*',world):
         raise ValueError('Nombre de mundo inválido')
     if seed < 0:
         raise ValueError("La semilla debe coincidir con el JSON; -1 no está permitido")
     map_geometry=LaunchConfiguration("map_geometry_json").perform(context)
     if world!="supermarket" and not map_geometry:
-        raise ValueError('Se requiere map_geometry_json para tugbot_warehouse')
+        raise ValueError('Se requiere map_geometry_json para el mundo seleccionado')
     scenario = load_scenario(scenario_path, expected_seed=seed,
                              expected_world=world,geometry_path=map_geometry or None)
     if (n_robots, n_trash, n_deposits) != (3, 6, 3):

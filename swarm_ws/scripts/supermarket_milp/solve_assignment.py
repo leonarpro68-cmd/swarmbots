@@ -142,8 +142,8 @@ def solve(data,one_color_per_round=False,verify_exhaustive=True):
 
 def main():
     ap=argparse.ArgumentParser(description='Fase 2 MILP offline. NO emite comandos ROS')
-    ap.add_argument('--costs',type=Path,default=HERE/'results'/'seed_100'/'astar_costs.json')
-    ap.add_argument('--output',type=Path,default=HERE/'results'/'seed_100'/'assignment_milp.json')
+    ap.add_argument('--costs',type=Path,required=True)
+    ap.add_argument('--output',type=Path,required=True)
     ap.add_argument('--one-color-per-round',action='store_true',help='evitar que dos robots compartan depósito en misma ronda')
     ap.add_argument('--no-exhaustive',action='store_true',help='desactivar comprobación independiente de las 720 asignaciones')
     args=ap.parse_args()

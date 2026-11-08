@@ -47,11 +47,11 @@ El preflight offline no sustituye la validación física en Gazebo. La misión d
 
 ## Herramientas de bajo nivel y pruebas
 
-`build_costs.py` y `solve_assignment.py` siguen disponibles para análisis manual de un escenario existente. Su uso separado exige proporcionar rutas consistentes con el mismo mapa y semilla. Las salidas MILP se guardan en `scripts/supermarket_milp/results/<mapa>/seed_<N>/`, salvo `supermarket`, que conserva la ruta histórica `results/seed_<N>/`.
+`build_costs.py` y `solve_assignment.py` siguen disponibles para análisis manual de un escenario existente. Su uso separado exige proporcionar rutas consistentes con el mismo mapa y semilla. Las salidas MILP de todos los mapas, incluido `supermarket`, se guardan en `scripts/supermarket_milp/results/<mapa>/seed_<N>/`.
 
 ```bash
 python3 -m unittest discover \
   -s scripts/supermarket_milp/tests -p 'test_*.py' -v
 ```
 
-Los resultados de la antigua semilla 100 del supermercado pueden conservarse como referencia histórica, pero no deben confundirse con planes ejecutables de una nueva semilla o un nuevo mapa.
+Las herramientas de bajo nivel exigen rutas explícitas de entrada y salida; no seleccionan por defecto una semilla histórica. El escenario `data/seed_100.json` permanece solo como fixture de las pruebas A*/MILP.

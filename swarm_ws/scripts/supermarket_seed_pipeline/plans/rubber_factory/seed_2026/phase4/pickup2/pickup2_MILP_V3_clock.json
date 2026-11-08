@@ -3,43 +3,43 @@
   "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
   "execution_authorized": false,
   "input_npz": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_2026/phase4/pickup2/pickup2_MILP_TIMED_OFFLINE.npz",
-  "input_sha256": "81141deeb00a66f1ee9c84da7feb323ca1dfbd65038d54b15245e9f193224881",
+  "input_sha256": "38cb75a3b210cc78b5c23102c47e044b5dfb92e6a4e58676ee130f282db5de07",
   "method": "common_virtual_clock_with_C1_smooth_speed_factor",
   "max_speed_m_s": 2.0,
   "max_accel_m_s2": 2.0,
   "max_scale": 2.0,
   "transition_tau_s": 2.0,
-  "duration_original_s": 17.796136782616145,
-  "duration_uniform_s": 17.447192924133475,
-  "duration_successive_s": 16.47252814918474,
-  "saving_vs_uniform_s": 0.9746647749487352,
-  "saving_vs_original_s": 1.3236086334314052,
+  "duration_original_s": 17.796136566571217,
+  "duration_uniform_s": 17.44719271232472,
+  "duration_successive_s": 16.472507598883325,
+  "saving_vs_uniform_s": 0.9746851134413959,
+  "saving_vs_original_s": 1.3236289676878918,
   "uniform_scale": 1.02,
   "finish_times_virtual_s": {
-    "summit0": 17.796136782616145,
-    "summit1": 13.689335986627801,
-    "summit2": 10.951468789302242
+    "summit0": 17.796136566571217,
+    "summit1": 13.689335820439396,
+    "summit2": 10.951468656351516
   },
   "finish_times_wall_s": {
-    "summit0": 16.47252814918474,
-    "summit1": 13.303925729100726,
-    "summit2": 10.736734107159062
+    "summit0": 16.472507598883325,
+    "summit1": 13.303918357315336,
+    "summit2": 10.736733976815213
   },
   "ramps": [
     {
-      "start_tau": 10.951468789302242,
-      "end_tau": 12.951468789302242,
+      "start_tau": 10.951468656351516,
+      "end_tau": 12.951468656351516,
       "from_scale": 1.02,
-      "to_scale": 1.0945004958223303,
+      "to_scale": 1.0945053792296346,
       "robots_finished": [
         "summit2"
       ]
     },
     {
-      "start_tau": 13.689335986627801,
-      "end_tau": 15.689335986627801,
-      "from_scale": 1.0945004958223303,
-      "to_scale": 1.3722686142194416,
+      "start_tau": 13.689335820439396,
+      "end_tau": 15.689335820439396,
+      "from_scale": 1.0945053792296346,
+      "to_scale": 1.3722741531507308,
       "robots_finished": [
         "summit1"
       ]
@@ -47,21 +47,21 @@
   ],
   "attempts": [
     {
-      "finish_tau": 10.951468789302242,
+      "finish_tau": 10.951468656351516,
       "accepted": true,
       "from_scale": 1.02,
-      "to_scale": 1.0945004958223303
+      "to_scale": 1.0945053792296346
     },
     {
-      "finish_tau": 13.689335986627801,
+      "finish_tau": 13.689335820439396,
       "accepted": true,
-      "from_scale": 1.0945004958223303,
-      "to_scale": 1.3722686142194416
+      "from_scale": 1.0945053792296346,
+      "to_scale": 1.3722741531507308
     }
   ],
   "certified_envelopes": {
-    "speed_m_s": 2.000000009999992,
-    "accel_m_s2": 2.0000000099999964,
+    "speed_m_s": 2.0000000099999924,
+    "accel_m_s2": 2.0000000099999693,
     "accel_witness": {
       "robot": "summit0",
       "segment_index": 12
@@ -78,79 +78,79 @@
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 1.3689335987,
-      "wall_time_s": 1.3420917634,
+      "tau_original_s": 1.368933582,
+      "wall_time_s": 1.3420917471,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 2.7378671973,
-      "wall_time_s": 2.6841835268,
+      "tau_original_s": 2.7378671641,
+      "wall_time_s": 2.6841834942,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 4.106800796,
-      "wall_time_s": 4.0262752902,
+      "tau_original_s": 4.1068007461,
+      "wall_time_s": 4.0262752413,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 5.4757343947,
-      "wall_time_s": 5.3683670536,
+      "tau_original_s": 5.4757343282,
+      "wall_time_s": 5.3683669884,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 6.8446679933,
-      "wall_time_s": 6.710458817,
+      "tau_original_s": 6.8446679102,
+      "wall_time_s": 6.7104587355,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 8.213601592,
-      "wall_time_s": 8.0525505804,
+      "tau_original_s": 8.2136014923,
+      "wall_time_s": 8.0525504826,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 9.5825351906,
-      "wall_time_s": 9.3946423438,
+      "tau_original_s": 9.5825350743,
+      "wall_time_s": 9.3946422297,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 10.9514687893,
-      "wall_time_s": 10.7367341072,
+      "tau_original_s": 10.9514686564,
+      "wall_time_s": 10.7367339768,
       "speed_factor": 1.02
     },
     {
-      "tau_original_s": 12.320402388,
-      "wall_time_s": 12.0511342697,
-      "speed_factor": 1.0807753915
+      "tau_original_s": 12.3204022384,
+      "wall_time_s": 12.0511323762,
+      "speed_factor": 1.0807793743
     },
     {
-      "tau_original_s": 12.9514687893,
-      "wall_time_s": 12.6297668775,
-      "speed_factor": 1.0945004958
+      "tau_original_s": 12.9514686564,
+      "wall_time_s": 12.629762544,
+      "speed_factor": 1.0945053792
     },
     {
-      "tau_original_s": 13.6893359866,
-      "wall_time_s": 13.3039257291,
-      "speed_factor": 1.0945004958
+      "tau_original_s": 13.6893358204,
+      "wall_time_s": 13.3039183573,
+      "speed_factor": 1.0945053792
     },
     {
-      "tau_original_s": 15.0582695853,
-      "wall_time_s": 14.4724454738,
-      "speed_factor": 1.3210958486
+      "tau_original_s": 15.0582694025,
+      "wall_time_s": 14.4724330287,
+      "speed_factor": 1.3211012635
     },
     {
-      "tau_original_s": 15.6893359866,
-      "wall_time_s": 14.9372596353,
-      "speed_factor": 1.3722686142
+      "tau_original_s": 15.6893358204,
+      "wall_time_s": 14.9372453182,
+      "speed_factor": 1.3722741532
     },
     {
-      "tau_original_s": 16.427203184,
-      "wall_time_s": 15.4749584427,
-      "speed_factor": 1.3722686142
+      "tau_original_s": 16.4272029845,
+      "wall_time_s": 15.474941931,
+      "speed_factor": 1.3722741532
     },
     {
-      "tau_original_s": 17.7961367826,
-      "wall_time_s": 16.4725281492,
-      "speed_factor": 1.3722686142
+      "tau_original_s": 17.7961365666,
+      "wall_time_s": 16.4725075989,
+      "speed_factor": 1.3722741532
     }
   ],
   "limitations": [

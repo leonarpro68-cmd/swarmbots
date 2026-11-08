@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """FASE 1 OFFLINE: costos A* para MILP, sin ROS ni órdenes de movimiento.
 
-Usa el grafo de supermarket (588 nodos / 1786 aristas) y los nodos de
-aproximación del escenario. Para depósitos, usa un punto de parada
-verificado para seed 100; un escenario diferente debe aportar el mismo
-depósito y un punto de parada libre, o editarse mediante --stands.
+Utiliza el grafo indicado mediante --graph y los nodos de aproximación
+del escenario. Para depósitos, --stands permite indicar puntos de parada
+comprobados para el mapa y escenario seleccionados.
 """
 from __future__ import annotations
 import argparse
@@ -163,11 +162,11 @@ def build(scenario, graph, speed=2.0, stands=None):
 
 def main():
     p=argparse.ArgumentParser(description='Fase 1: matriz de costos A* sin movimiento')
-    p.add_argument('--scenario',type=Path,default=HERE/'data'/'seed_100.json')
-    p.add_argument('--graph',type=Path,default=map_files(HERE.parents[1], 'supermarket')[0])
+    p.add_argument('--scenario',type=Path,required=True)
+    p.add_argument('--graph',type=Path,required=True)
     p.add_argument('--stands',type=Path,help='JSON: {"azul":[x,y],"verde":[x,y],"naranja":[x,y]}')
     p.add_argument('--speed',type=float,default=2.0)
-    p.add_argument('--output',type=Path,default=HERE/'results'/'seed_100'/'astar_costs.json')
+    p.add_argument('--output',type=Path,required=True)
     args=p.parse_args()
     stands=_read(args.stands) if args.stands else None
     result=build(_read(args.scenario),_read(args.graph),args.speed,stands)

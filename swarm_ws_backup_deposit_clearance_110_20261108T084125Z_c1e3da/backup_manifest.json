@@ -1,0 +1,48 @@
+{
+  "workspace": "/home/rafael/swarmbots/swarm_ws",
+  "files": [
+    {
+      "path": "scripts/supermarket_seed_pipeline/clearance_config.py",
+      "before_sha256": "21cdf9a43420314872add3fa1da6b7e8ca81c2ef30fd6149e6628b31fec982d0",
+      "after_sha256": "aab21cffbe5a916ff16cd2edc5f66632cd1aac72f94853c9ca4830cdb2b51a29",
+      "mode": 420
+    },
+    {
+      "path": "scripts/supermarket_seed_pipeline/supermarket_planning/dynamic_map.py",
+      "before_sha256": "80eb6a26c40e01ec95b1023bb2f3f560cdaa3b3432673ae28f2ace1da6a8bf85",
+      "after_sha256": "97446aaac1d8e8e0e3305f063b6cb2c6385c11491959ac84b1b176d12bd791a5",
+      "mode": 420
+    },
+    {
+      "path": "scripts/supermarket_seed_pipeline/stage_adapter.py",
+      "before_sha256": "96ef086b5459707fc369259a6c5d520401e24ca2e91f7403d9d8ac6fdecb8457",
+      "after_sha256": "a280146ff0bb82fc51c7bad33d9fd84c2eaf6a909110bed17c488e3885e3e9e3",
+      "mode": 420
+    },
+    {
+      "path": "scripts/supermarket_seed_pipeline/prepare_phase5.py",
+      "before_sha256": "593784c1b09a161846e4f1917d1b6cc49531f15b3f49cdb2dfd2e781f6d48c2a",
+      "after_sha256": "9522328f5ee57954da3f2508baa3c40472e743c18485deea05caeda40e9586cf",
+      "mode": 420
+    },
+    {
+      "path": "scripts/supermarket_seed_pipeline/run_full_offline.py",
+      "before_sha256": "37a292b7ce6e51ff33440f5c621f9703d67b14dee3d43e55fdc1dfc0dbdb5303",
+      "after_sha256": "c88802b6e1ec8b642e64410bcc111ec5c7db9ec855c096a3151ca4ca7e19d042",
+      "mode": 420
+    },
+    {
+      "path": "scripts/supermarket_seed_pipeline/run_prepared_mission.py",
+      "before_sha256": "341403ffed7d4eb4548106d743ac87ef7c2ea6a060587b60d8ef3fe3d868f462",
+      "after_sha256": "67c93b9f38dbbac72ea328b856e88fc1b38403ab4934c9e3b45f906f3aaa9266",
+      "mode": 420
+    },
+    {
+      "path": "tests/test_deposit_clearance_110.py",
+      "before_sha256": null,
+      "after_sha256": "266a6dddd7a6350b0d331dffc476bdea4870b828b2de4d999017d65a3f8ff8a1",
+      "mode": 420
+    }
+  ],
+  "policy": "deposit_center_exclusion_m = 1.10"
+}

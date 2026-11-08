@@ -3,7 +3,7 @@
   "status": "PASS_CORRIDOR_PREFLIGHT_ONLY",
   "execution_authorized": false,
   "source_sha256": {
-    "cbs": "489ae9cd0dd8b9c22240e4a1079239bae3197a94e329b32e9a811e0a6942bb03",
+    "cbs": "d72db10641fd04c491478b87d459c039877b276f9132d1ac4fbbfa1712a48947",
     "scenario": "a54f4faa33bd74ef18f845ed0fe396c6d5ea45163dafd64d2be3727b6d271d7b",
     "geometry": "15cca71e441bce8ba0d621442d833d1659bbe989f3ed7eae5ed701992dba8205"
   },
@@ -40,7 +40,7 @@
       "halfspaces_total": 1368,
       "minimum_constraints_per_piece": 24,
       "maximum_constraints_per_piece": 24,
-      "min_CBS_endpoint_slack_m": 0.4
+      "min_CBS_endpoint_slack_m": 0.15
     },
     {
       "stage": "pickup2",
@@ -57,7 +57,7 @@
       "halfspaces_total": 936,
       "minimum_constraints_per_piece": 24,
       "maximum_constraints_per_piece": 24,
-      "min_CBS_endpoint_slack_m": 0.4
+      "min_CBS_endpoint_slack_m": 0.15
     },
     {
       "stage": "delivery2",
@@ -74,7 +74,7 @@
       "halfspaces_total": 882,
       "minimum_constraints_per_piece": 21,
       "maximum_constraints_per_piece": 21,
-      "min_CBS_endpoint_slack_m": 0.4
+      "min_CBS_endpoint_slack_m": 0.15
     }
   ],
   "next_gate": "Hybrid V2 SLSQP + 5 refinements + convex-hull certificate, then common V3 timewarp; NOT yet performed",

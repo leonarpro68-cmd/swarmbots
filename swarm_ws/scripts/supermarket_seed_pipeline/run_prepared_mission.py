@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only preflight + hash checking + seeded supervised Gazebo mission.
 
-The old validated seed100 controller and its mission script remain unchanged.
+Every prepared mission requires a complete, map-scoped manifest.
 """
 import argparse
 import datetime
@@ -13,6 +13,7 @@ import sys
 import uuid
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 from swarm_maps import MAPS, map_files, scenario_file, milp_results_dir, plans_dir
+from clearance_config import VISUAL_DEPOSIT_NAV_EXCLUSION_M
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 HERE=pathlib.Path(__file__).resolve().parent
@@ -36,15 +37,17 @@ def validate(ws,seed,mode="milp",map_name="supermarket"):
     if read(scene).get('seed')!=seed or read(scene).get('world')!=map_name or read(assign).get('world')!=map_name:
         raise ValueError('Escenario/asignación de otro mapa o semilla')
     m=read(manifest)
+    if m.get('deposit_center_exclusion_m') != VISUAL_DEPOSIT_NAV_EXCLUSION_M:
+        raise ValueError('PLAN OBSOLETO: depósitos requieren exclusión de centro '
+                         f'{VISUAL_DEPOSIT_NAV_EXCLUSION_M:.2f} m; regenerar CBS/Hybrid/V3/D8 '
+                         'en un directorio nuevo, conservando el plan anterior como respaldo')
     for k,p in [('scenario_sha256',scene),('assignment_sha256',assign),('geometry_sha256',geometry),('graph_sha256',graph)]:
         if m.get(k)!=sha(p):raise ValueError(f'HASH MISMATCH: {k}')
-    # Los manifiestos históricos de supermarket no guardaban 'map', y
-    # los MILP tampoco guardaban 'assignment_mode'. Solo esos dos
-    # campos pueden inferirse al validar un certificado antiguo.
-    if m.get('seed')!=seed or m.get('map','supermarket')!=map_name or m.get('assignment_mode','milp')!=mode:
+    # No inferir mapa ni modo cuando faltan datos del manifiesto.
+    if m.get('seed')!=seed or m.get('map')!=map_name or m.get('assignment_mode')!=mode:
         raise ValueError('Manifiesto de otra semilla, mapa o modo')
     cr=read(cbs)
-    if cr.get('assignment_mode','milp')!=mode:raise ValueError('CBS pertenece a otro modo')
+    if cr.get('assignment_mode')!=mode:raise ValueError('CBS pertenece a otro modo o carece de assignment_mode')
     if cr.get('seed')!=seed or cr.get('status')!='OFFLINE_CBS_ONLY_NOT_EXECUTABLE' or cr.get('inputs_sha256')!={'scenario':sha(scene),'assignment':sha(assign)}:
         raise ValueError('CBS no corresponde a esta asignación y semilla')
     d=read(pre)
@@ -88,23 +91,25 @@ def main():
     ap.add_argument('--workspace',type=pathlib.Path,required=True)
     ap.add_argument('--results-root',type=pathlib.Path,required=True)
     ap.add_argument('--readiness-seconds',type=int,default=180)
+    ap.add_argument('--timing-profile',choices=('normal','fast'),default='normal')
     a=ap.parse_args()
     ws=a.workspace.expanduser().resolve()
     scene,prepared=validate(ws,a.seed,a.assignment_mode,a.map)
-    sys.path.insert(0,str(ws/'scripts/supermarket_one_launch'))
-    from run_unique_mission import check_live  # reuse working read-only ROS preflight
-    check_live(ws,scene,a.readiness_seconds)
+    from ros_preflight import check_live  # verificación ROS común para los siete mapas
+    from timing_profiles import get_profile
+    timing=get_profile(a.timing_profile)
+    check_live(ws,scene,a.readiness_seconds,observe_seconds=timing.preflight_observe_seconds)
     root=a.results_root.expanduser().resolve()/a.map
     run=unique_dir(root,a.seed,a.assignment_mode)
     meta={'seed':a.seed,'map':a.map,'mode':a.assignment_mode,'scenario':str(scene),'prepared':str(prepared),
-          'scenario_sha256':sha(scene),'status':'STARTED_SUPERVISED_NOT_PHYSICAL_CERTIFICATE'}
+          'scenario_sha256':sha(scene),'timing_profile':a.timing_profile,'timing_values':vars(timing),'status':'STARTED_SUPERVISED_NOT_PHYSICAL_CERTIFICATE'}
     (root/(run.name+'.metadata.json')).write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
     print('RESULTS_DIRECTORY:',run,flush=True)
     exe=HERE/'run_auto_experiment_seed.py'
     if not exe.is_file():raise FileNotFoundError(exe)
     cmd=[sys.executable,str(exe),'--assignment-mode',a.assignment_mode,'--physical-policy','warehouse',
          '--prepared',str(prepared),'--run-dir',str(run),'--mode','execute',
-         '--confirm-new-session','--confirm-supervision','--unattended','--authorize-noninteractive']
+         '--confirm-new-session','--confirm-supervision','--unattended','--authorize-noninteractive','--timing-profile',a.timing_profile]
     log=root/(run.name+'.runner.log')
     with log.open('w') as f:proc=subprocess.run(cmd,cwd=ws,stdout=f,stderr=subprocess.STDOUT,check=False)
     print('MISSION_EXIT_CODE:',proc.returncode,flush=True)

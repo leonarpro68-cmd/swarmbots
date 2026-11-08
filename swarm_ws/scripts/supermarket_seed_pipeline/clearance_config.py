@@ -23,6 +23,11 @@ assert abs(INTERROBOT_CENTER_SEPARATION_M-1.15) < 1e-12
 import math
 TRASH_BOX_HALF_DIAGONAL_M = math.hypot(0.09, 0.09) / 2
 TRASH_CENTER_EXCLUSION_M = SUMMIT_RADIUS_M + FREE_GAP_M + TRASH_BOX_HALF_DIAGONAL_M
-# Depósitos: marcadores visuales SIN colisión SDF; mantener política virtual
-# previa de navegación cuando no sean origen/destino de una etapa.
-VISUAL_DEPOSIT_NAV_EXCLUSION_M = 0.50
+# Depósitos: disco VISUAL de radio 0.50 m, sin colisión propia en SDF.
+# Todas las trayectorias representan el CENTRO del Summit: para no superponer
+# su carrocería con el disco de un depósito hay que inflar la exclusión con
+# el radio de planificación del robot y la holgura geométrica.
+VISUAL_DEPOSIT_RADIUS_M = 0.50
+VISUAL_DEPOSIT_NAV_EXCLUSION_M = (VISUAL_DEPOSIT_RADIUS_M
+                                  + SUMMIT_RADIUS_M + FREE_GAP_M)
+assert abs(VISUAL_DEPOSIT_NAV_EXCLUSION_M - 1.10) < 1e-12

@@ -70,7 +70,7 @@ def run(scenario,mission,mapdata, margin=0.0, detailed=False):
 
 def main():
     p=argparse.ArgumentParser()
-    p.add_argument('--seed',type=int,default=100)
+    p.add_argument('--seed',type=int,required=True)
     p.add_argument('--margin',type=float,default=0.0)
     p.add_argument('--detail',action='store_true')
     args=p.parse_args()

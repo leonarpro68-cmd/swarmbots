@@ -3,7 +3,7 @@
   "world": "supermarket",
   "seed": 1,
   "stage": "pickup2",
-  "navigation_sha256": "8306ac4066e818f0e49627c918f29b45b8a538045b759ca16333447eeb1e5b97",
+  "navigation_sha256": "d5231a43c6e06978ecd8c952e596970dea93e8c3f6385112591af8f17bcabdc1",
   "robots": {
     "summit0": {
       "trash": "trash_V2_verde",

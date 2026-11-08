@@ -14,6 +14,7 @@ import subprocess
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from swarm_maps import MAPS, map_files, scenario_file, milp_results_dir, plans_dir, validate_map
+from clearance_config import VISUAL_DEPOSIT_NAV_EXCLUSION_M
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 HERE=Path(__file__).resolve().parent
@@ -28,18 +29,11 @@ def launch(*args):
     print('\n$ '+' '.join(cmd),flush=True)
     env=dict(os.environ,OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1')
     subprocess.run(cmd,cwd=HERE,env=env,check=True)
-def compatible_manifest(stored, expected, map_name, mode):
-    """No reescribe los certificados; admite el formato MILP/FIXED histórico."""
-    if stored==expected:
-        return True
-    if map_name!='supermarket':
-        return False
-    legacy=dict(expected)
-    legacy.pop('map',None)
-    if mode=='milp':
-        legacy.pop('assignment_mode',None)
-    return stored==legacy
-
+def stored_max_ct(manifest:Path):
+    data=read(manifest)
+    if 'max_ct' not in data:
+        raise ValueError(f'BLOCKED: manifiesto incompleto (falta max_ct): {manifest}')
+    return data['max_ct']
 
 def expected_input(ws,seed,mode,map_name="supermarket"):
     sc=scenario_file(ws,map_name,seed)
@@ -88,17 +82,19 @@ def main():
     # presupuesto original salvo que se indique --max-ct explícitamente.
     previous_manifest=root/'inputs_manifest.json'
     if a.max_ct is None:
-        a.max_ct=read(previous_manifest).get('max_ct',6000) if previous_manifest.is_file() else 10000
+        a.max_ct=stored_max_ct(previous_manifest) if previous_manifest.is_file() else 10000
     phase4=root/'phase4'
     prepared=root/'prepared'
     source={'scenario_sha256':sha(scenario),'assignment_sha256':sha(assignment),
             'geometry_sha256':sha(geom),'graph_sha256':sha(graph),
             'seed':a.seed,'assignment_mode':a.assignment_mode,'max_ct':a.max_ct,'max_cbs_time':a.max_cbs_time,
             'maxiter':a.maxiter,'refinements':5,'max_speed':2.,'max_acceleration':2.}
-    source['map']=a.map  # mismo contrato para todos los mapas nuevos
+    source['map']=a.map  # contrato único en los siete mapas
+    # Bloquea la reutilización de Bezier anteriores, certificados a 0.50 m.
+    source['deposit_center_exclusion_m']=VISUAL_DEPOSIT_NAV_EXCLUSION_M
     manifest=root/'inputs_manifest.json'
     if manifest.exists():
-        if not compatible_manifest(read(manifest),source,a.map,a.assignment_mode):
+        if read(manifest)!=source:
             raise ValueError('BLOCKED: el escenario, MILP, geometría o parámetros cambiaron. No reutilizar planes anteriores. Crear nuevo directorio de planes.')
     else:
         allowed={'fixed_assignment.json'} if a.assignment_mode=='fixed' else set()

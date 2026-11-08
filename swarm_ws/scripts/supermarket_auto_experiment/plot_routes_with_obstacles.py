@@ -78,7 +78,7 @@ def main():
     ap.add_argument('--scenario', default=None)
     ap.add_argument('--geometry', required=True, help='obstaculos.json del mundo activo')
     ap.add_argument('--output', required=True)
-    ap.add_argument('--mission-label', default='seed_100_run_007')
+    ap.add_argument('--mission-label', default='swarmbots')
     args = ap.parse_args()
     data = json.loads(Path(args.stage_windows).read_text(encoding='utf-8'))
     by_stage = {w['stage']:w for w in data['stages']}

@@ -3,7 +3,7 @@
   "status": "PARTIAL_OR_REJECTED_NOT_EXECUTABLE",
   "execution_authorized": false,
   "source_sha256": {
-    "cbs": "049a4d0c3f389cc1f3de0bfbc8f8a22f5c76fed9f368384980f5ac17d19f4441",
+    "cbs": "44d890c94bd025b456bd0171cf0bc074aacc8d028bea83d6af0167a8b9de7d05",
     "scenario": "90f906323f3da59a8aaddaa21036bf9d060094210ac72123894549c27064f025",
     "geometry": "2c972b1b756cdad14fbe067910d6d4699a485685e207d82d631d03d8a38d29c2"
   },
@@ -24,19 +24,19 @@
         "timed_input": "delivery2_MILP_TIMED_OFFLINE.npz",
         "dt_s": 1.02,
         "original_s": 27.54,
-        "successive_s": 24.648569160758097,
+        "successive_s": 24.648553446042513,
         "verified_envelopes": {
           "summit0": {
-            "speed_m_s": 1.921295166951361,
-            "acceleration_m_s2": 1.5395726510761314
+            "speed_m_s": 1.9218502932662236,
+            "acceleration_m_s2": 1.5397020633629035
           },
           "summit1": {
-            "speed_m_s": 2.000000009999995,
-            "acceleration_m_s2": 2.0000000099999986
+            "speed_m_s": 2.0000000099999955,
+            "acceleration_m_s2": 2.000000009999967
           },
           "summit2": {
-            "speed_m_s": 1.852435452172053,
-            "acceleration_m_s2": 1.7502258783537477
+            "speed_m_s": 1.8524363069094472,
+            "acceleration_m_s2": 1.7502247121858194
           }
         }
       }

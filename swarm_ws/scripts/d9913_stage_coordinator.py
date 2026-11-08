@@ -143,6 +143,64 @@ def prepare(a, report):
     return proto,data
 
 
+def check_initial_readiness(node, data, a, report, *, now_wall=None, adaptive=False):
+    """Check *current* ROS inputs; never issue a command from this function.
+
+    The static gates are identical in normal and adaptive profiles. Adaptive
+    additionally rejects an old /clock sample even if the clock once advanced.
+    """
+    if len(node.clock_times)<3 or node.clock_times[-1]-node.clock_times[0]<1.:
+        raise RuntimeError('CLOCK_NOT_ADVANCING')
+    if adaptive:
+        progress_wall=getattr(node,'clock_progress_wall',None)
+        if progress_wall is None or now_wall is None or now_wall-progress_wall>2.:
+            raise RuntimeError('CLOCK_NOT_ADVANCING')
+    latest=node.clock_times[-1]
+    for n in ROBOTS:
+        pubs=node.get_publishers_info_by_topic(f'/{n}/cmd_vel')
+        expected=[p for p in pubs if p.node_name=='path_follower' and p.node_namespace.rstrip('/')==f'/{n}']
+        if len(pubs)!=1 or len(expected)!=1:raise RuntimeError(f'{n}: CMD_VEL_OWNER_MISMATCH')
+        od=node.odoms.get(n)
+        if od is None:raise RuntimeError(f'{n}: ODOM_MISSING')
+        err=math.dist(od['xy'],data[n][0][0,0])
+        report['robots'][n].update(error_m=err,speed_m_s=od['speed'],odom_frame=od['frame'])
+        if err>a.start_tolerance or od['speed']>a.max_stationary_speed or od['frame']!=f'{n}/odom':
+            raise RuntimeError(f'{n}: ALIGNMENT_OR_STATIONARY_CHECK_FAILED')
+        if not 0<=latest-od['stamp']<=.5:raise RuntimeError(f'{n}: ODOM_STALE')
+    return latest
+
+
+def await_adaptive_readiness(node, data, a, report, spin_one, *, now=None):
+    """Wait UP TO observe_seconds wall seconds, returning at the first safe state.
+
+    spin_one(timeout_s) is injected for unit tests; production uses rclpy.spin_once.
+    The 5-second synchronized start delay is *not* part of this budget.
+    """
+    now=now or time.monotonic
+    started=now()
+    deadline=started+a.observe_seconds
+    reason='CLOCK_NOT_ADVANCING'
+    checks=0
+    while now()<deadline:
+        spin_one(min(.05,max(0.,deadline-now())))
+        checks+=1
+        try:
+            latest=check_initial_readiness(node,data,a,report,now_wall=now(),adaptive=True)
+        except RuntimeError as exc:
+            reason=str(exc)
+            continue
+        report['readiness_observation']={
+            'mode':'adaptive','max_wait_wall_s':a.observe_seconds,
+            'elapsed_wall_s':round(now()-started,3),'checks':checks,
+            'result':'READY'}
+        return latest
+    report['readiness_observation']={
+        'mode':'adaptive','max_wait_wall_s':a.observe_seconds,
+        'elapsed_wall_s':round(now()-started,3),'checks':checks,
+        'result':'TIMEOUT','last_problem':reason}
+    raise RuntimeError(reason)
+
+
 def run_ros(a,proto,data,report):
     import rclpy
     from rclpy.node import Node
@@ -153,13 +211,17 @@ def run_ros(a,proto,data,report):
         def __init__(self):
             super().__init__('d9913_stage_coordinator')
             self.clock_times=[];self.odoms={};self.statuses={n:[] for n in ROBOTS}
+            self.clock_progress_wall=None
             self.create_subscription(Clock,'/clock',self.clock_cb,10)
             for n in ROBOTS:
                 self.create_subscription(Odometry,f'/{n}/odom',lambda m,n=n:self.odom_cb(n,m),10)
                 self.create_subscription(String,f'/{n}/hybrid_trajectory/status',lambda m,n=n:self.status_cb(n,m),10)
             self.pubs={}
         def clock_cb(self,msg):
-            t=msg.clock.sec+msg.clock.nanosec*1e-9;self.clock_times.append(t)
+            t=msg.clock.sec+msg.clock.nanosec*1e-9
+            if self.clock_times and t > self.clock_times[-1] + 1e-5:
+                self.clock_progress_wall=time.monotonic()
+            self.clock_times.append(t)
         def odom_cb(self,n,msg):
             p=msg.pose.pose.position;v=msg.twist.twist.linear
             self.odoms[n]={'xy':(p.x,p.y),'speed':math.hypot(v.x,v.y),'frame':msg.header.frame_id,
@@ -181,21 +243,13 @@ def run_ros(a,proto,data,report):
             node.pubs[n].publish(String(data=raw))
         spin_for(.5)
     try:
-        spin_for(a.observe_seconds)
-        if len(node.clock_times)<3 or node.clock_times[-1]-node.clock_times[0]<1.:
-            raise RuntimeError('CLOCK_NOT_ADVANCING')
-        latest=node.clock_times[-1]
-        for n in ROBOTS:
-            pubs=node.get_publishers_info_by_topic(f'/{n}/cmd_vel')
-            expected=[p for p in pubs if p.node_name=='path_follower' and p.node_namespace.rstrip('/')==f'/{n}']
-            if len(pubs)!=1 or len(expected)!=1:raise RuntimeError(f'{n}: CMD_VEL_OWNER_MISMATCH')
-            od=node.odoms.get(n)
-            if od is None:raise RuntimeError(f'{n}: ODOM_MISSING')
-            err=math.dist(od['xy'],data[n][0][0,0])
-            report['robots'][n].update(error_m=err,speed_m_s=od['speed'],odom_frame=od['frame'])
-            if err>a.start_tolerance or od['speed']>a.max_stationary_speed or od['frame']!=f'{n}/odom':
-                raise RuntimeError(f'{n}: ALIGNMENT_OR_STATIONARY_CHECK_FAILED')
-            if not 0<=latest-od['stamp']<=.5:raise RuntimeError(f'{n}: ODOM_STALE')
+        if a.adaptive_observe:
+            latest=await_adaptive_readiness(
+                node,data,a,report,lambda seconds:rclpy.spin_once(node,timeout_sec=seconds))
+        else:
+            # Preserve the fixed 8 s normal profile exactly as before.
+            spin_for(a.observe_seconds)
+            latest=check_initial_readiness(node,data,a,report)
         report['clock_s']=latest
         if not a.execute:
             report['status']='PASS_GUARDED_DRY_RUN_NO_COMMANDS';return
@@ -283,6 +337,7 @@ def main():
     p.add_argument('--expected-sha256',default=None)
     p.add_argument('--output',default='scripts/resultados/d9913_stage.json')
     p.add_argument('--observe-seconds',type=float,default=5.)
+    p.add_argument('--adaptive-observe',action='store_true',help='Wait until clock and all odometries are valid; observe-seconds becomes an upper bound')
     p.add_argument('--start-tolerance',type=float,default=.05)
     p.add_argument('--max-stationary-speed',type=float,default=.01)
     p.add_argument('--start-delay',type=float,default=10.)
@@ -297,6 +352,8 @@ def main():
         if not (0.2<=a.time_scale<=2.0) or not (0.1<=a.nav_speed_limit<=2.0) or not (0.1<=a.nav_accel_limit<=2.0):
             raise ValueError('PARAMETROS_NAVEGACION_FUERA_DE_RANGO')
         if a.start_delay<5 or a.start_delay>30:raise ValueError('START_DELAY_OUT_OF_RANGE')
+        if a.adaptive_observe and not 2.<=a.observe_seconds<=30.:
+            raise ValueError('ADAPTIVE_OBSERVE_OUT_OF_RANGE')
         proto,data=prepare(a,report)
         run_ros(a,proto,data,report)
     except Exception as exc:report['problems'].append(str(exc));report['status']='REJECT'

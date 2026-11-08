@@ -35,8 +35,8 @@ def build_stage(scenario, stage, mapdata):
         for t in scenario['trash']:
             if t['name'] in pending:
                 obstacles.append((tuple(t['xy_m']), TRASH_CENTER_EXCLUSION_M))
-        # Depósitos son marcadores visuales. Se conserva el bloqueo virtual
-        # de navigation según el grafo multigoal utilizado por CBS.
+        # Depósitos visuales: exclusión inflada del CENTRO del Summit.
+        # Coincide con DynamicTrashGraph y protege la carrocería completa.
         for dep in scenario['deposits']:
             obstacles.append((tuple(dep['xy_m']), VISUAL_DEPOSIT_NAV_EXCLUSION_M))
         circles.append(obstacles)

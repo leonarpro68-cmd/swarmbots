@@ -7,56 +7,30 @@ import argparse,csv,json,math,pathlib,re,subprocess,sys
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 
 def find_scenario(prep, scripts):
- """Identify the exact map and seed from the prepared-plan directory.
-
- Supported layouts:
-   plans/<map>/seed_N[/fixed]/prepared            (todos los mapas)
-   plans/seed_N[/fixed]/prepared                  (alias antiguo opcional)
- No implicit fallback to supermarket for an unrecognized map.
- """
+ """Find the canonical scenario for plans/<map>/seed_N[/fixed]/prepared."""
  from swarm_maps import scenario_file, map_files
 
  workspace = scripts.parent
  plans_root = (scripts / 'supermarket_seed_pipeline' / 'plans').resolve()
- prep = pathlib.Path(prep).resolve()
+ prepared = pathlib.Path(prep).resolve()
  try:
-  rel = prep.relative_to(plans_root)
- except ValueError:
-  rel = None
+  parts = prepared.relative_to(plans_root).parts
+ except ValueError as exc:
+  raise ValueError(f'Plan preparado fuera de la estructura multimapa: {prepared}') from exc
 
- if rel is not None:
-  parts = rel.parts
-  if parts and re.fullmatch(r'seed_(\d+)', parts[0]):
-   map_name = 'supermarket'
-   seed = int(parts[0][5:])
-  elif len(parts) >= 2 and re.fullmatch(r'seed_(\d+)', parts[1]):
-   map_name = parts[0]
-   seed = int(parts[1][5:])
-  else:
-   raise ValueError(f'No se pudo identificar mapa/semilla de los planes: {prep}')
-
-  # Validate that the selected map has its own data, instead of silently
-  # reading supermarket or an unrelated scenario with the same seed.
-  map_files(workspace, map_name)
-  candidate = scenario_file(workspace, map_name, seed)
-  if candidate.is_file():
-   scenario = json.loads(candidate.read_text(encoding='utf-8'))
-   if scenario.get('world') != map_name or scenario.get('seed') != seed:
-    raise ValueError(f'Escenario no corresponde a {map_name}/seed_{seed}: {candidate}')
-   return candidate
-  if seed == 100 and map_name == 'supermarket':
-   legacy = sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
-   if len(legacy) == 1:
-    return legacy[0]
-  raise FileNotFoundError(f'Escenario de {map_name}/seed_{seed} no encontrado: {candidate}')
-
- # Preserve support for original D9.9 seed100 runs with no standard plan tree.
- legacy = sorted(prep.glob('scenario_for_original_D8_seed100_*.json'))
- if len(legacy) == 1:
-  return legacy[0]
- if len(legacy) > 1:
-  raise RuntimeError(f'Múltiples escenarios legacy en {prep}; no se elegirá uno arbitrariamente')
- raise FileNotFoundError(f'No se pudo identificar mapa y semilla desde {prep}')
+ is_milp = len(parts) == 3 and parts[2] == 'prepared'
+ is_fixed = len(parts) == 4 and parts[2:] == ('fixed', 'prepared')
+ if not (is_milp or is_fixed) or not re.fullmatch(r'seed_(\d+)', parts[1]):
+  raise ValueError(f'Ruta de plan no uniforme: {prepared}')
+ map_name, seed = parts[0], int(parts[1][5:])
+ map_files(workspace, map_name)
+ scenario_path = scenario_file(workspace, map_name, seed)
+ if not scenario_path.is_file():
+  raise FileNotFoundError(f'Escenario de {map_name}/seed_{seed} no encontrado: {scenario_path}')
+ scenario = json.loads(scenario_path.read_text(encoding='utf-8'))
+ if scenario.get('world') != map_name or scenario.get('seed') != seed:
+  raise ValueError(f'Escenario no corresponde a {map_name}/seed_{seed}: {scenario_path}')
+ return scenario_path
 
 def generate_routes(prep, run, scripts):
  """Plot routes against the actual scenario and collision geometry of its map."""

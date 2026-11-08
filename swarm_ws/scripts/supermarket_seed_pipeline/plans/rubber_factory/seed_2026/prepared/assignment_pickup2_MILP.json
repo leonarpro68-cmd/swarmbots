@@ -3,7 +3,7 @@
   "world": "rubber_factory",
   "seed": 2026,
   "stage": "pickup2",
-  "navigation_sha256": "81141deeb00a66f1ee9c84da7feb323ca1dfbd65038d54b15245e9f193224881",
+  "navigation_sha256": "38cb75a3b210cc78b5c23102c47e044b5dfb92e6a4e58676ee130f282db5de07",
   "robots": {
     "summit0": {
       "trash": "trash_V2_verde",

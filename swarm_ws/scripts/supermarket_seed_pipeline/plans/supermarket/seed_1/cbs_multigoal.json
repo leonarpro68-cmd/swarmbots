@@ -147,7 +147,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 575,
-      "dynamic_edges": 1707,
+      "dynamic_edges": 1703,
       "paths": [
         {
           "robot": "summit0",
@@ -708,7 +708,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 580,
-      "dynamic_edges": 1738,
+      "dynamic_edges": 1734,
       "paths": [
         {
           "robot": "summit0",
@@ -1253,7 +1253,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 580,
-      "dynamic_edges": 1738,
+      "dynamic_edges": 1734,
       "paths": [
         {
           "robot": "summit0",
@@ -1826,7 +1826,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 585,
-      "dynamic_edges": 1774,
+      "dynamic_edges": 1770,
       "paths": [
         {
           "robot": "summit0",

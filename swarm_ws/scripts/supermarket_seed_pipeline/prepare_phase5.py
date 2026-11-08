@@ -14,13 +14,14 @@ from swarm_maps import map_files
 
 import numpy as np
 from shapely.geometry import LineString, Point, box
+from clearance_config import VISUAL_DEPOSIT_NAV_EXCLUSION_M
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 ROBOTS=tuple(f'summit{i}' for i in range(3))
 ROBOT_RADIUS=0.55
 SHELF_CENTER_CLEARANCE=0.60
 OTHER_TRASH_EXCLUSION=0.55+math.sqrt(2)*0.09/2+0.05
-OTHER_DEPOSIT_EXCLUSION=0.50
+OTHER_DEPOSIT_EXCLUSION=VISUAL_DEPOSIT_NAV_EXCLUSION_M
 PICKUP_D8_MIN=0.55
 PICKUP_D8_MAX=2.70
 DELIVERY_D8_MIN=0.90
@@ -199,7 +200,7 @@ def main():
     if a.output_dir.exists() and any(a.output_dir.iterdir()):p.error('Directorio de salida no vacío, no sobrescribir')
     geo=a.geometry or map_files(Path(__file__).resolve().parents[2], 'supermarket')[1]
     cb=read(a.cbs)
-    if cb.get('assignment_mode', 'milp')!=a.assignment_mode:raise ValueError('Modo CBS incompatible con modo solicitado')
+    if cb.get('assignment_mode')!=a.assignment_mode:raise ValueError('Modo CBS ausente o incompatible con modo solicitado')
     rep,assignments=prepare(cb,read(a.scenario),read(geo),a.results,a.cbs,a.scenario,geo)
     a.output_dir.mkdir(parents=True,exist_ok=True)
     write_new(a.output_dir/'phase5_static_preflight.json',rep)

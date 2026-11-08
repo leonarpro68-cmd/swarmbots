@@ -28,7 +28,7 @@ def run(cbs,scene,geometry):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--cbs',type=Path,required=True)
-    p.add_argument('--scenario',type=Path,required=True);p.add_argument('--geometry',type=Path,default=map_files(Path(__file__).resolve().parents[2], 'supermarket')[1])
+    p.add_argument('--scenario',type=Path,required=True);p.add_argument('--geometry',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True);a=p.parse_args()
     if a.output.exists():p.error('No se sobrescribe: '+str(a.output))
     report=run(json.loads(a.cbs.read_text()),json.loads(a.scenario.read_text()),json.loads(a.geometry.read_text()))

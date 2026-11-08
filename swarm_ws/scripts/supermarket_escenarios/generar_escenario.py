@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generador offline e independiente para supermarket. No modifica SwarmBots.
 
-Uso: python3 generar_escenario.py --seed 100 --output-dir resultados/seed_100
+Uso: python3 generar_escenario.py --seed 2026 --output-dir resultados/supermarket/seed_2026
 Requiere matplotlib para la figura; la selección solo usa la biblioteca estándar.
 """
 from __future__ import annotations
@@ -215,8 +215,8 @@ def draw(graph,geometry,scenario,path):
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--seed',type=int,default=100)
-    ap.add_argument('--output-dir',type=Path,default=Path('resultados/supermarket/seed_100'))
+    ap.add_argument('--seed',type=int,required=True)
+    ap.add_argument('--output-dir',type=Path,required=True)
     ap.add_argument('--min-separation',type=float,default=5.)
     ap.add_argument('--trash-clearance',type=float,default=.75)
     ap.add_argument('--graph',type=Path,help='grafo.json del mapa seleccionado')

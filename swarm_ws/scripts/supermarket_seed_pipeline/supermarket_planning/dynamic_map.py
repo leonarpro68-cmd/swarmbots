@@ -6,10 +6,15 @@ segmento-punto y se reconstruye por etapas o tras collect().
 from __future__ import annotations
 import math
 from . import geometry, cbs
+try:
+    from ..clearance_config import VISUAL_DEPOSIT_NAV_EXCLUSION_M
+except ImportError:
+    from clearance_config import VISUAL_DEPOSIT_NAV_EXCLUSION_M
 
 TRASH_RADIUS_M=math.hypot(.09,.09)/2
 TRASH_EXCLUSION_M=.936+TRASH_RADIUS_M
-DEPOSIT_RADIUS_M=.50
+# Misma exclusión del centro Summit que el corredor Hybrid/Bézier.
+DEPOSIT_RADIUS_M=VISUAL_DEPOSIT_NAV_EXCLUSION_M
 EPS=1e-9
 
 def segment_point_distance(a,b,p):

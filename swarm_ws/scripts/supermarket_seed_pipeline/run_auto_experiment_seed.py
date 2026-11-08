@@ -2,6 +2,7 @@
 """Orquestador experimental FIXED/MILP. No arranca Gazebo ni el soporte ROS2."""
 import argparse, hashlib, json, os, pathlib, subprocess, sys, time, signal, math
 from collections import Counter
+from timing_profiles import get_profile
 STAGES=('pickup1','delivery1','pickup2','delivery2')
 ROBOTS=('summit0','summit1','summit2')
 def seed_from_prepared(prepared):
@@ -61,10 +62,13 @@ def check_contract(prepared, mode):
                 raise RuntimeError(f'{stage}/{robot}: objetivo de pickup inválido')
     return d, tasks, scenario
 
-def build_nav(stage,nav,run):
+def build_nav(stage,nav,run,timing=None):
+    timing = timing or get_profile('normal')
     base=[sys.executable,'scripts/d9913_stage_coordinator.py','--stage',stage,'--trajectory',nav['trajectory'],
           '--successive-clock',nav['successive_clock'],'--expected-sha256',nav['sha256'],
-          '--nav-speed-limit','2.0','--nav-accel-limit','2.0','--observe-seconds','8','--start-delay','15']
+          '--nav-speed-limit','2.0','--nav-accel-limit','2.0','--observe-seconds',str(timing.observe_seconds),'--start-delay',str(timing.start_delay)]
+    if timing.adaptive_observe:
+        base.append('--adaptive-observe')
     return [
      ('align_dry',[sys.executable,'scripts/d997_initial_alignment_path.py','--trajectory',nav['trajectory'],'--output',str(run/f'{stage}_alignment_dry.json')]),
      ('align',[sys.executable,'scripts/d997_initial_alignment_path.py','--trajectory',nav['trajectory'],'--execute','--output',str(run/f'{stage}_alignment_real.json')]),
@@ -195,8 +199,10 @@ def main():
     ap.add_argument('--authorize-noninteractive',action='store_true',help='Autorización explícita desde launch unificado; NO certifica agarre físico')
     ap.add_argument('--unattended',action='store_true',help='Sin pausas humanas, NO certifica agarre/liberación física')
     ap.add_argument('--no-plots',action='store_true',help='Desactiva gráficos al terminar')
+    ap.add_argument('--timing-profile',choices=('normal','fast'),default='normal',help='fast: esperas cortas experimentales; mantiene los timeouts críticos')
     ap.add_argument('--physical-policy',choices=['sequential','warehouse'],default='warehouse',help='warehouse: pickups paralelos y deliveries por oleadas con cribado de geometría')
     a=ap.parse_args();prepared=a.prepared.expanduser().resolve();run=a.run_dir.expanduser().resolve()
+    timing=get_profile(a.timing_profile)
     contract,tasks,scenario=check_contract(prepared,a.assignment_mode)
     if run.exists() and any(run.iterdir()):raise SystemExit('ERROR: directorio de ensayo no vacío; no repetir ni sobreescribir')
     if a.mode=='execute' and not (a.confirm_new_session and a.confirm_supervision):raise SystemExit('Faltan confirmaciones explícitas')
@@ -210,7 +216,7 @@ def main():
             if value!='EJECUTAR':raise SystemExit('Cancelado')
     run.mkdir(parents=True, exist_ok=True)
     log=[];rec=None
-    def save(): (run/'automation_report.json').write_text(json.dumps({'mode':a.mode,'assignment_mode':a.assignment_mode,'events':log},ensure_ascii=False,indent=2)+'\n')
+    def save(): (run/'automation_report.json').write_text(json.dumps({'mode':a.mode,'assignment_mode':a.assignment_mode,'timing_profile':a.timing_profile,'timing_values':vars(timing),'events':log},ensure_ascii=False,indent=2)+'\n')
     def step(name,cmd,required_text=None,report_status=None):
         print('\n>>>',name,'\n', ' '.join(map(str,cmd)),flush=True)
         record={'name':name,'cmd':cmd,'started_wall_s':time.time()};log.append(record)
@@ -233,12 +239,12 @@ def main():
         if a.mode=='execute':
             step('support_graph',[sys.executable,'scripts/supermarket_support/check_support_graph.py','--n-robots','3'],required_text='PASS_SUPPORT_GRAPH_NOT_EXECUTION_AUTHORIZATION')
             rec=subprocess.Popen([sys.executable,'scripts/supermarket_experiment/record_odom.py','--output',str(run/'odom.csv')],stdout=(run/'recorder.log').open('w'),stderr=subprocess.STDOUT)
-            time.sleep(3)
+            time.sleep(timing.recorder_start_seconds)
             if rec.poll() is not None:raise RuntimeError('Recorder terminó prematuramente')
         mark('mission_start')
         for stage in STAGES:
             nav=contract['stages'][stage]
-            for key,cmd in build_nav(stage,nav,run):
+            for key,cmd in build_nav(stage,nav,run,timing):
                 if key=='nav':mark(stage+'_nav_start')
                 status=('PASS_GUARDED_DRY_RUN_NO_COMMANDS' if key=='nav_dry' else 'DONE_ALL_'+stage.upper() if key=='nav' else None)
                 step(stage+'_'+key,cmd,report_status=status)

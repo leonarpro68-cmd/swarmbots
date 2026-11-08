@@ -11,5 +11,6 @@
   "refinements": 5,
   "max_speed": 2.0,
   "max_acceleration": 2.0,
-  "map": "supermarket"
+  "map": "supermarket",
+  "deposit_center_exclusion_m": 1.1
 }

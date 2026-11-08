@@ -34,7 +34,7 @@ config/maps/<nombre>/grafo.json
 config/maps/<nombre>/obstaculos.json
 ```
 
-Mapas disponibles en esta versión: `supermarket`, `tugbot_warehouse`, `colored_warehouse`, `pallet_warehouse`, `parking_lot`, `rubber_factory` y `electrical_substation`. La retícula de navegación tiene separación de 1.25 m. Los escenarios y resultados se guardan fuera de `config/maps/`, separados por mapa y semilla (salvo las rutas históricas conservadas para `supermarket`).
+Mapas disponibles en esta versión: `supermarket`, `tugbot_warehouse`, `colored_warehouse`, `pallet_warehouse`, `parking_lot`, `rubber_factory` y `electrical_substation`. La retícula de navegación tiene separación de 1.25 m. Los escenarios y resultados se guardan fuera de `config/maps/`, separados por mapa y semilla, incluido `supermarket`.
 
 ## Generar escenario y asignación A* + MILP
 
@@ -72,7 +72,7 @@ python3 scripts/supermarket_seed_pipeline/run_full_offline.py \
   --assignment-mode fixed
 ```
 
-Los planes y certificados se ligan a hashes de escenario, asignación, grafo y obstáculos. No combines artefactos de distintas semillas o mapas. Si se rechaza una etapa, consulta su reporte; no rebajes márgenes ni cambies el estado `PASS` manualmente.
+Los planes y certificados se ligan a hashes de escenario, asignación, grafo y obstáculos. Cada `inputs_manifest.json` debe incluir explícitamente `map`, `assignment_mode`, `seed` y el resto de parámetros: no se infieren campos históricos. No combines artefactos de distintas semillas o mapas. Si se rechaza una etapa, consulta su reporte; no rebajes márgenes ni cambies el estado `PASS` manualmente.
 
 ## Ejecutar en Gazebo (solo con planificación completa)
 
@@ -83,7 +83,7 @@ ros2 launch swarm_worlds supermarket_full_prepared.launch.py \
 
 El launch ejecuta verificaciones adicionales antes de iniciar la misión. La primera simulación de una nueva semilla debe supervisarse. Para otro mapa o semilla, usa los mismos valores en los tres comandos.
 
-**Excepción histórica:** la semilla 100 de `supermarket` está protegida y tiene su launch específico `supermarket_full_experiment.launch.py`. No se la debe ejecutar mediante `supermarket_full_prepared.launch.py`.
+El único launch de misión preparada multimapa es `supermarket_full_prepared.launch.py`, con planes certificados y modo `milp` o `fixed`. La comprobación ROS de preparación ahora está en `ros_preflight.py`.
 
 ## Resultados y recuperación
 
@@ -97,7 +97,7 @@ scripts/supermarket_seed_pipeline/plans/<mapa>/seed_<N>/
   prepared/phase5_static_preflight.json
 ```
 
-Para `supermarket`, por compatibilidad, la ruta omite `<mapa>/` y utiliza `plans/seed_<N>/`. El modo `fixed` añade un subdirectorio `fixed/` a los resultados de planificación. La ejecución Gazebo genera registros separados en `scripts/resultados/experiments/` (por mapa para los mundos no predeterminados).
+Para los siete mapas, `plans/<mapa>/seed_<N>/` es la única ruta canónica. El modo `fixed` añade el subdirectorio `fixed/`. Los registros Gazebo se guardan en `scripts/resultados/experiments/<mapa>/`. Los planes antiguos migrados pueden conservar enlaces simbólicos que resuelven rutas absolutas almacenadas dentro de certificados; no eliminarlos sin revisar los planes que los referencian.
 
 El pipeline puede reutilizar certificados existentes si los hashes coinciden. Si hay una etapa parcial, conserva su carpeta para diagnóstico antes de volver a intentar esa etapa; **no elimines planes o reportes válidos automáticamente**.
 
@@ -113,4 +113,4 @@ Dependencias de Python utilizadas en el pipeline: `numpy`, `scipy` y `shapely`, 
 
 ## Estructura unificada de mapas (noviembre 2026)
 
-Los siete mapas (incluido `supermarket`) guardan escenarios en `config/scenarios/<mapa>/seed_N.json`, resultados MILP en `scripts/supermarket_milp/results/<mapa>/seed_N/` y planes preparados en `scripts/supermarket_seed_pipeline/plans/<mapa>/seed_N/`. Los planes anteriores de supermarket pueden contar con enlaces simbólicos de compatibilidad para rutas absolutas internas; no borrarlos hasta recalcular o archivar esos planes.
+Los siete mapas (incluido `supermarket`) guardan escenarios en `config/scenarios/<mapa>/seed_N.json`, resultados MILP en `scripts/supermarket_milp/results/<mapa>/seed_N/` y planes preparados en `scripts/supermarket_seed_pipeline/plans/<mapa>/seed_N/`. Los enlaces simbólicos históricos que ya existan solo sirven para resolver rutas internas antiguas; no son rutas de escritura ni una excepción de lectura para generar nuevos planes.

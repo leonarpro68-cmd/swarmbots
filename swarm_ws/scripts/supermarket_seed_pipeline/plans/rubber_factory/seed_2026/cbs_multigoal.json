@@ -171,7 +171,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 558,
-      "dynamic_edges": 1958,
+      "dynamic_edges": 1948,
       "paths": [
         {
           "robot": "summit0",
@@ -512,7 +512,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 564,
-      "dynamic_edges": 2004,
+      "dynamic_edges": 1994,
       "paths": [
         {
           "robot": "summit0",
@@ -1057,7 +1057,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 564,
-      "dynamic_edges": 2004,
+      "dynamic_edges": 1994,
       "paths": [
         {
           "robot": "summit0",
@@ -1514,7 +1514,7 @@
       "ct_expanded": 1,
       "ct_generated": 1,
       "dynamic_nodes": 571,
-      "dynamic_edges": 2054,
+      "dynamic_edges": 2044,
       "paths": [
         {
           "robot": "summit0",

@@ -57,7 +57,7 @@ def _objects(objects, kind, expected, bounds=BOUNDS, origin=(-15.,-25.), step=ST
     return converted
 
 
-def load_scenario(path, expected_seed=100, expected_world="supermarket", geometry_path=None):
+def load_scenario(path, expected_seed, expected_world, geometry_path=None):
     path = Path(path).expanduser().resolve()
     if not path.is_file():
         raise FileNotFoundError(f'Escenario no encontrado: {path}')

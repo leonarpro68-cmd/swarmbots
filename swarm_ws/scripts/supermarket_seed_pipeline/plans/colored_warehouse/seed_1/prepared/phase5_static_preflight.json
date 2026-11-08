@@ -1,0 +1,546 @@
+{
+  "schema": "supermarket.milp.phase5.d8_nav_gate.v1",
+  "status": "PASS_STATIC_PRECHECK_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "physical_D8_reach_verified": false,
+  "sha256": {
+    "cbs": "e0b0db5a899c76146c40be9b37a37f8ec4b7cc53cae1008ac7c491cf08d5253b",
+    "scenario": "d410bb268d38343c2116ef29b6a1b77eead3cdc75f44c0fb96d1d65ea5968202",
+    "geometry": "507db2f2dce3b424f217bcc500d002636366f2040ad02aa262ec9e5f359e1ded"
+  },
+  "stages": {
+    "pickup1": {
+      "stage": "pickup1",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/pickup1/pickup1_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/pickup1/pickup1_MILP_V3_clock.json",
+      "sha256": "844199bf3354adeb88da22daab17dbdc2467131c619ed63820c6d6ba2f0d604c",
+      "start_xy_m": [
+        [
+          3.75,
+          1.25
+        ],
+        [
+          6.25,
+          10.0
+        ],
+        [
+          -12.5,
+          2.5
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          12.5,
+          7.5
+        ],
+        [
+          -8.75,
+          10.0
+        ]
+      ],
+      "duration_v3_s": 10.95129
+    },
+    "delivery1": {
+      "stage": "delivery1",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/delivery1/delivery1_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/delivery1/delivery1_MILP_V3_clock.json",
+      "sha256": "b3f5f400503d5dce51e23838b527066bca56c92b48500884622ee1248daaede2",
+      "start_xy_m": [
+        [
+          1.25,
+          -6.25
+        ],
+        [
+          12.5,
+          7.5
+        ],
+        [
+          -8.75,
+          10.0
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          5.0,
+          -3.75
+        ],
+        [
+          -2.5,
+          1.25
+        ],
+        [
+          -5.0,
+          -6.25
+        ]
+      ],
+      "duration_v3_s": 17.818351
+    },
+    "pickup2": {
+      "stage": "pickup2",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/pickup2/pickup2_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/pickup2/pickup2_MILP_V3_clock.json",
+      "sha256": "2739169c6cee78cab967189ed42a73a4f56757f9c74039715288d2b4c9be7f9f",
+      "start_xy_m": [
+        [
+          5.0,
+          -3.75
+        ],
+        [
+          -2.5,
+          1.25
+        ],
+        [
+          -5.0,
+          -6.25
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          12.5,
+          -6.25
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          -11.25,
+          -5.0
+        ]
+      ],
+      "duration_v3_s": 12.196349
+    },
+    "delivery2": {
+      "stage": "delivery2",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/delivery2/delivery2_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/colored_warehouse/seed_1/phase4/delivery2/delivery2_MILP_V3_clock.json",
+      "sha256": "970328a9f948793fa526ac6489d76d4f74f665c02afcf22e0558b26ba1fc26f4",
+      "start_xy_m": [
+        [
+          12.5,
+          -6.25
+        ],
+        [
+          -1.25,
+          -1.25
+        ],
+        [
+          -11.25,
+          -5.0
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          7.5,
+          -3.75
+        ],
+        [
+          -5.0,
+          -5.0
+        ],
+        [
+          -2.5,
+          1.25
+        ]
+      ],
+      "duration_v3_s": 17.072914
+    }
+  },
+  "d8_tasks": [
+    {
+      "stage": "pickup1",
+      "robot": "summit0",
+      "target": "trash_N2_naranja",
+      "color": "naranja",
+      "approach_xy_m": [
+        1.25,
+        -6.25
+      ],
+      "target_xy_m": [
+        0.94309,
+        -7.71368
+      ],
+      "distance_m": 1.495511,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 1.204489,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          1.076484,
+          -7.077515
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "pickup1",
+      "robot": "summit1",
+      "target": "trash_A2_azul",
+      "color": "azul",
+      "approach_xy_m": [
+        12.5,
+        7.5
+      ],
+      "target_xy_m": [
+        12.77908,
+        6.12975
+      ],
+      "distance_m": 1.398381,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 1.301619,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          12.649357,
+          6.766674
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "pickup1",
+      "robot": "summit2",
+      "target": "trash_V1_verde",
+      "color": "verde",
+      "approach_xy_m": [
+        -8.75,
+        10.0
+      ],
+      "target_xy_m": [
+        -7.28229,
+        8.8799
+      ],
+      "distance_m": 1.846293,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.853707,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          -7.799007,
+          9.274239
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery1",
+      "robot": "summit0",
+      "target": "deposit_naranja",
+      "color": "naranja",
+      "approach_xy_m": [
+        5.0,
+        -3.75
+      ],
+      "target_xy_m": [
+        6.25,
+        -3.75
+      ],
+      "distance_m": 1.25,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.55,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          5.45,
+          -3.75
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery1",
+      "robot": "summit1",
+      "target": "deposit_azul",
+      "color": "azul",
+      "approach_xy_m": [
+        -2.5,
+        1.25
+      ],
+      "target_xy_m": [
+        -3.75,
+        2.5
+      ],
+      "distance_m": 1.767767,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.032233,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          -3.184315,
+          1.934315
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery1",
+      "robot": "summit2",
+      "target": "deposit_verde",
+      "color": "verde",
+      "approach_xy_m": [
+        -5.0,
+        -6.25
+      ],
+      "target_xy_m": [
+        -6.25,
+        -6.25
+      ],
+      "distance_m": 1.25,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.55,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          -5.45,
+          -6.25
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "pickup2",
+      "robot": "summit0",
+      "target": "trash_N1_naranja",
+      "color": "naranja",
+      "approach_xy_m": [
+        12.5,
+        -6.25
+      ],
+      "target_xy_m": [
+        13.50892,
+        -7.05343
+      ],
+      "distance_m": 1.289736,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 1.410264,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          13.000445,
+          -6.648518
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "pickup2",
+      "robot": "summit1",
+      "target": "trash_V2_verde",
+      "color": "verde",
+      "approach_xy_m": [
+        -1.25,
+        -1.25
+      ],
+      "target_xy_m": [
+        -2.56853,
+        -2.3954
+      ],
+      "distance_m": 1.746557,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.953443,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          -2.077825,
+          -1.969127
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "pickup2",
+      "robot": "summit2",
+      "target": "trash_A1_azul",
+      "color": "azul",
+      "approach_xy_m": [
+        -11.25,
+        -5.0
+      ],
+      "target_xy_m": [
+        -12.49183,
+        -4.08524
+      ],
+      "distance_m": 1.542377,
+      "d8_distance_min_m": 0.55,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 1.157623,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.65,
+        "inspection_endpoint_xy_m": [
+          -11.968489,
+          -4.470745
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery2",
+      "robot": "summit0",
+      "target": "deposit_naranja",
+      "color": "naranja",
+      "approach_xy_m": [
+        7.5,
+        -3.75
+      ],
+      "target_xy_m": [
+        6.25,
+        -3.75
+      ],
+      "distance_m": 1.25,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.55,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          7.05,
+          -3.75
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery2",
+      "robot": "summit1",
+      "target": "deposit_verde",
+      "color": "verde",
+      "approach_xy_m": [
+        -5.0,
+        -5.0
+      ],
+      "target_xy_m": [
+        -6.25,
+        -6.25
+      ],
+      "distance_m": 1.767767,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.032233,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          -5.684315,
+          -5.684315
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    },
+    {
+      "stage": "delivery2",
+      "robot": "summit2",
+      "target": "deposit_azul",
+      "color": "azul",
+      "approach_xy_m": [
+        -2.5,
+        1.25
+      ],
+      "target_xy_m": [
+        -3.75,
+        2.5
+      ],
+      "distance_m": 1.767767,
+      "d8_distance_min_m": 0.9,
+      "d8_distance_max_m": 1.8,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.032233,
+      "local_corridor_screen": {
+        "inspect_standoff_m": 0.8,
+        "inspection_endpoint_xy_m": [
+          -3.184315,
+          1.934315
+        ],
+        "shelf_hits": [],
+        "other_pending_trash_hits": [],
+        "other_deposit_hits": [],
+        "straight_line_geometric_screen_pass": true,
+        "note": "Solo línea ideal; NO demuestra visibilidad RGB-D, estabilidad de carga ni ausencia de colisión en Gazebo"
+      },
+      "d8_camera_and_grip_verified": false
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Aproximación rectilínea aproximada, no trayectoria ejecutada de visual_grasp",
+    "D8 no garantiza distancia real hasta verificar odometría",
+    "Sin inspección de RGB-D, orientación, gripper, joint ni descarga en Gazebo",
+    "No se ha emitido ningún comando ROS"
+  ]
+}
