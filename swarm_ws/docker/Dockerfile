@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-colcon-common-extensions \
         python3-rosdep \
         python3-vcstool \
+        python3-shapely \
         build-essential \
         git \
     && rm -rf /var/lib/apt/lists/*
