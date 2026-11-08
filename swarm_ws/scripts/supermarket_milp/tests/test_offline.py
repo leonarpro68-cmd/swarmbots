@@ -9,6 +9,8 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
+sys.path.insert(0,str(ROOT.parent))
+from swarm_maps import map_files
 from build_costs import Graph,build,STAGES
 from solve_assignment import solve,BASELINE
 
@@ -16,7 +18,7 @@ class TestPhases12(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.scenario=json.loads((ROOT/'data/seed_100.json').read_text())
-        cls.gdata=json.loads((ROOT/'data/supermarket_grafo.json').read_text())
+        cls.gdata=json.loads(map_files(ROOT.parents[1], 'supermarket')[0].read_text())
         cls.costs=build(cls.scenario,cls.gdata)
         cls.solution=solve(cls.costs)
 

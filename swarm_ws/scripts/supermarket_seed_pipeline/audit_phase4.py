@@ -5,6 +5,8 @@ No mueve robots ni crea trayectorias ejecutables. Se detiene ante fallos.
 from __future__ import annotations
 import argparse, hashlib, json, sys
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 from validar_corredores import run as check_corridors
 
 STAGES=('pickup1','delivery1','pickup2','delivery2')
@@ -54,7 +56,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);here=Path(__file__).resolve().parent
     p.add_argument('--cbs',type=Path,default=here/'reference_milp_cbs_seed100.json')
     p.add_argument('--scenario',type=Path,default=here/'reference_seed100.json')
-    p.add_argument('--geometry',type=Path,default=here/'supermarket_obstaculos.json')
+    p.add_argument('--geometry',type=Path,default=map_files(here.parents[1], 'supermarket')[1])
     p.add_argument('--output',type=Path,default=here/'results/geometry_audit.json')
     a=p.parse_args()
     return audit(a.cbs,a.scenario,a.output,a.geometry)

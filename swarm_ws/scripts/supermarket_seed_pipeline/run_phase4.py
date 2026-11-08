@@ -7,6 +7,8 @@ The scripts copied in original_hybrid and original_v3 retain original solver log
 from __future__ import annotations
 import argparse, hashlib, json, math, os, sys, time, traceback
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 import numpy as np
 from audit_phase4 import create_mission
 from validar_corredores import run as audit_corridors
@@ -122,7 +124,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--cbs',type=Path,required=True)
     p.add_argument('--scenario',type=Path,required=True)
-    p.add_argument('--geometry',type=Path,default=ROOT/'supermarket_obstaculos.json')
+    p.add_argument('--geometry',type=Path,default=map_files(ROOT.parents[1], 'supermarket')[1])
     p.add_argument('--output-dir',type=Path,required=True)
     p.add_argument('--stage',choices=(*STAGES,'all'),default='all')
     p.add_argument('--maxiter',type=int,default=450)

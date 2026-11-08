@@ -14,6 +14,9 @@ import itertools
 import json
 import math
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_STANDS = {
@@ -161,7 +164,7 @@ def build(scenario, graph, speed=2.0, stands=None):
 def main():
     p=argparse.ArgumentParser(description='Fase 1: matriz de costos A* sin movimiento')
     p.add_argument('--scenario',type=Path,default=HERE/'data'/'seed_100.json')
-    p.add_argument('--graph',type=Path,default=HERE/'data'/'supermarket_grafo.json')
+    p.add_argument('--graph',type=Path,default=map_files(HERE.parents[1], 'supermarket')[0])
     p.add_argument('--stands',type=Path,help='JSON: {"azul":[x,y],"verde":[x,y],"naranja":[x,y]}')
     p.add_argument('--speed',type=float,default=2.0)
     p.add_argument('--output',type=Path,default=HERE/'results'/'seed_100'/'astar_costs.json')

@@ -68,14 +68,6 @@ def main():
     scenario,assignment=expected_input(ws,a.seed,a.assignment_mode,a.map)
     graph,geom=map_files(ws,a.map)
     validate_map(graph,geom)
-    # Conservamos la comprobación histórica de los cuatro JSON de supermarket.
-    if a.map=='supermarket':
-        for original,selected in ((ws/'scripts/supermarket_milp/data/supermarket_grafo.json',graph),
-                                  (HERE/'supermarket_grafo.json',graph),
-                                  (ws/'scripts/supermarket_escenarios/supermarket_obstaculos.json',geom),
-                                  (HERE/'supermarket_obstaculos.json',geom)):
-            if not original.is_file() or sha(original)!=sha(selected):
-                raise ValueError(f'BLOCKED: los datos originales difieren de config/maps/supermarket: {original}')
     base=plans_dir(ws,a.map,a.seed)
     cbs=(base/'cbs_multigoal.json' if a.assignment_mode=='milp' else base/'fixed'/'cbs_multigoal.json')
     root=cbs.parent

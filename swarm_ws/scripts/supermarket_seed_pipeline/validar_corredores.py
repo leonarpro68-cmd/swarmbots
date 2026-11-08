@@ -7,6 +7,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 import numpy as np
 from corridors_supermarket import Rectangle, corridors, check_segments_in_corridors
 from clearance_config import (RECTANGLE_CENTER_CLEARANCE_M, WALL_CENTER_CLEARANCE_M, INTERROBOT_HALFSEPARATOR_M, INTERROBOT_CENTER_SEPARATION_M, TRASH_CENTER_EXCLUSION_M, VISUAL_DEPOSIT_NAV_EXCLUSION_M)
@@ -73,7 +76,7 @@ def main():
     args=p.parse_args()
     scenario=json.loads((ROOT/f'examples/seed_{args.seed}.json').read_text())
     mission=json.loads((ROOT/f'examples/mission_{args.seed}.json').read_text())
-    data=json.loads((ROOT/'supermarket_obstaculos.json').read_text())
+    data=json.loads(map_files(ROOT.parents[1], 'supermarket')[1].read_text())
     result=run(scenario,mission,data,margin=args.margin,detailed=args.detail)
     path=ROOT/f'results/seed_{args.seed}_corredores.json'
     path.write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')

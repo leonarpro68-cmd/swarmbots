@@ -8,6 +8,9 @@ from __future__ import annotations
 import argparse, json, math, random
 from pathlib import Path
 from collections import deque
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 
 ROOT=Path(__file__).resolve().parent
 COLORS={'verde':'#17a34a','naranja':'#ea580c','azul':'#2563eb'}
@@ -32,8 +35,9 @@ def close_to_rect_segment(a,b,o,clearance):
     return min(d2(0),d2(1),d2((lo+hi)/2)) >= (clearance-1e-8)**2
 
 def load(graph_file=None, geometry_file=None):
-    graph=json.loads(Path(graph_file or ROOT/'supermarket_grafo.json').read_text())
-    geometry=json.loads(Path(geometry_file or ROOT/'supermarket_obstaculos.json').read_text())
+    default_graph, default_geometry = map_files(ROOT.parents[1], 'supermarket')
+    graph=json.loads(Path(graph_file or default_graph).read_text())
+    geometry=json.loads(Path(geometry_file or default_geometry).read_text())
     vertices={tuple((n['x'],n['y'])):n for n in graph['nodes']}
     adj={v:set() for v in vertices}
     for a,b in graph['edges']:

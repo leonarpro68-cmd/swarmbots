@@ -5,6 +5,9 @@ No reachability conclusion is possible from Euclidean distance alone.
 """
 import argparse,json,math
 from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 from audit_phase4 import create_mission
 
 def run(cbs,scene,geometry):
@@ -25,7 +28,7 @@ def run(cbs,scene,geometry):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--cbs',type=Path,required=True)
-    p.add_argument('--scenario',type=Path,required=True);p.add_argument('--geometry',type=Path,default=Path(__file__).parent/'supermarket_obstaculos.json')
+    p.add_argument('--scenario',type=Path,required=True);p.add_argument('--geometry',type=Path,default=map_files(Path(__file__).resolve().parents[2], 'supermarket')[1])
     p.add_argument('--output',type=Path,required=True);a=p.parse_args()
     if a.output.exists():p.error('No se sobrescribe: '+str(a.output))
     report=run(json.loads(a.cbs.read_text()),json.loads(a.scenario.read_text()),json.loads(a.geometry.read_text()))

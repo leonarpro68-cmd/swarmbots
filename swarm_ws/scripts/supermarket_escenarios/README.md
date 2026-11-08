@@ -8,7 +8,7 @@ No modifica ni ejecuta archivos de la misión validada de `tugbot_warehouse`.
 python3 generar_escenario.py --seed 100 --output-dir resultados/seed_100
 ```
 
-Requiere Python 3 y `matplotlib` para crear el PNG. Los archivos `supermarket_grafo.json` y `supermarket_obstaculos.json` deben estar junto al script.
+Requiere Python 3 y `matplotlib` para crear el PNG. El grafo y los obstáculos predeterminados se leen de `config/maps/supermarket/grafo.json` y `config/maps/supermarket/obstaculos.json`; no hay copias locales junto al script.
 
 ## Reglas
 

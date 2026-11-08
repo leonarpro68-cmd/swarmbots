@@ -1,6 +1,8 @@
 """Adaptador aislado para el grafo de supermarket. No altera geometría original."""
-import json, math
+import json, math, sys
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
+from swarm_maps import map_files
 STEP_M=1.25
 ORIGIN_X=-15.0
 ORIGIN_Y=-25.0
@@ -9,7 +11,7 @@ ROBOT_WIDTH_M=0.5786
 ROBOT_RADIUS_M=math.hypot(ROBOT_LENGTH_M, ROBOT_WIDTH_M)/2
 EXTRA_MARGIN_M=0.30
 ROOT=Path(__file__).resolve().parents[1]
-_GRAPH_FILE=ROOT/'supermarket_grafo.json'
+_GRAPH_FILE=map_files(Path(__file__).resolve().parents[3], 'supermarket')[0]
 
 
 def use_graph(path):

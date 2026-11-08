@@ -1,66 +1,57 @@
-# SwarmBots — MILP Supermarket Fases 1 y 2 (OFFLINE)
+# SwarmBots — Asignación offline A* + MILP (multimapa)
 
-**Estado:** cálculo A* + optimización MILP comprobados. **Sin comandos ROS / Gazebo.** Estos resultados **no son trayectorias ejecutables** ni validación CBS/Bézier/V3/D8.
+Este directorio contiene el cálculo de costos A* y la asignación óptima de tareas según un **modelo proxy de tiempo**. No genera por sí solo rutas CBS, trayectorias Bézier/V3 ni certifica el comportamiento físico de Gazebo.
 
-## Fuentes de datos
+## Instalación y entorno
 
-- `data/seed_100.json` extraído del generador de escenarios entregado, mismo escenario de 3 robots, 6 basuritas y 3 depósitos. Se verifica contra la versión viva antes de emplearlo en nuevas simulaciones.
-- `data/supermarket_grafo.json`, grafo de 588 vértices, 1786 aristas, resolución 1.25 m, exclusión preliminar de obstáculos 0.936 m, generado en el proyecto `supermarket_escenarios_v1`.
-- Los puntos de aproximación a basuras corresponden al JSON de escenario; no son necesariamente los objetivos finales elegidos por CBS, que pueden diferir por 1 o más celdas.
-- Para finalizar cada entrega se usan paradas fijas cercanas a depósitos, observadas en la misión validada: azul `(5,-10)`, verde `(-2.5,-1.25)`, naranja `(-5,15)`. El modelo mantiene la misma parada en ambas rondas por ahora; **no optimiza** dónde detenerse alrededor del depósito. No es equivalente a la segunda entrega real de naranja y verde.
+El módulo **ya forma parte de `swarm_ws/scripts/supermarket_milp/`**. No es necesario instalarlo desde un ZIP independiente. Utiliza los mapas centrales en `config/maps/<mapa>/grafo.json` y `obstaculos.json`.
 
-## Qué optimiza
-
-Variables binarias `y_{r,a,b}`: robot `r` recoge la basurita `a` en ronda 1 y `b` en ronda 2, `a ≠ b`. Con 3 robots y 6 objetos hay 90 binarias. Variables continuas `T_pickup1, T_delivery1, T_pickup2, T_delivery2` representan el mayor tiempo de viaje individual de la etapa. Minimiza `T_pickup1 + T_delivery1 + T_pickup2 + T_delivery2`, con un desempate diminuto de longitud. Costos obtenidos mediante A* en el grafo, convertidos a tiempo a velocidad proxy de 2.0 m/s (NO velocidad constante certificada del robot).
-
-Restricciones: cada robot obtiene una pareja, cada basura se atiende una vez, y `T_stage` supera todos los tiempos individuales. Opción `--one-color-per-round`: exactamente una basurita de cada color en cada ronda para evitar acumulación intencional en depósitos; no prueba ausencia de conflictos entre robots.
-
-Se comprueba la solución MILP de forma independiente por enumeración exhaustiva de las 720 asignaciones posibles (288 si se impone una por color/ronda). Esto certifica el **óptimo del costo proxy** dentro del universo indicado; **no** el óptimo físico global de Gazebo.
-
-## Instalar en el host Ubuntu (fuera de Docker)
-
-Extraer `supermarket_milp_fases1_2_v1.zip` en Descargas (queda la carpeta `supermarket_milp_fases1_2_v1`).
+Ejecuta los siguientes comandos desde `/home/dev/swarm_ws` dentro de Docker (con Python y dependencias instaladas):
 
 ```bash
-bash "$HOME/Descargas/supermarket_milp_fases1_2_v1/install_on_host.sh" \
-  "$HOME/swarmbots/swarm_ws"
+python3 scripts/supermarket_milp/run_offline_seed.py \
+  --seed 2030 --map electrical_substation
 ```
 
-Instala solo `scripts/supermarket_milp`. No hace falta `colcon build` (no cambia paquetes ROS). Si ya existen los reportes de salida, el instalador **no los sobrescribe**. Antes de reejecutar pruebas usa otro nombre de salida o mueve esos reportes.
+Esta interfaz genera un escenario reproducible con 3 Summit, 6 objetos y 3 depósitos, calcula paradas de depósito a partir de vecinos conectados del grafo, evalúa costos A* y resuelve MILP con una basura de cada color por ronda. El mapa predeterminado es `supermarket`; puedes seleccionar cualquiera de los mapas disponibles mediante `--map`.
 
-## Dentro de Docker — reconstruir A* y MILP
+**Protección de resultados:** si ya existe la asignación de la semilla, `run_offline_seed.py` se detiene sin sobrescribirla. No uses `--overwrite` sin revisar los planes CBS/Bézier que dependan de los mismos archivos.
+
+## Modelo que resuelve
+
+- Se asignan dos basuras diferentes a cada uno de los tres robots, una por ronda, usando las seis basuras exactamente una vez.
+- Las variables binarias representan pares ordenados de recogida para cada robot; el modelo considera **90 parejas**.
+- El objetivo minimiza la suma de los cuatro tiempos máximos por etapa (proxy basado en distancias A* y velocidad de referencia), con un pequeño desempate de distancia.
+- La restricción de una basura de cada color por ronda está activada por el orquestador.
+- Se verifica el costo proxy de la asignación por enumeración exhaustiva de las alternativas permitidas.
+
+El resultado **no es un óptimo global de navegación física**: CBS, separación geométrica, Bézier/V3 y D8 se verifican después, en el pipeline de preparación.
+
+## Flujo completo de trabajo
+
+Una vez concluido A* + MILP:
 
 ```bash
-cd ~/swarm_ws
-python3 -c 'import scipy; print("SciPy",scipy.__version__)'
-
-python3 scripts/supermarket_milp/build_costs.py \
-  --scenario scripts/supermarket_milp/data/seed_100.json \
-  --graph scripts/supermarket_milp/data/supermarket_grafo.json \
-  --output scripts/supermarket_milp/results/seed_100/astar_costs.json
-
-python3 scripts/supermarket_milp/solve_assignment.py \
-  --costs scripts/supermarket_milp/results/seed_100/astar_costs.json \
-  --one-color-per-round \
-  --output scripts/supermarket_milp/results/seed_100/assignment_milp_one_color_per_round.json
-
-python3 -m unittest discover -s scripts/supermarket_milp/tests -v
+python3 scripts/supermarket_seed_pipeline/run_full_offline.py \
+  --seed 2030 --map electrical_substation --assignment-mode milp
 ```
 
-Para analizar TODAS las 720 combinaciones sin limitar una basurita por color/ronda, omite `--one-color-per-round` y usa salida `assignment_milp.json`.
+Cuando termine con `OFFLINE_FULL_STATIC_PASS_NOT_GAZEBO_CERTIFIED`, podrás ejecutar con ROS 2 (dentro de Docker):
 
-**Si el escenario activo difiere del JSON incluido**, ejecutar `build_costs.py --scenario ~/swarm_ws/config/supermarket/seed_100.json` con el archivo vivo y comprobar su integridad; no usar reportes antiguos como si fueran equivalentes. La configuración del grafo debe corresponder al escenario utilizado.
+```bash
+ros2 launch swarm_worlds supermarket_full_prepared.launch.py \
+  seed:=2030 map:=electrical_substation assignment_mode:=milp
+```
 
-## Resultado de referencia, semilla 100
+El preflight offline no sustituye la validación física en Gazebo. La misión debe supervisarse.
 
-| Robot | Pickup1 | Pickup2 |
-|---|---|---|
-| summit0 | `trash_V1_verde` | `trash_N1_naranja` |
-| summit1 | `trash_A1_azul` | `trash_V2_verde` |
-| summit2 | `trash_N2_naranja` | `trash_A2_azul` |
+## Herramientas de bajo nivel y pruebas
 
-Costo proxy fijo `47.829320s`; MILP `43.776019s`; diferencia `4.053301s` (~`8.47%`) bajo las simplificaciones arriba. La misma asignación respeta una basurita de cada color por ronda. Reportes en `results/seed_100/`.
+`build_costs.py` y `solve_assignment.py` siguen disponibles para análisis manual de un escenario existente. Su uso separado exige proporcionar rutas consistentes con el mismo mapa y semilla. Las salidas MILP se guardan en `scripts/supermarket_milp/results/<mapa>/seed_<N>/`, salvo `supermarket`, que conserva la ruta histórica `results/seed_<N>/`.
 
-## Próximo paso (NO incluido)
+```bash
+python3 -m unittest discover \
+  -s scripts/supermarket_milp/tests -p 'test_*.py' -v
+```
 
-Recalcular objetivos discretos para la nueva asignación, planificar las **4 etapas** mediante CBS, construir corredores, certificar Bézier Hybrid V2 con seguridad/curvatura y los relojes colectivos V3, generar **nuevos** NPZ/clock verificados, y adaptar los JSON para maniobras D8. No ejecutar la nueva asignación con los NPZ de la misión fija anterior.
+Los resultados de la antigua semilla 100 del supermercado pueden conservarse como referencia histórica, pero no deben confundirse con planes ejecutables de una nueva semilla o un nuevo mapa.

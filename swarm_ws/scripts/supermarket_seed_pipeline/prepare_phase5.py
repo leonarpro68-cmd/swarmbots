@@ -9,6 +9,8 @@ import json
 import math
 from pathlib import Path
 import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from swarm_maps import map_files
 
 import numpy as np
 from shapely.geometry import LineString, Point, box
@@ -195,7 +197,7 @@ def main():
     p.add_argument('--output-dir',type=Path,required=True)
     a=p.parse_args()
     if a.output_dir.exists() and any(a.output_dir.iterdir()):p.error('Directorio de salida no vacío, no sobrescribir')
-    geo=a.geometry or Path(__file__).with_name('supermarket_obstaculos.json')
+    geo=a.geometry or map_files(Path(__file__).resolve().parents[2], 'supermarket')[1]
     cb=read(a.cbs)
     if cb.get('assignment_mode', 'milp')!=a.assignment_mode:raise ValueError('Modo CBS incompatible con modo solicitado')
     rep,assignments=prepare(cb,read(a.scenario),read(geo),a.results,a.cbs,a.scenario,geo)
