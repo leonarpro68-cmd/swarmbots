@@ -86,7 +86,7 @@ def physical(stage, robot, task, scenario, execute, prepared, mode):
             raise RuntimeError(f'{stage}/{robot}: target de recogida no coincide con basurita')
         cmd = [sys.executable,'scripts/prueba_alinear_agarrar_cbs.py',
                '--scenario',str(scenario),'--robot',robot,'--trash',trash,
-               '--max-distance','2.2']
+               '--max-distance','2.7']
         if not execute:cmd+=['--dry-run']
     else:
         deposit = slot['target']

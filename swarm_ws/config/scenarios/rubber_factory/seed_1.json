@@ -2,7 +2,7 @@
   "version": "supermarket_offline_v1",
   "world": "rubber_factory",
   "seed": 1,
-  "attempt": 1,
+  "attempt": 2,
   "units": "m",
   "trash_spawn_rectangle": {
     "xmin": -13.75,
@@ -20,34 +20,34 @@
     {
       "name": "summit0",
       "xy_m": [
-        -11.25,
-        6.25
+        -1.25,
+        18.75
       ],
       "grid": [
-        3,
-        25
+        11,
+        35
       ]
     },
     {
       "name": "summit1",
       "xy_m": [
-        -8.75,
-        -3.75
+        11.25,
+        10.0
       ],
       "grid": [
-        5,
-        17
+        21,
+        28
       ]
     },
     {
       "name": "summit2",
       "xy_m": [
-        -7.5,
-        16.25
+        -10.0,
+        13.75
       ],
       "grid": [
-        6,
-        33
+        4,
+        31
       ]
     }
   ],
@@ -57,12 +57,12 @@
       "type": "deposit",
       "color": "verde",
       "xy_m": [
-        5.0,
-        -5.0
+        -6.25,
+        1.25
       ],
       "grid": [
-        16,
-        16
+        7,
+        21
       ]
     },
     {
@@ -70,12 +70,12 @@
       "type": "deposit",
       "color": "naranja",
       "xy_m": [
-        3.75,
-        -23.75
+        -12.5,
+        20.0
       ],
       "grid": [
-        15,
-        1
+        2,
+        36
       ]
     },
     {
@@ -84,11 +84,11 @@
       "color": "azul",
       "xy_m": [
         7.5,
-        6.25
+        -7.5
       ],
       "grid": [
         18,
-        25
+        14
       ]
     }
   ],
@@ -98,16 +98,16 @@
       "type": "trash",
       "color": "verde",
       "xy_m": [
-        1.11445,
-        16.92316
+        -3.77175,
+        10.61652
       ],
       "approach_node_xy_m": [
-        1.25,
-        17.5
+        -3.75,
+        10.0
       ],
       "approach_grid": [
-        13,
-        34
+        9,
+        28
       ]
     },
     {
@@ -115,16 +115,16 @@
       "type": "trash",
       "color": "verde",
       "xy_m": [
-        8.66511,
-        21.85374
+        1.5473,
+        23.54976
       ],
       "approach_node_xy_m": [
-        8.75,
-        21.25
+        2.5,
+        23.75
       ],
       "approach_grid": [
-        19,
-        37
+        14,
+        39
       ]
     },
     {
@@ -132,16 +132,16 @@
       "type": "trash",
       "color": "naranja",
       "xy_m": [
-        10.78053,
-        14.62733
+        -0.0101,
+        1.63809
       ],
       "approach_node_xy_m": [
-        11.25,
-        15.0
+        0.0,
+        2.5
       ],
       "approach_grid": [
-        21,
-        32
+        12,
+        22
       ]
     },
     {
@@ -149,16 +149,16 @@
       "type": "trash",
       "color": "naranja",
       "xy_m": [
-        -6.36311,
-        -11.95972
+        0.07085,
+        -3.81761
       ],
       "approach_node_xy_m": [
-        -6.25,
-        -10.0
+        1.25,
+        -3.75
       ],
       "approach_grid": [
-        7,
-        12
+        13,
+        17
       ]
     },
     {
@@ -166,25 +166,8 @@
       "type": "trash",
       "color": "azul",
       "xy_m": [
-        -0.11557,
-        -0.43656
-      ],
-      "approach_node_xy_m": [
-        0.0,
-        0.0
-      ],
-      "approach_grid": [
-        12,
-        20
-      ]
-    },
-    {
-      "name": "trash_A2_azul",
-      "type": "trash",
-      "color": "azul",
-      "xy_m": [
-        -6.64881,
-        -18.61339
+        -7.11664,
+        -10.50921
       ],
       "approach_node_xy_m": [
         -6.25,
@@ -193,6 +176,23 @@
       "approach_grid": [
         7,
         12
+      ]
+    },
+    {
+      "name": "trash_A2_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        7.69619,
+        13.60512
+      ],
+      "approach_node_xy_m": [
+        8.75,
+        13.75
+      ],
+      "approach_grid": [
+        19,
+        31
       ]
     }
   ],
@@ -202,6 +202,7 @@
     "trash_approach_lines_checked": true,
     "astar_cbs_verified": false,
     "physical_maneuvers_verified": false,
-    "gazebo_spawn_verified": false
+    "gazebo_spawn_verified": false,
+    "cbs_dynamic_initial_accessibility": true
   }
 }

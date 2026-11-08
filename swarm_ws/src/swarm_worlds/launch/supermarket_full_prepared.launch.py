@@ -23,15 +23,13 @@ def setup(context,*args,**kwargs):
     if mode not in ('fixed','milp'):raise ValueError('assignment_mode debe ser fixed o milp')
     if not seedstr.isdigit():raise ValueError('Se requiere seed no negativa')
     seed=int(seedstr)
-    if seed==100 and map_name=='supermarket':raise ValueError('Para seed100 utiliza el lanzamiento ya validado supermarket_full_experiment.launch.py')
     ws=Path(LaunchConfiguration('workspace').perform(context)).expanduser().resolve()
-    scene=(ws/'config/supermarket'/f'seed_{seed}.json' if map_name=='supermarket'
-           else ws/'config/scenarios'/map_name/f'seed_{seed}.json')
-    base=ws/'scripts/supermarket_seed_pipeline/plans'
-    if map_name!='supermarket':base=base/map_name
-    base=base/f'seed_{seed}'
-    map_geometry=ws/'config/maps'/map_name/'obstaculos.json'
-    map_graph=ws/'config/maps'/map_name/'grafo.json'
+    import sys
+    sys.path.insert(0, str(ws/'scripts'))
+    from swarm_maps import scenario_file, plans_dir, map_files
+    scene=scenario_file(ws,map_name,seed)
+    base=plans_dir(ws,map_name,seed)
+    map_graph,map_geometry=map_files(ws,map_name)
     prepared=(base if mode=='milp' else base/'fixed')/'prepared'
     runner=ws/'scripts/supermarket_seed_pipeline/run_prepared_mission.py'
     for f in (scene,map_graph,map_geometry,prepared/'phase5_static_preflight.json',runner,ws/'scripts/supermarket_seed_pipeline/run_auto_experiment_seed.py'):

@@ -2,7 +2,7 @@
   "version": "supermarket_offline_v1",
   "world": "rubber_factory",
   "seed": 6,
-  "attempt": 1,
+  "attempt": 3,
   "units": "m",
   "trash_spawn_rectangle": {
     "xmin": -13.75,
@@ -20,34 +20,34 @@
     {
       "name": "summit0",
       "xy_m": [
-        -10.0,
-        8.75
+        -2.5,
+        2.5
       ],
       "grid": [
-        4,
-        27
+        10,
+        22
       ]
     },
     {
       "name": "summit1",
       "xy_m": [
-        -1.25,
-        -8.75
+        -3.75,
+        21.25
       ],
       "grid": [
-        11,
-        13
+        9,
+        37
       ]
     },
     {
       "name": "summit2",
       "xy_m": [
-        10.0,
-        15.0
+        -12.5,
+        2.5
       ],
       "grid": [
-        20,
-        32
+        2,
+        22
       ]
     }
   ],
@@ -57,12 +57,12 @@
       "type": "deposit",
       "color": "verde",
       "xy_m": [
-        -2.5,
-        8.75
+        -7.5,
+        -2.5
       ],
       "grid": [
-        10,
-        27
+        6,
+        18
       ]
     },
     {
@@ -70,12 +70,12 @@
       "type": "deposit",
       "color": "naranja",
       "xy_m": [
-        1.25,
-        23.75
+        8.75,
+        -2.5
       ],
       "grid": [
-        13,
-        39
+        19,
+        18
       ]
     },
     {
@@ -83,12 +83,12 @@
       "type": "deposit",
       "color": "azul",
       "xy_m": [
-        -1.25,
-        2.5
+        1.25,
+        -5.0
       ],
       "grid": [
-        11,
-        22
+        13,
+        16
       ]
     }
   ],
@@ -98,16 +98,16 @@
       "type": "trash",
       "color": "verde",
       "xy_m": [
-        -8.78605,
-        2.05697
+        -13.30889,
+        16.12193
       ],
       "approach_node_xy_m": [
-        -8.75,
-        2.5
+        -12.5,
+        16.25
       ],
       "approach_grid": [
-        5,
-        22
+        2,
+        33
       ]
     },
     {
@@ -115,8 +115,59 @@
       "type": "trash",
       "color": "verde",
       "xy_m": [
-        -5.47794,
-        14.32278
+        -9.58687,
+        -9.00629
+      ],
+      "approach_node_xy_m": [
+        -8.75,
+        -8.75
+      ],
+      "approach_grid": [
+        5,
+        13
+      ]
+    },
+    {
+      "name": "trash_N1_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        11.15486,
+        7.24022
+      ],
+      "approach_node_xy_m": [
+        11.25,
+        6.25
+      ],
+      "approach_grid": [
+        21,
+        25
+      ]
+    },
+    {
+      "name": "trash_N2_naranja",
+      "type": "trash",
+      "color": "naranja",
+      "xy_m": [
+        -8.8773,
+        18.93549
+      ],
+      "approach_node_xy_m": [
+        -8.75,
+        20.0
+      ],
+      "approach_grid": [
+        5,
+        36
+      ]
+    },
+    {
+      "name": "trash_A1_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        -4.95687,
+        14.94284
       ],
       "approach_node_xy_m": [
         -5.0,
@@ -128,71 +179,20 @@
       ]
     },
     {
-      "name": "trash_N1_naranja",
-      "type": "trash",
-      "color": "naranja",
-      "xy_m": [
-        3.46822,
-        -10.76816
-      ],
-      "approach_node_xy_m": [
-        3.75,
-        -11.25
-      ],
-      "approach_grid": [
-        15,
-        11
-      ]
-    },
-    {
-      "name": "trash_N2_naranja",
-      "type": "trash",
-      "color": "naranja",
-      "xy_m": [
-        0.14359,
-        18.22303
-      ],
-      "approach_node_xy_m": [
-        0.0,
-        18.75
-      ],
-      "approach_grid": [
-        12,
-        35
-      ]
-    },
-    {
-      "name": "trash_A1_azul",
-      "type": "trash",
-      "color": "azul",
-      "xy_m": [
-        5.48757,
-        0.02378
-      ],
-      "approach_node_xy_m": [
-        5.0,
-        0.0
-      ],
-      "approach_grid": [
-        16,
-        20
-      ]
-    },
-    {
       "name": "trash_A2_azul",
       "type": "trash",
       "color": "azul",
       "xy_m": [
-        -7.50829,
-        23.05032
+        -6.18548,
+        7.51417
       ],
       "approach_node_xy_m": [
-        -7.5,
-        22.5
+        -5.0,
+        7.5
       ],
       "approach_grid": [
-        6,
-        38
+        8,
+        26
       ]
     }
   ],
@@ -202,6 +202,7 @@
     "trash_approach_lines_checked": true,
     "astar_cbs_verified": false,
     "physical_maneuvers_verified": false,
-    "gazebo_spawn_verified": false
+    "gazebo_spawn_verified": false,
+    "cbs_dynamic_initial_accessibility": true
   }
 }

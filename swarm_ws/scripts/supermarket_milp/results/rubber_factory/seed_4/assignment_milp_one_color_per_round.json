@@ -18,51 +18,51 @@
   },
   "chosen": {
     "summit0": {
-      "pickup1": "trash_A2_azul",
+      "pickup1": "trash_A1_azul",
       "delivery1": "deposit_azul",
-      "pickup2": "trash_A1_azul",
+      "pickup2": "trash_A2_azul",
       "delivery2": "deposit_azul"
     },
     "summit1": {
-      "pickup1": "trash_V1_verde",
+      "pickup1": "trash_V2_verde",
       "delivery1": "deposit_verde",
-      "pickup2": "trash_N1_naranja",
+      "pickup2": "trash_N2_naranja",
       "delivery2": "deposit_naranja"
     },
     "summit2": {
-      "pickup1": "trash_N2_naranja",
+      "pickup1": "trash_N1_naranja",
       "delivery1": "deposit_naranja",
-      "pickup2": "trash_V2_verde",
+      "pickup2": "trash_V1_verde",
       "delivery2": "deposit_verde"
     }
   },
   "optimized_proxy": {
     "stage_makespan_s": {
-      "pickup1": 5.625,
-      "delivery1": 16.490485,
-      "pickup2": 7.544417,
-      "delivery2": 14.571068
+      "pickup1": 7.02665,
+      "delivery1": 15.865485,
+      "pickup2": 10.625,
+      "delivery2": 13.321068
     },
-    "sum_stage_makespan_s": 44.23097,
-    "sum_robot_distance_m": 188.566019,
+    "sum_stage_makespan_s": 46.838203,
+    "sum_robot_distance_m": 169.031747,
     "robot_stage_estimated_s": {
       "summit0": {
-        "pickup1": 2.651651,
-        "delivery1": 5.928301,
-        "pickup2": 7.544417,
-        "delivery2": 7.544417
+        "pickup1": 3.276651,
+        "delivery1": 5.410534,
+        "pickup2": 2.133884,
+        "delivery2": 2.133884
       },
       "summit1": {
-        "pickup1": 4.785534,
-        "delivery1": 7.803301,
-        "pickup2": 6.767767,
-        "delivery2": 14.571068
+        "pickup1": 7.02665,
+        "delivery1": 7.02665,
+        "pickup2": 3.383884,
+        "delivery2": 13.321068
       },
       "summit2": {
-        "pickup1": 5.625,
-        "delivery1": 16.490485,
-        "pickup2": 7.133883,
-        "delivery2": 7.437184
+        "pickup1": 6.25,
+        "delivery1": 15.865485,
+        "pickup2": 10.625,
+        "delivery2": 8.062185
       }
     }
   },
@@ -83,42 +83,42 @@
     },
     "proxy": {
       "stage_makespan_s": {
-        "pickup1": 9.375,
-        "delivery1": 14.571068,
-        "pickup2": 10.0,
-        "delivery2": 16.490485
+        "pickup1": 7.02665,
+        "delivery1": 15.865485,
+        "pickup2": 10.625,
+        "delivery2": 13.321068
       },
-      "sum_stage_makespan_s": 50.436553,
-      "sum_robot_distance_m": 203.566019,
+      "sum_stage_makespan_s": 46.838203,
+      "sum_robot_distance_m": 176.835048,
       "robot_stage_estimated_s": {
         "summit0": {
-          "pickup1": 2.651651,
-          "delivery1": 5.928301,
-          "pickup2": 7.544417,
-          "delivery2": 7.544417
+          "pickup1": 3.901651,
+          "delivery1": 2.133884,
+          "pickup2": 5.410534,
+          "delivery2": 5.410534
         },
         "summit1": {
-          "pickup1": 5.15165,
-          "delivery1": 7.437184,
-          "pickup2": 7.285534,
-          "delivery2": 16.490485
+          "pickup1": 7.02665,
+          "delivery1": 7.02665,
+          "pickup2": 3.383884,
+          "delivery2": 13.321068
         },
         "summit2": {
-          "pickup1": 9.375,
-          "delivery1": 14.571068,
-          "pickup2": 10.0,
-          "delivery2": 7.803301
+          "pickup1": 6.25,
+          "delivery1": 15.865485,
+          "pickup2": 10.625,
+          "delivery2": 8.062185
         }
       }
     }
   },
-  "proxy_gain_vs_fixed_s": 6.205583,
-  "proxy_gain_vs_fixed_percent": 12.304,
+  "proxy_gain_vs_fixed_s": 0.0,
+  "proxy_gain_vs_fixed_percent": 0.0,
   "independent_exhaustive_verification": {
     "evaluated_full_assignments": 288,
     "global_proxy_makespan_optimum_verified": true,
-    "best_proxy_makespan_s": 44.23097,
-    "best_proxy_distance_m_under_exact_tie": 188.566019
+    "best_proxy_makespan_s": 46.838203,
+    "best_proxy_distance_m_under_exact_tie": 169.031747
   },
   "methodological_warning": [
     "Óptimo para esta matriz A*, no es un óptimo de la misión con CBS/Bezier/V3/Gazebo.",

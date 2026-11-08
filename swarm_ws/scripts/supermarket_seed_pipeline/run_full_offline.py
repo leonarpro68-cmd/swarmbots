@@ -28,6 +28,19 @@ def launch(*args):
     print('\n$ '+' '.join(cmd),flush=True)
     env=dict(os.environ,OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1')
     subprocess.run(cmd,cwd=HERE,env=env,check=True)
+def compatible_manifest(stored, expected, map_name, mode):
+    """No reescribe los certificados; admite el formato MILP/FIXED histórico."""
+    if stored==expected:
+        return True
+    if map_name!='supermarket':
+        return False
+    legacy=dict(expected)
+    legacy.pop('map',None)
+    if mode=='milp':
+        legacy.pop('assignment_mode',None)
+    return stored==legacy
+
+
 def expected_input(ws,seed,mode,map_name="supermarket"):
     sc=scenario_file(ws,map_name,seed)
     asn=(milp_results_dir(ws,map_name,seed)/'assignment_milp_one_color_per_round.json'
@@ -52,12 +65,11 @@ def main():
     ap.add_argument('--assignment-mode',choices=('fixed','milp'),default='milp')
     ap.add_argument('--workspace',type=Path,default=Path(__file__).resolve().parents[2])
     ap.add_argument('--maxiter',type=int,default=450)
-    ap.add_argument('--max-ct',type=int,default=6000)
+    ap.add_argument('--max-ct',type=int,default=None,help='Límite CBS: 10000 en planes nuevos; conserva el valor del manifiesto en planes existentes')
     ap.add_argument('--max-cbs-time',type=int,default=110)
     ap.add_argument('--until',choices=('cbs','v3','d8'),default='d8')
     a=ap.parse_args()
     if a.seed<0:ap.error('semilla negativa')
-    if a.seed==100 and a.map=='supermarket':ap.error('Para proteger la misión validada seed100, este automatizador solo admite semillas nuevas de supermarket')
     ws=a.workspace.expanduser().resolve()
     if a.assignment_mode=='fixed':
         sc=scenario_file(ws,a.map,a.seed)
@@ -71,19 +83,23 @@ def main():
     base=plans_dir(ws,a.map,a.seed)
     cbs=(base/'cbs_multigoal.json' if a.assignment_mode=='milp' else base/'fixed'/'cbs_multigoal.json')
     root=cbs.parent
+    # No invalidar los planes previos: sus parámetros están ligados al SHA
+    # del manifiesto. Un nuevo plan usa 10000, uno existente conserva el
+    # presupuesto original salvo que se indique --max-ct explícitamente.
+    previous_manifest=root/'inputs_manifest.json'
+    if a.max_ct is None:
+        a.max_ct=read(previous_manifest).get('max_ct',6000) if previous_manifest.is_file() else 10000
     phase4=root/'phase4'
     prepared=root/'prepared'
     source={'scenario_sha256':sha(scenario),'assignment_sha256':sha(assignment),
             'geometry_sha256':sha(geom),'graph_sha256':sha(graph),
             'seed':a.seed,'assignment_mode':a.assignment_mode,'max_ct':a.max_ct,'max_cbs_time':a.max_cbs_time,
             'maxiter':a.maxiter,'refinements':5,'max_speed':2.,'max_acceleration':2.}
-    if a.map=='supermarket' and a.assignment_mode=='milp':
-        source.pop('assignment_mode')  # manifiesto histórico exactamente igual
-    if a.map!='supermarket':
-        source['map']=a.map
+    source['map']=a.map  # mismo contrato para todos los mapas nuevos
     manifest=root/'inputs_manifest.json'
     if manifest.exists():
-        if read(manifest)!=source:raise ValueError('BLOCKED: el escenario, MILP, geometría o parámetros cambiaron. No reutilizar planes anteriores. Crear nuevo directorio de planes.')
+        if not compatible_manifest(read(manifest),source,a.map,a.assignment_mode):
+            raise ValueError('BLOCKED: el escenario, MILP, geometría o parámetros cambiaron. No reutilizar planes anteriores. Crear nuevo directorio de planes.')
     else:
         allowed={'fixed_assignment.json'} if a.assignment_mode=='fixed' else set()
         if root.exists() and any(x.name not in allowed for x in root.iterdir()):raise ValueError('BLOCKED: hay archivos sin manifiesto; no se reutilizan')

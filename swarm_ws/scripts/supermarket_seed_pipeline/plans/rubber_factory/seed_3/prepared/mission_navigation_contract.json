@@ -1,0 +1,151 @@
+{
+  "schema": "supermarket.milp.phase5.navigation.contract.v1",
+  "execution_authorized": false,
+  "stages": {
+    "pickup1": {
+      "stage": "pickup1",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/pickup1/pickup1_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/pickup1/pickup1_MILP_V3_clock.json",
+      "sha256": "bdf6c495850cb6e37d25a06950b1ab410784a72c3d0e2083a3f584d3e27f316f",
+      "start_xy_m": [
+        [
+          -5.0,
+          -3.75
+        ],
+        [
+          -3.75,
+          17.5
+        ],
+        [
+          5.0,
+          -1.25
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          -8.75,
+          -7.5
+        ],
+        [
+          3.75,
+          10.0
+        ],
+        [
+          8.75,
+          -6.25
+        ]
+      ],
+      "duration_v3_s": 11.371793
+    },
+    "delivery1": {
+      "stage": "delivery1",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/delivery1/delivery1_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/delivery1/delivery1_MILP_V3_clock.json",
+      "sha256": "5409bd5c56716b4d7fce3e4f08795cec6c7a27f61695a550f9f3e51c5dc60e21",
+      "start_xy_m": [
+        [
+          -8.75,
+          -7.5
+        ],
+        [
+          3.75,
+          10.0
+        ],
+        [
+          8.75,
+          -6.25
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          2.5,
+          20.0
+        ],
+        [
+          0.0,
+          6.25
+        ],
+        [
+          -3.75,
+          3.75
+        ]
+      ],
+      "duration_v3_s": 28.240366
+    },
+    "pickup2": {
+      "stage": "pickup2",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/pickup2/pickup2_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/pickup2/pickup2_MILP_V3_clock.json",
+      "sha256": "99efa06dbb0d033f82a4fb07bccc62d2c826eab2e4409bedd6621bdcce98aa5b",
+      "start_xy_m": [
+        [
+          2.5,
+          20.0
+        ],
+        [
+          0.0,
+          6.25
+        ],
+        [
+          -3.75,
+          3.75
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          7.5,
+          8.75
+        ],
+        [
+          2.5,
+          -5.0
+        ],
+        [
+          -10.0,
+          5.0
+        ]
+      ],
+      "duration_v3_s": 11.323466
+    },
+    "delivery2": {
+      "stage": "delivery2",
+      "trajectory": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/delivery2/delivery2_MILP_TIMED_OFFLINE.npz",
+      "successive_clock": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_3/phase4/delivery2/delivery2_MILP_V3_clock.json",
+      "sha256": "e5cc835a409b90e79bbc305e6c22d4699dd09c50cb83d37317bdc73583715518",
+      "start_xy_m": [
+        [
+          7.5,
+          8.75
+        ],
+        [
+          2.5,
+          -5.0
+        ],
+        [
+          -10.0,
+          5.0
+        ]
+      ],
+      "goal_xy_m": [
+        [
+          2.5,
+          3.75
+        ],
+        [
+          -6.25,
+          3.75
+        ],
+        [
+          2.5,
+          20.0
+        ]
+      ],
+      "duration_v3_s": 17.672541
+    }
+  },
+  "source_sha256": {
+    "cbs": "22f79bf064952d04b44abb44f6634179ad1fefd9843eb2d5298f5f51f44e592d",
+    "scenario": "bf42d63e27e6da5885e198c74472c5765ae20a785ee1f8909fc7f0dd81d30fca",
+    "geometry": "15cca71e441bce8ba0d621442d833d1659bbe989f3ed7eae5ed701992dba8205"
+  }
+}

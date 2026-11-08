@@ -1,0 +1,193 @@
+{
+  "schema": "swarm.d9929.collective_successive_timewarp.v1",
+  "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "input_npz": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_4/phase4/delivery1/delivery1_MILP_TIMED_OFFLINE.npz",
+  "input_sha256": "d68c269880f70e6fd8b588c63f587a86e0966e3536c32fcfc679b64ab5936492",
+  "method": "common_virtual_clock_with_C1_smooth_speed_factor",
+  "max_speed_m_s": 2.0,
+  "max_accel_m_s2": 2.0,
+  "max_scale": 2.0,
+  "transition_tau_s": 2.0,
+  "duration_original_s": 33.13008165099898,
+  "duration_uniform_s": 32.480472206861755,
+  "duration_successive_s": 27.544220351774808,
+  "saving_vs_uniform_s": 4.936251855086947,
+  "saving_vs_original_s": 5.585861299224174,
+  "uniform_scale": 1.0199999999999998,
+  "finish_times_virtual_s": {
+    "summit0": 9.035476813908813,
+    "summit1": 13.55321522086322,
+    "summit2": 33.13008165099898
+  },
+  "finish_times_wall_s": {
+    "summit0": 8.858310601871388,
+    "summit1": 12.525995903954797,
+    "summit2": 27.544220351774808
+  },
+  "ramps": [
+    {
+      "start_tau": 9.035476813908813,
+      "end_tau": 11.035476813908813,
+      "from_scale": 1.0199999999999998,
+      "to_scale": 1.3035406747418445,
+      "robots_finished": [
+        "summit0"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "finish_tau": 9.035476813908813,
+      "accepted": true,
+      "from_scale": 1.0199999999999998,
+      "to_scale": 1.3035406747418445
+    },
+    {
+      "finish_tau": 13.55321522086322,
+      "accepted": false,
+      "reason": "NO_DYNAMICAL_HEADROOM"
+    }
+  ],
+  "certified_envelopes": {
+    "speed_m_s": 2.0000000099999973,
+    "accel_m_s2": 1.9999999999999996,
+    "accel_witness": {
+      "robot": "summit0",
+      "segment_index": 0
+    },
+    "method": "quintic_Bernstein_convex_hull_and_chain_rule"
+  },
+  "common_time_warp": true,
+  "collision_preservation": "Preserva la coincidencia de tiempos entre robots; requiere entrada CBS válida",
+  "source_C2_checked": true,
+  "timewarp_knots": [
+    {
+      "tau_original_s": 0.0,
+      "wall_time_s": 0.0,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 1.5059128023,
+      "wall_time_s": 1.4763851003,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 3.0118256046,
+      "wall_time_s": 2.9527702006,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 4.517738407,
+      "wall_time_s": 4.4291553009,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 6.0236512093,
+      "wall_time_s": 5.9055404012,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 7.5295640116,
+      "wall_time_s": 7.3819255016,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 9.0354768139,
+      "wall_time_s": 8.8583106019,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 10.5413896162,
+      "wall_time_s": 10.2132081906,
+      "speed_factor": 1.2750669079
+    },
+    {
+      "tau_original_s": 11.0354768139,
+      "wall_time_s": 10.5945345727,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 12.0473024185,
+      "wall_time_s": 11.3707478695,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 13.5532152209,
+      "wall_time_s": 12.525995904,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 15.0591280232,
+      "wall_time_s": 13.6812439384,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 16.5650408255,
+      "wall_time_s": 14.8364919729,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 18.0709536278,
+      "wall_time_s": 15.9917400073,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 19.5768664301,
+      "wall_time_s": 17.1469880417,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 21.0827792325,
+      "wall_time_s": 18.3022360762,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 22.5886920348,
+      "wall_time_s": 19.4574841106,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 24.0946048371,
+      "wall_time_s": 20.6127321451,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 25.6005176394,
+      "wall_time_s": 21.7679801795,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 27.1064304417,
+      "wall_time_s": 22.923228214,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 28.612343244,
+      "wall_time_s": 24.0784762484,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 30.1182560464,
+      "wall_time_s": 25.2337242829,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 31.6241688487,
+      "wall_time_s": 26.3889723173,
+      "speed_factor": 1.3035406747
+    },
+    {
+      "tau_original_s": 33.130081651,
+      "wall_time_s": 27.5442203518,
+      "speed_factor": 1.3035406747
+    }
+  ],
+  "limitations": [
+    "Horario/ley de reloj virtual offline; NO es aún un NPZ con duración constante por pieza",
+    "La ejecución requerirá un seguidor que evalúe el reloj común sin alterar la geometría ni la sincronización",
+    "No certifica de nuevo las rutas CBS de origen ni el agarre físico"
+  ],
+  "geometry_source": "MILP CBS corrected + Hybrid V2 convex-hull certificate",
+  "physical_D8_reach_verified": false
+}

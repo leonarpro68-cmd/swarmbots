@@ -1,0 +1,138 @@
+{
+  "schema": "swarm.d9929.collective_successive_timewarp.v1",
+  "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "input_npz": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/rubber_factory/seed_1/phase4/pickup1/pickup1_MILP_TIMED_OFFLINE.npz",
+  "input_sha256": "ecfe09e5fea0dad87937ad78d9b1fad902327eef81653d54f0c15271ff591e52",
+  "method": "common_virtual_clock_with_C1_smooth_speed_factor",
+  "max_speed_m_s": 2.0,
+  "max_accel_m_s2": 2.0,
+  "max_scale": 2.0,
+  "transition_tau_s": 2.0,
+  "duration_original_s": 14.830344914193818,
+  "duration_uniform_s": 14.539553837444918,
+  "duration_successive_s": 12.949722200874776,
+  "saving_vs_uniform_s": 1.5898316365701426,
+  "saving_vs_original_s": 1.8806227133190418,
+  "uniform_scale": 1.02,
+  "finish_times_virtual_s": {
+    "summit0": 11.122758685645364,
+    "summit1": 14.830344914193818,
+    "summit2": 7.415172457096909
+  },
+  "finish_times_wall_s": {
+    "summit0": 10.31714188961158,
+    "summit1": 12.949722200874776,
+    "summit2": 7.269776918722461
+  },
+  "ramps": [
+    {
+      "start_tau": 7.415172457096909,
+      "end_tau": 9.415172457096908,
+      "from_scale": 1.02,
+      "to_scale": 1.302829596235345,
+      "robots_finished": [
+        "summit2"
+      ]
+    },
+    {
+      "start_tau": 11.122758685645364,
+      "end_tau": 13.122758685645364,
+      "from_scale": 1.302829596235345,
+      "to_scale": 1.4503635368036518,
+      "robots_finished": [
+        "summit0"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "finish_tau": 7.415172457096909,
+      "accepted": true,
+      "from_scale": 1.02,
+      "to_scale": 1.302829596235345
+    },
+    {
+      "finish_tau": 11.122758685645364,
+      "accepted": true,
+      "from_scale": 1.302829596235345,
+      "to_scale": 1.4503635368036518
+    }
+  ],
+  "certified_envelopes": {
+    "speed_m_s": 1.8937565238904566,
+    "accel_m_s2": 2.000000009999997,
+    "accel_witness": {
+      "robot": "summit1",
+      "segment_index": 7
+    },
+    "method": "quintic_Bernstein_convex_hull_and_chain_rule"
+  },
+  "common_time_warp": true,
+  "collision_preservation": "Preserva la coincidencia de tiempos entre robots; requiere entrada CBS válida",
+  "source_C2_checked": true,
+  "timewarp_knots": [
+    {
+      "tau_original_s": 0.0,
+      "wall_time_s": 0.0,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 1.8537931143,
+      "wall_time_s": 1.8174442297,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 3.7075862285,
+      "wall_time_s": 3.6348884594,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 5.5613793428,
+      "wall_time_s": 5.452332689,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 7.4151724571,
+      "wall_time_s": 7.2697769187,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 9.2689655714,
+      "wall_time_s": 8.8942225158,
+      "speed_factor": 1.3018422765
+    },
+    {
+      "tau_original_s": 9.4151724571,
+      "wall_time_s": 9.0064668532,
+      "speed_factor": 1.3028295962
+    },
+    {
+      "tau_original_s": 11.1227586856,
+      "wall_time_s": 10.3171418896,
+      "speed_factor": 1.3028295962
+    },
+    {
+      "tau_original_s": 12.9765517999,
+      "wall_time_s": 11.6715554844,
+      "speed_factor": 1.4498485158
+    },
+    {
+      "tau_original_s": 13.1227586856,
+      "wall_time_s": 11.7723717055,
+      "speed_factor": 1.4503635368
+    },
+    {
+      "tau_original_s": 14.8303449142,
+      "wall_time_s": 12.9497222009,
+      "speed_factor": 1.4503635368
+    }
+  ],
+  "limitations": [
+    "Horario/ley de reloj virtual offline; NO es aún un NPZ con duración constante por pieza",
+    "La ejecución requerirá un seguidor que evalúe el reloj común sin alterar la geometría ni la sincronización",
+    "No certifica de nuevo las rutas CBS de origen ni el agarre físico"
+  ],
+  "geometry_source": "MILP CBS corrected + Hybrid V2 convex-hull certificate",
+  "physical_D8_reach_verified": false
+}

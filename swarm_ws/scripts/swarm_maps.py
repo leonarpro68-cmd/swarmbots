@@ -2,7 +2,7 @@
 
 El directorio config/maps/<nombre>/ solo contiene grafo.json y obstaculos.json.
 Los escenarios y resultados de cada semilla se almacenan FUERA de config/maps.
-Para supermarket se conservan las rutas de resultados heredadas.
+Todos los mapas, incluido supermarket, usan las mismas rutas.
 """
 from __future__ import annotations
 import json
@@ -32,24 +32,22 @@ def map_files(ws: Path, name: str):
 
 def scenario_file(ws: Path, name: str, seed: int):
     check_map_name(name)
-    if name == 'supermarket':
-        return Path(ws)/'config'/'supermarket'/f'seed_{seed}.json'
     return Path(ws)/'config'/'scenarios'/name/f'seed_{seed}.json'
 
 
 def generation_dir(ws: Path, name: str, seed: int):
-    root=Path(ws)/'scripts'/'supermarket_escenarios'/'resultados'
-    return root/f'seed_{seed}' if name=='supermarket' else root/name/f'seed_{seed}'
+    check_map_name(name)
+    return Path(ws)/'scripts'/'supermarket_escenarios'/'resultados'/name/f'seed_{seed}'
 
 
 def milp_results_dir(ws: Path, name: str, seed: int):
-    root=Path(ws)/'scripts'/'supermarket_milp'/'results'
-    return root/f'seed_{seed}' if name=='supermarket' else root/name/f'seed_{seed}'
+    check_map_name(name)
+    return Path(ws)/'scripts'/'supermarket_milp'/'results'/name/f'seed_{seed}'
 
 
 def plans_dir(ws: Path, name: str, seed: int):
-    root=Path(ws)/'scripts'/'supermarket_seed_pipeline'/'plans'
-    return root/f'seed_{seed}' if name=='supermarket' else root/name/f'seed_{seed}'
+    check_map_name(name)
+    return Path(ws)/'scripts'/'supermarket_seed_pipeline'/'plans'/name/f'seed_{seed}'
 
 
 def validate_map(graph_file: Path, obstacles_file: Path):

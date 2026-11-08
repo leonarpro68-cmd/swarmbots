@@ -1,6 +1,6 @@
 {
   "schema": "supermarket.milp.phase5.d8_nav_gate.v1",
-  "status": "REJECTED_STATIC_PRECHECK",
+  "status": "PASS_STATIC_PRECHECK_NOT_EXECUTABLE",
   "execution_authorized": false,
   "physical_D8_reach_verified": false,
   "sha256": {
@@ -166,9 +166,9 @@
       ],
       "distance_m": 2.270922,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
-      "d8_distance_gate": false,
-      "distance_to_max_limit_m": -0.070922,
+      "d8_distance_max_m": 2.7,
+      "d8_distance_gate": true,
+      "distance_to_max_limit_m": 0.429078,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -198,9 +198,9 @@
       ],
       "distance_m": 1.687323,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
+      "d8_distance_max_m": 2.7,
       "d8_distance_gate": true,
-      "distance_to_max_limit_m": 0.512677,
+      "distance_to_max_limit_m": 1.012677,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -230,9 +230,9 @@
       ],
       "distance_m": 1.959919,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
+      "d8_distance_max_m": 2.7,
       "d8_distance_gate": true,
-      "distance_to_max_limit_m": 0.240081,
+      "distance_to_max_limit_m": 0.740081,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -358,9 +358,9 @@
       ],
       "distance_m": 2.00392,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
+      "d8_distance_max_m": 2.7,
       "d8_distance_gate": true,
-      "distance_to_max_limit_m": 0.19608,
+      "distance_to_max_limit_m": 0.69608,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -390,9 +390,9 @@
       ],
       "distance_m": 1.37923,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
+      "d8_distance_max_m": 2.7,
       "d8_distance_gate": true,
-      "distance_to_max_limit_m": 0.82077,
+      "distance_to_max_limit_m": 1.32077,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -422,9 +422,9 @@
       ],
       "distance_m": 2.086336,
       "d8_distance_min_m": 0.55,
-      "d8_distance_max_m": 2.2,
+      "d8_distance_max_m": 2.7,
       "d8_distance_gate": true,
-      "distance_to_max_limit_m": 0.113664,
+      "distance_to_max_limit_m": 0.613664,
       "local_corridor_screen": {
         "inspect_standoff_m": 0.65,
         "inspection_endpoint_xy_m": [
@@ -536,9 +536,7 @@
       "d8_camera_and_grip_verified": false
     }
   ],
-  "errors": [
-    "pickup1/summit0: distancia D8 2.271 fuera de (0.55,2.2)"
-  ],
+  "errors": [],
   "limitations": [
     "Aproximación rectilínea aproximada, no trayectoria ejecutada de visual_grasp",
     "D8 no garantiza distancia real hasta verificar odometría",

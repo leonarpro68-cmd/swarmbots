@@ -4,5 +4,6 @@
   "trash_approach_lines_checked": true,
   "astar_cbs_verified": false,
   "physical_maneuvers_verified": false,
-  "gazebo_spawn_verified": false
+  "gazebo_spawn_verified": false,
+  "cbs_dynamic_initial_accessibility": true
 }

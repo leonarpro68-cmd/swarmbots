@@ -18,51 +18,51 @@
   },
   "chosen": {
     "summit0": {
-      "pickup1": "trash_A1_azul",
+      "pickup1": "trash_A2_azul",
       "delivery1": "deposit_azul",
-      "pickup2": "trash_V2_verde",
-      "delivery2": "deposit_verde"
+      "pickup2": "trash_N2_naranja",
+      "delivery2": "deposit_naranja"
     },
     "summit1": {
-      "pickup1": "trash_N2_naranja",
+      "pickup1": "trash_N1_naranja",
       "delivery1": "deposit_naranja",
-      "pickup2": "trash_A2_azul",
-      "delivery2": "deposit_azul"
+      "pickup2": "trash_V2_verde",
+      "delivery2": "deposit_verde"
     },
     "summit2": {
       "pickup1": "trash_V1_verde",
       "delivery1": "deposit_verde",
-      "pickup2": "trash_N1_naranja",
-      "delivery2": "deposit_naranja"
+      "pickup2": "trash_A1_azul",
+      "delivery2": "deposit_azul"
     }
   },
   "optimized_proxy": {
     "stage_makespan_s": {
-      "pickup1": 6.919417,
-      "delivery1": 12.133883,
-      "pickup2": 12.133883,
-      "delivery2": 20.303301
+      "pickup1": 7.178301,
+      "delivery1": 10.517767,
+      "pickup2": 7.910534,
+      "delivery2": 13.838835
     },
-    "sum_stage_makespan_s": 51.490484,
-    "sum_robot_distance_m": 236.013981,
+    "sum_stage_makespan_s": 39.445437,
+    "sum_robot_distance_m": 185.156117,
     "robot_stage_estimated_s": {
       "summit0": {
-        "pickup1": 6.919417,
-        "delivery1": 4.160534,
-        "pickup2": 8.642767,
-        "delivery2": 13.276651
+        "pickup1": 6.035534,
+        "delivery1": 10.517767,
+        "pickup2": 3.017767,
+        "delivery2": 13.838835
       },
       "summit1": {
-        "pickup1": 3.642767,
-        "delivery1": 12.133883,
-        "pickup2": 12.133883,
-        "delivery2": 10.088835
+        "pickup1": 7.178301,
+        "delivery1": 10.454951,
+        "pickup2": 7.910534,
+        "delivery2": 12.178301
       },
       "summit2": {
-        "pickup1": 4.633883,
-        "delivery1": 11.401651,
-        "pickup2": 10.669417,
-        "delivery2": 20.303301
+        "pickup1": 3.901651,
+        "delivery1": 4.008883,
+        "pickup2": 6.508883,
+        "delivery2": 7.02665
       }
     }
   },
@@ -83,42 +83,42 @@
     },
     "proxy": {
       "stage_makespan_s": {
-        "pickup1": 16.124368,
-        "delivery1": 20.303301,
-        "pickup2": 20.517767,
-        "delivery2": 12.133883
+        "pickup1": 8.687185,
+        "delivery1": 12.178301,
+        "pickup2": 7.02665,
+        "delivery2": 13.838835
       },
-      "sum_stage_makespan_s": 69.079319,
-      "sum_robot_distance_m": 275.762718,
+      "sum_stage_makespan_s": 41.730971,
+      "sum_robot_distance_m": 195.637088,
       "robot_stage_estimated_s": {
         "summit0": {
-          "pickup1": 9.160534,
-          "delivery1": 10.088835,
-          "pickup2": 4.160534,
-          "delivery2": 4.160534
+          "pickup1": 6.035534,
+          "delivery1": 10.517767,
+          "pickup2": 7.02665,
+          "delivery2": 7.02665
         },
         "summit1": {
-          "pickup1": 16.124368,
-          "delivery1": 13.276651,
-          "pickup2": 6.919417,
-          "delivery2": 12.133883
+          "pickup1": 8.687185,
+          "delivery1": 12.178301,
+          "pickup2": 4.419417,
+          "delivery2": 13.838835
         },
         "summit2": {
-          "pickup1": 9.633883,
-          "delivery1": 20.303301,
-          "pickup2": 20.517767,
-          "delivery2": 11.401651
+          "pickup1": 7.696068,
+          "delivery1": 10.454951,
+          "pickup2": 5.928301,
+          "delivery2": 4.008883
         }
       }
     }
   },
-  "proxy_gain_vs_fixed_s": 17.588835,
-  "proxy_gain_vs_fixed_percent": 25.462,
+  "proxy_gain_vs_fixed_s": 2.285534,
+  "proxy_gain_vs_fixed_percent": 5.477,
   "independent_exhaustive_verification": {
     "evaluated_full_assignments": 288,
     "global_proxy_makespan_optimum_verified": true,
-    "best_proxy_makespan_s": 51.490484,
-    "best_proxy_distance_m_under_exact_tie": 236.013981
+    "best_proxy_makespan_s": 39.445437,
+    "best_proxy_distance_m_under_exact_tie": 185.156117
   },
   "methodological_warning": [
     "Óptimo para esta matriz A*, no es un óptimo de la misión con CBS/Bezier/V3/Gazebo.",

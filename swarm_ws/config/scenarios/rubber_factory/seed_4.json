@@ -102,11 +102,11 @@
         -8.73832
       ],
       "approach_node_xy_m": [
-        -7.5,
+        -8.75,
         -8.75
       ],
       "approach_grid": [
-        6,
+        5,
         13
       ]
     },
@@ -115,37 +115,20 @@
       "type": "trash",
       "color": "verde",
       "xy_m": [
-        9.45763,
-        -15.33606
-      ],
-      "approach_node_xy_m": [
-        8.75,
-        -7.5
-      ],
-      "approach_grid": [
-        19,
-        14
-      ]
-    },
-    {
-      "name": "trash_N1_naranja",
-      "type": "trash",
-      "color": "naranja",
-      "xy_m": [
         -12.6711,
         0.90858
       ],
       "approach_node_xy_m": [
         -12.5,
-        1.25
+        0.0
       ],
       "approach_grid": [
         2,
-        21
+        20
       ]
     },
     {
-      "name": "trash_N2_naranja",
+      "name": "trash_N1_naranja",
       "type": "trash",
       "color": "naranja",
       "xy_m": [
@@ -154,32 +137,32 @@
       ],
       "approach_node_xy_m": [
         -12.5,
-        8.75
+        7.5
       ],
       "approach_grid": [
         2,
-        27
+        26
       ]
     },
     {
-      "name": "trash_A1_azul",
+      "name": "trash_N2_naranja",
       "type": "trash",
-      "color": "azul",
+      "color": "naranja",
       "xy_m": [
         -5.34021,
         4.8316
       ],
       "approach_node_xy_m": [
-        -5.0,
+        -6.25,
         5.0
       ],
       "approach_grid": [
-        8,
+        7,
         24
       ]
     },
     {
-      "name": "trash_A2_azul",
+      "name": "trash_A1_azul",
       "type": "trash",
       "color": "azul",
       "xy_m": [
@@ -188,11 +171,28 @@
       ],
       "approach_node_xy_m": [
         -1.25,
-        18.75
+        17.5
       ],
       "approach_grid": [
         11,
-        35
+        34
+      ]
+    },
+    {
+      "name": "trash_A2_azul",
+      "type": "trash",
+      "color": "azul",
+      "xy_m": [
+        6.87219,
+        16.09723
+      ],
+      "approach_node_xy_m": [
+        6.25,
+        16.25
+      ],
+      "approach_grid": [
+        17,
+        33
       ]
     }
   ],
@@ -202,6 +202,7 @@
     "trash_approach_lines_checked": true,
     "astar_cbs_verified": false,
     "physical_maneuvers_verified": false,
-    "gazebo_spawn_verified": false
+    "gazebo_spawn_verified": false,
+    "cbs_dynamic_initial_accessibility": true
   }
 }

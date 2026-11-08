@@ -109,3 +109,8 @@ python3 -m unittest discover -s scripts/supermarket_milp/tests -p 'test_*.py' -v
 ```
 
 Dependencias de Python utilizadas en el pipeline: `numpy`, `scipy` y `shapely`, entre otras dependencias de ROS 2 ya previstas en el contenedor. Se recomienda incluir `python3-shapely` en el Dockerfile para que las pruebas sean reproducibles tras reconstruir la imagen.
+
+
+## Estructura unificada de mapas (noviembre 2026)
+
+Los siete mapas (incluido `supermarket`) guardan escenarios en `config/scenarios/<mapa>/seed_N.json`, resultados MILP en `scripts/supermarket_milp/results/<mapa>/seed_N/` y planes preparados en `scripts/supermarket_seed_pipeline/plans/<mapa>/seed_N/`. Los planes anteriores de supermarket pueden contar con enlaces simbólicos de compatibilidad para rutas absolutas internas; no borrarlos hasta recalcular o archivar esos planes.

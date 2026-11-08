@@ -10,8 +10,8 @@ def find_scenario(prep, scripts):
  """Identify the exact map and seed from the prepared-plan directory.
 
  Supported layouts:
-   plans/seed_N[/fixed]/prepared                  (supermarket)
-   plans/<map>/seed_N[/fixed]/prepared            (other maps)
+   plans/<map>/seed_N[/fixed]/prepared            (todos los mapas)
+   plans/seed_N[/fixed]/prepared                  (alias antiguo opcional)
  No implicit fallback to supermarket for an unrecognized map.
  """
  from swarm_maps import scenario_file, map_files

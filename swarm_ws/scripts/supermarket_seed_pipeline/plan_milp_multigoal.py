@@ -15,7 +15,7 @@ ROBOTS=('summit0','summit1','summit2')
 def read(p): return json.loads(Path(p).read_text(encoding='utf8'))
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def plan(assignment, scenario, *, max_ct=6000, max_time=110):
+def plan(assignment, scenario, *, max_ct=10000, max_time=110):
     if assignment.get('execution_authorized') is not False or assignment.get('status') not in ('OPTIMAL_ASTAR_PROXY_OFFLINE_NOT_EXECUTABLE','FIXED_DETERMINISTIC_OFFLINE_NOT_EXECUTABLE'):
         raise ValueError('Se requiere una asignación offline reconocida')
     if assignment.get('seed')!=scenario.get('seed') or not isinstance(scenario.get('seed'), int) or scenario['seed'] < 0:
@@ -93,7 +93,7 @@ def main():
     p.add_argument('--output',type=Path,default=here/'results/milp_cbs_multigoal_seed100.json')
     p.add_argument('--graph',type=Path,help='Grafo del mapa seleccionado (sin copiarlo al directorio CBS)')
     p.add_argument('--max-time',type=int,default=110)
-    p.add_argument('--max-ct',type=int,default=6000)
+    p.add_argument('--max-ct',type=int,default=10000)
     a=p.parse_args()
     if a.output.exists():p.error(f'No se sobrescribe: {a.output}')
     assignment=read(a.assignment)

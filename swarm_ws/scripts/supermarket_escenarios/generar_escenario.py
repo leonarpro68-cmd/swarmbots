@@ -16,6 +16,10 @@ ROOT=Path(__file__).resolve().parent
 COLORS={'verde':'#17a34a','naranja':'#ea580c','azul':'#2563eb'}
 RECT=(-13.75,13.75,-23.75,22.50)
 LABELS=[('V1','verde'),('V2','verde'),('N1','naranja'),('N2','naranja'),('A1','azul'),('A2','azul')]
+# Límites D8 de inicio de recogida, coherentes con prepare_phase5 y el ejecutor.
+PICKUP_D8_MIN_M=0.55
+PICKUP_D8_MAX_M=2.70
+DISTANCE_EPS_M=1e-6
 
 def point_rect_distance(x,y,o):
     dx=max(o['xmin']-x,0,x-o['xmax']);dy=max(o['ymin']-y,0,y-o['ymax'])
@@ -33,6 +37,25 @@ def close_to_rect_segment(a,b,o,clearance):
         if d2(m1)<d2(m2):hi=m2
         else:lo=m1
     return min(d2(0),d2(1),d2((lo+hi)/2)) >= (clearance-1e-8)**2
+
+def nearby_pickup_node(point, valid_nodes, obstacles, clearance):
+    """Primer nodo alcanzable geométricamente a distancia D8 de la basura.
+
+    No basta con 0.75 m de distancia a los obstáculos: debe existir al menos
+    un nodo del grafo a distancia inicial permitida por D8 y con un segmento
+    libre desde el nodo hasta la basura.
+    """
+    candidates = sorted(
+        (math.dist(point, node), node) for node in valid_nodes
+        if PICKUP_D8_MIN_M + DISTANCE_EPS_M < math.dist(point, node)
+        < PICKUP_D8_MAX_M - DISTANCE_EPS_M
+    )
+    for _, node in candidates:
+        if all(close_to_rect_segment(point, node, obstacle, clearance)
+               for obstacle in obstacles):
+            return node
+    return None
+
 
 def load(graph_file=None, geometry_file=None):
     default_graph, default_geometry = map_files(ROOT.parents[1], 'supermarket')
@@ -52,6 +75,52 @@ def load(graph_file=None, geometry_file=None):
         components.append(seen)
     component=max(components,key=len)
     return graph,geometry,vertices,adj,component
+
+def check_cbs_accessibility(scenario, graph_file):
+    """Chequeo conservador de alcanzabilidad de todas las basuras en el grafo
+    dinámico inicial (con las 6 basuras pendientes). No sustituye a CBS ni D8.
+
+    Reutiliza las reglas exactas de exclusión de DynamicTrashGraph y de
+    approach_vertices; verifica que cada robot pueda alcanzar una aproximación
+    de cada basura antes de aceptar la distribución.
+    """
+    from supermarket_seed_pipeline.supermarket_planning import geometry
+    from supermarket_seed_pipeline.supermarket_planning.dynamic_map import DynamicTrashGraph
+    from supermarket_seed_pipeline.supermarket_planning.approach import approach_vertices
+
+    geometry.use_graph(graph_file)
+    dynamic = DynamicTrashGraph(scenario)
+    starts = [tuple(r['grid']) for r in scenario['robots']]
+    if any(start not in dynamic.vertices for start in starts):
+        return False
+    goals = {}
+    # Se verifica el mismo intervalo D8 también sobre los nodos que CBS
+    # puede usar realmente, no solo sobre el nodo estático seleccionado.
+    for trash in scenario['trash']:
+        options = approach_vertices(dynamic, trash['name'])
+        near = {node for node in options
+                if PICKUP_D8_MIN_M + DISTANCE_EPS_M
+                   < math.dist(geometry.node_position(node),trash['xy_m'])
+                   < PICKUP_D8_MAX_M - DISTANCE_EPS_M}
+        if not near:
+            return False
+        goals[trash['name']] = near
+
+    # Una BFS por robot; se exige un camino para cada destino potencial,
+    # no una misión simultánea sin conflictos (eso sigue siendo tarea de CBS).
+    for start in starts:
+        reached = {start}
+        queue = deque([start])
+        while queue:
+            u = queue.popleft()
+            for v in dynamic.neighbors[u]:
+                if v not in reached:
+                    reached.add(v)
+                    queue.append(v)
+        if any(not (options & reached) for options in goals.values()):
+            return False
+    return True
+
 
 def choose(seed, min_sep=5., clearance=.75, attempts=3000,
            graph_file=None, geometry_file=None, world='supermarket'):
@@ -87,13 +156,11 @@ def choose(seed, min_sep=5., clearance=.75, attempts=3000,
                 p=(rng.uniform(spawn_rect[0],spawn_rect[1]),rng.uniform(spawn_rect[2],spawn_rect[3]))
                 if not all(point_rect_distance(*p,o)>=clearance for o in obstacles):continue
                 if not all(math.dist(p,q)>=min_sep for q in used):continue
-                # Identificar un nodo de aproximación sin cruzar obstáculos ni su banda de 0,75 m.
-                # No se exige que la basurita esté en el mismo nodo.
-                nearest=sorted(valid_nodes,key=lambda q:(math.dist(p,q),q))
-                anchor=None
-                for q in nearest[:25]:
-                    if all(close_to_rect_segment(p,q,o,clearance) for o in obstacles):
-                        anchor=q;break
+                # Comprobar ANTES de aceptar la basura que tiene un nodo
+                # del grafo a distancia D8 válida y con acercamiento libre.
+                # Así evitamos objetos como A2/semilla 1, cuyo nodo más
+                # cercano estaba a más de cinco metros.
+                anchor=nearby_pickup_node(p,valid_nodes,obstacles,clearance)
                 if anchor is None:continue
                 found=(p,anchor);break
             if found is None:break
@@ -109,6 +176,14 @@ def choose(seed, min_sep=5., clearance=.75, attempts=3000,
         'rules':{'min_pair_separation_m':min_sep,'trash_obstacle_clearance_m':clearance,'robots_deposits_on_graph':True,'trash_continuous_xy':True},
         'robots':robots,'deposits':deposits,'trash':trash,
         'validation':{'geometry_and_pairwise_separation':True,'connected_graph':len(component)==len(vertices),'trash_approach_lines_checked':True,'astar_cbs_verified':False,'physical_maneuvers_verified':False,'gazebo_spawn_verified':False}}
+        # Mantener inalteradas las semillas históricas de supermarket.
+        # Los otros mundos deben superar una comprobación de accesibilidad
+        # equivalente a la primera etapa de CBS antes de aceptarse.
+        if world != 'supermarket':
+            selected_graph = Path(graph_file) if graph_file else map_files(ROOT.parents[1], world)[0]
+            if not check_cbs_accessibility(scenario, selected_graph):
+                continue
+            scenario['validation']['cbs_dynamic_initial_accessibility'] = True
         return graph,geometry,scenario
     raise RuntimeError(f'No se obtuvo escenario válido tras {attempts} intentos')
 

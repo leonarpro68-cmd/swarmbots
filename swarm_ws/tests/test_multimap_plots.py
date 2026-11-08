@@ -36,9 +36,7 @@ class MultimapPlotTests(unittest.TestCase):
         scenario = scenario_file(self.ws, name, seed)
         scenario.parent.mkdir(parents=True, exist_ok=True)
         scenario.write_text(json.dumps({'seed': seed, 'world': world_override or name}))
-        root = self.scripts / 'supermarket_seed_pipeline' / 'plans'
-        if name != 'supermarket':
-            root = root / name
+        root = self.scripts / 'supermarket_seed_pipeline' / 'plans' / name
         prepared = root / f'seed_{seed}'
         if mode == 'fixed':
             prepared = prepared / 'fixed'

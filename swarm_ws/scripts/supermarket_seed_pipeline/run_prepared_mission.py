@@ -21,7 +21,7 @@ def sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 def read(p):return json.loads(pathlib.Path(p).read_text(encoding='utf-8'))
 
 def validate(ws,seed,mode="milp",map_name="supermarket"):
-    if seed<0 or (seed==100 and map_name=='supermarket'):raise ValueError('Semilla no permitida: se protege supermarket seed100')
+    if seed<0:raise ValueError('Semilla no permitida: debe ser no negativa')
     scene=scenario_file(ws,map_name,seed)
     base=plans_dir(ws,map_name,seed)
     root=base if mode=='milp' else base/'fixed'
@@ -38,9 +38,11 @@ def validate(ws,seed,mode="milp",map_name="supermarket"):
     m=read(manifest)
     for k,p in [('scenario_sha256',scene),('assignment_sha256',assign),('geometry_sha256',geometry),('graph_sha256',graph)]:
         if m.get(k)!=sha(p):raise ValueError(f'HASH MISMATCH: {k}')
-    if m.get('seed')!=seed or (map_name!='supermarket' and m.get('map')!=map_name) or (mode=='fixed' and m.get('assignment_mode')!='fixed'):
-        raise ValueError('Manifiesto de otra semilla o modo')
-    if mode=='milp' and m.get('assignment_mode','milp')!='milp':raise ValueError('Manifiesto MILP alterado')
+    # Los manifiestos históricos de supermarket no guardaban 'map', y
+    # los MILP tampoco guardaban 'assignment_mode'. Solo esos dos
+    # campos pueden inferirse al validar un certificado antiguo.
+    if m.get('seed')!=seed or m.get('map','supermarket')!=map_name or m.get('assignment_mode','milp')!=mode:
+        raise ValueError('Manifiesto de otra semilla, mapa o modo')
     cr=read(cbs)
     if cr.get('assignment_mode','milp')!=mode:raise ValueError('CBS pertenece a otro modo')
     if cr.get('seed')!=seed or cr.get('status')!='OFFLINE_CBS_ONLY_NOT_EXECUTABLE' or cr.get('inputs_sha256')!={'scenario':sha(scene),'assignment':sha(assign)}:
@@ -92,8 +94,7 @@ def main():
     sys.path.insert(0,str(ws/'scripts/supermarket_one_launch'))
     from run_unique_mission import check_live  # reuse working read-only ROS preflight
     check_live(ws,scene,a.readiness_seconds)
-    root=a.results_root.expanduser().resolve()
-    if a.map!='supermarket':root=root/a.map
+    root=a.results_root.expanduser().resolve()/a.map
     run=unique_dir(root,a.seed,a.assignment_mode)
     meta={'seed':a.seed,'map':a.map,'mode':a.assignment_mode,'scenario':str(scene),'prepared':str(prepared),
           'scenario_sha256':sha(scene),'status':'STARTED_SUPERVISED_NOT_PHYSICAL_CERTIFICATE'}

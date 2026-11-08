@@ -52,7 +52,10 @@ class MapSelectionTest(unittest.TestCase):
         seed=2026
         for fn in (scenario_file,generation_dir,milp_results_dir,plans_dir):
             self.assertNotEqual(fn(WS,'supermarket',seed), fn(WS,'tugbot_warehouse',seed))
-        self.assertEqual(scenario_file(WS,'supermarket',seed), WS/'config/supermarket/seed_2026.json')
+        self.assertEqual(scenario_file(WS,'supermarket',seed), WS/'config/scenarios/supermarket/seed_2026.json')
+        self.assertEqual(generation_dir(WS,'supermarket',seed), WS/'scripts/supermarket_escenarios/resultados/supermarket/seed_2026')
+        self.assertEqual(milp_results_dir(WS,'supermarket',seed), WS/'scripts/supermarket_milp/results/supermarket/seed_2026')
+        self.assertEqual(plans_dir(WS,'supermarket',seed), WS/'scripts/supermarket_seed_pipeline/plans/supermarket/seed_2026')
 
     def test_tugbot_scenario_is_deterministic(self):
         g,o=map_files(WS,'tugbot_warehouse')

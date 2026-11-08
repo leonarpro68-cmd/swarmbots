@@ -18,51 +18,51 @@
   },
   "chosen": {
     "summit0": {
-      "pickup1": "trash_A2_azul",
+      "pickup1": "trash_A1_azul",
       "delivery1": "deposit_azul",
-      "pickup2": "trash_A1_azul",
-      "delivery2": "deposit_azul"
+      "pickup2": "trash_V2_verde",
+      "delivery2": "deposit_verde"
     },
     "summit1": {
-      "pickup1": "trash_N1_naranja",
+      "pickup1": "trash_N2_naranja",
       "delivery1": "deposit_naranja",
-      "pickup2": "trash_N2_naranja",
+      "pickup2": "trash_N1_naranja",
       "delivery2": "deposit_naranja"
     },
     "summit2": {
-      "pickup1": "trash_V2_verde",
+      "pickup1": "trash_V1_verde",
       "delivery1": "deposit_verde",
-      "pickup2": "trash_V1_verde",
-      "delivery2": "deposit_verde"
+      "pickup2": "trash_A2_azul",
+      "delivery2": "deposit_azul"
     }
   },
   "optimized_proxy": {
     "stage_makespan_s": {
-      "pickup1": 7.758883,
-      "delivery1": 17.392767,
-      "pickup2": 3.901651,
-      "delivery2": 3.901651
+      "pickup1": 6.875,
+      "delivery1": 13.990485,
+      "pickup2": 5.410534,
+      "delivery2": 6.660534
     },
-    "sum_stage_makespan_s": 32.954952,
-    "sum_robot_distance_m": 138.979709,
+    "sum_stage_makespan_s": 32.936553,
+    "sum_robot_distance_m": 158.210679,
     "robot_stage_estimated_s": {
       "summit0": {
-        "pickup1": 7.392767,
-        "delivery1": 10.669417,
-        "pickup2": 3.901651,
-        "delivery2": 3.901651
+        "pickup1": 6.142767,
+        "delivery1": 9.785534,
+        "pickup2": 5.410534,
+        "delivery2": 3.75
       },
       "summit1": {
-        "pickup1": 3.75,
-        "delivery1": 17.392767,
-        "pickup2": 2.133884,
-        "delivery2": 2.133884
+        "pickup1": 2.758884,
+        "delivery1": 13.990485,
+        "pickup2": 4.52665,
+        "delivery2": 4.52665
       },
       "summit2": {
-        "pickup1": 7.758883,
-        "delivery1": 3.383884,
-        "pickup2": 3.535534,
-        "delivery2": 3.535534
+        "pickup1": 6.875,
+        "delivery1": 9.526651,
+        "pickup2": 5.15165,
+        "delivery2": 6.660534
       }
     }
   },
@@ -83,42 +83,42 @@
     },
     "proxy": {
       "stage_makespan_s": {
-        "pickup1": 14.419417,
-        "delivery1": 17.392767,
-        "pickup2": 12.071068,
-        "delivery2": 3.901651
+        "pickup1": 16.035534,
+        "delivery1": 6.660534,
+        "pickup2": 13.624368,
+        "delivery2": 13.990485
       },
-      "sum_stage_makespan_s": 47.784903,
-      "sum_robot_distance_m": 194.46068,
+      "sum_stage_makespan_s": 50.310921,
+      "sum_robot_distance_m": 227.959416,
       "robot_stage_estimated_s": {
         "summit0": {
-          "pickup1": 7.392767,
-          "delivery1": 10.669417,
-          "pickup2": 3.901651,
-          "delivery2": 3.901651
+          "pickup1": 3.017767,
+          "delivery1": 6.660534,
+          "pickup2": 9.785534,
+          "delivery2": 9.785534
         },
         "summit1": {
-          "pickup1": 12.026651,
-          "delivery1": 3.383884,
-          "pickup2": 6.40165,
-          "delivery2": 2.133884
+          "pickup1": 16.035534,
+          "delivery1": 3.75,
+          "pickup2": 10.625,
+          "delivery2": 13.990485
         },
         "summit2": {
-          "pickup1": 14.419417,
-          "delivery1": 17.392767,
-          "pickup2": 12.071068,
-          "delivery2": 3.535534
+          "pickup1": 12.651651,
+          "delivery1": 4.52665,
+          "pickup2": 13.624368,
+          "delivery2": 9.526651
         }
       }
     }
   },
-  "proxy_gain_vs_fixed_s": 14.829951,
-  "proxy_gain_vs_fixed_percent": 31.035,
+  "proxy_gain_vs_fixed_s": 17.374368,
+  "proxy_gain_vs_fixed_percent": 34.534,
   "independent_exhaustive_verification": {
     "evaluated_full_assignments": 288,
     "global_proxy_makespan_optimum_verified": true,
-    "best_proxy_makespan_s": 32.954952,
-    "best_proxy_distance_m_under_exact_tie": 138.979709
+    "best_proxy_makespan_s": 32.936553,
+    "best_proxy_distance_m_under_exact_tie": 158.210679
   },
   "methodological_warning": [
     "Óptimo para esta matriz A*, no es un óptimo de la misión con CBS/Bezier/V3/Gazebo.",
