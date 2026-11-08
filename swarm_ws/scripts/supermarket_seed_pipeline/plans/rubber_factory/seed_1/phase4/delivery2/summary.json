@@ -1,0 +1,50 @@
+{
+  "schema": "supermarket.milp.phase4.hybrid_v2_v3.offline.v2",
+  "status": "PARTIAL_OR_REJECTED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "source_sha256": {
+    "cbs": "52c305ed7e9353c647926b1d713fdbcdb32bd50c9cd0ce5483f27979d90622af",
+    "scenario": "4eb190473bb4d03d78c39a8c6ab94678f200bb35e04d7d393178352dbc9d5448",
+    "geometry": "15cca71e441bce8ba0d621442d833d1659bbe989f3ed7eae5ed701992dba8205"
+  },
+  "corridors": {
+    "pickup1": "PASS",
+    "delivery1": "PASS",
+    "pickup2": "PASS",
+    "delivery2": "PASS"
+  },
+  "stages": {
+    "delivery2": {
+      "status": "PASS_OFFLINE_HYBRID_V2_V3_NOT_EXECUTABLE",
+      "problem": null,
+      "cbs_ticks": 19,
+      "report": "delivery2_report.json",
+      "v3": {
+        "clock_file": "delivery2_MILP_V3_clock.json",
+        "timed_input": "delivery2_MILP_TIMED_OFFLINE.npz",
+        "dt_s": 1.1668652873425525,
+        "original_s": 22.170440459508498,
+        "successive_s": 20.265378600874946,
+        "verified_envelopes": {
+          "summit0": {
+            "speed_m_s": 2.000000009999997,
+            "acceleration_m_s2": 2.0000000099999866
+          },
+          "summit1": {
+            "speed_m_s": 2.0,
+            "acceleration_m_s2": 1.3182222649241668
+          },
+          "summit2": {
+            "speed_m_s": 1.6629730919987038,
+            "acceleration_m_s2": 1.1699205489713567
+          }
+        }
+      }
+    }
+  },
+  "limitations": [
+    "NO se validó el alcance de maniobras físicas D8",
+    "No se verificó seguimiento ni dinámica real de Gazebo",
+    "No autoriza ejecución de robots ni sustituye la misión anterior"
+  ]
+}

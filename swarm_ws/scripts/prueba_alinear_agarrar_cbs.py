@@ -83,8 +83,8 @@ def main():
     ap.add_argument('--scenario', required=True)
     ap.add_argument('--robot', default='summit0', choices=('summit0','summit1','summit2'))
     ap.add_argument('--trash', default='trash_V1_verde')
-    ap.add_argument('--max-distance', type=float, default=2.2,
-                    help='Distancia máxima inicial permitida, en metros (default 2.2)')
+    ap.add_argument('--max-distance', type=float, default=2.7,
+                    help='Distancia máxima inicial permitida, en metros (default 2.7)')
     ap.add_argument('--return-tolerance', type=float, default=0.12)
     ap.add_argument('--visual-timeout', type=float, default=22.)
     ap.add_argument('--dry-run', action='store_true', help='Solo comprobar pose y geometría; sin enviar órdenes')

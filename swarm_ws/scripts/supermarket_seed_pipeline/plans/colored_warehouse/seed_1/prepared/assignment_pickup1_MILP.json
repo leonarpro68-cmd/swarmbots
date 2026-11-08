@@ -1,0 +1,52 @@
+{
+  "schema": "supermarket.milp.physical.assignment.offline.v1",
+  "world": "colored_warehouse",
+  "seed": 1,
+  "stage": "pickup1",
+  "navigation_sha256": "844199bf3354adeb88da22daab17dbdc2467131c619ed63820c6d6ba2f0d604c",
+  "robots": {
+    "summit0": {
+      "trash": "trash_N2_naranja",
+      "color": "naranja",
+      "goal_xy_m": [
+        1.25,
+        -6.25
+      ],
+      "target": "trash_N2_naranja",
+      "target_xy_m": [
+        0.94309,
+        -7.71368
+      ],
+      "distance_m": 1.495511
+    },
+    "summit1": {
+      "trash": "trash_A2_azul",
+      "color": "azul",
+      "goal_xy_m": [
+        12.5,
+        7.5
+      ],
+      "target": "trash_A2_azul",
+      "target_xy_m": [
+        12.77908,
+        6.12975
+      ],
+      "distance_m": 1.398381
+    },
+    "summit2": {
+      "trash": "trash_V1_verde",
+      "color": "verde",
+      "goal_xy_m": [
+        -8.75,
+        10.0
+      ],
+      "target": "trash_V1_verde",
+      "target_xy_m": [
+        -7.28229,
+        8.8799
+      ],
+      "distance_m": 1.846293
+    }
+  },
+  "execution_authorized": false
+}

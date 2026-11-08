@@ -1,0 +1,21 @@
+{
+  "schema": "swarm.d996.preflight.readonly.v1",
+  "status": "PASS_STATIC_LIVE_NOT_RUN",
+  "problems": [],
+  "facts": {
+    "world_exists": true,
+    "scenario_exists": true,
+    "npz_exists": true,
+    "conversion_exists": true,
+    "offline_preflight_exists": true,
+    "world_sha256": "0d97e6beadbc05f85dd26ca2ff4932345461cb22155b8f7d058e0eb074e4cb8f",
+    "scenario_sha256": "a81be6d156d1b5197ff07f8a0e108bf0162b685d9b4b03843cbc763be8f08a26",
+    "conversion_status": "CONVERTED_OFFLINE_CHECKS_PASSED",
+    "offline_preflight_status": "PASS_OFFLINE_READ_ONLY"
+  },
+  "live_observation": null,
+  "tf_certified": false,
+  "execution_authorized": false,
+  "commands_sent": 0,
+  "publisher_created": false
+}

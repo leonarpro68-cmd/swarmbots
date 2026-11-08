@@ -1,0 +1,52 @@
+{
+  "schema": "supermarket.milp.physical.assignment.offline.v1",
+  "world": "rubber_factory",
+  "seed": 3,
+  "stage": "delivery1",
+  "navigation_sha256": "5409bd5c56716b4d7fce3e4f08795cec6c7a27f61695a550f9f3e51c5dc60e21",
+  "robots": {
+    "summit0": {
+      "trash": "trash_V2_verde",
+      "color": "verde",
+      "goal_xy_m": [
+        2.5,
+        20.0
+      ],
+      "target": "deposit_verde",
+      "target_xy_m": [
+        3.75,
+        21.25
+      ],
+      "distance_m": 1.767767
+    },
+    "summit1": {
+      "trash": "trash_A1_azul",
+      "color": "azul",
+      "goal_xy_m": [
+        0.0,
+        6.25
+      ],
+      "target": "deposit_azul",
+      "target_xy_m": [
+        1.25,
+        5.0
+      ],
+      "distance_m": 1.767767
+    },
+    "summit2": {
+      "trash": "trash_N2_naranja",
+      "color": "naranja",
+      "goal_xy_m": [
+        -3.75,
+        3.75
+      ],
+      "target": "deposit_naranja",
+      "target_xy_m": [
+        -5.0,
+        5.0
+      ],
+      "distance_m": 1.767767
+    }
+  },
+  "execution_authorized": false
+}

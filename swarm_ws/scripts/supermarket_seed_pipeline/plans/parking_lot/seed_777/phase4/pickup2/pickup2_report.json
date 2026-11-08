@@ -1,0 +1,343 @@
+{
+  "stage": "pickup2",
+  "status": "PASS_OFFLINE_HYBRID_V2_V3_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "cbs_ticks": 11,
+  "active_ticks": [
+    11,
+    8,
+    4
+  ],
+  "targets": [
+    "trash_A2_azul",
+    "trash_V1_verde",
+    "trash_N1_naranja"
+  ],
+  "selected_goals": [
+    [
+      5,
+      8
+    ],
+    [
+      17,
+      21
+    ],
+    [
+      17,
+      3
+    ]
+  ],
+  "refinements_requested": 5,
+  "source": "MILP CBS dynamic multigoal",
+  "initial_slsqp": [
+    {
+      "robot": 0,
+      "success": true,
+      "message": "Optimization terminated successfully",
+      "iterations": 79,
+      "duration_sec": 0.6475746631622314,
+      "cost": 5.218174070894252,
+      "inequality_violation": 8.881784197001252e-16,
+      "equality_violation": 1.3322676295501878e-14
+    },
+    {
+      "robot": 1,
+      "success": true,
+      "message": "Optimization terminated successfully",
+      "iterations": 56,
+      "duration_sec": 0.16520285606384277,
+      "cost": 8.519561542613058,
+      "inequality_violation": 2.220446049250313e-15,
+      "equality_violation": 5.329070518200751e-15
+    },
+    {
+      "robot": 2,
+      "success": true,
+      "message": "Optimization terminated successfully",
+      "iterations": 26,
+      "duration_sec": 0.01344609260559082,
+      "cost": 5.514705882353509,
+      "inequality_violation": 0,
+      "equality_violation": 3.552713678800501e-14
+    }
+  ],
+  "initial_cost": 19.25244149586082,
+  "refinement_history": [
+    {
+      "iteration": 0,
+      "accepted": true,
+      "cost": 19.25244149586082
+    },
+    {
+      "iteration": 1,
+      "accepted": true,
+      "cost": 11.881622188437712,
+      "certificate": {
+        "pass_certificate": true,
+        "max_halfspace_violation_m": 0.0,
+        "max_C2_residual": 2.7071235305215018e-14,
+        "max_endpoint_residual_m": 1.0986160316453369e-14,
+        "max_wait_residual_m": 0.0
+      },
+      "solver": [
+        {
+          "robot": 0,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 81,
+          "duration_sec": 0.6483948230743408,
+          "cost": 3.337392054587487,
+          "inequality_violation": 0,
+          "equality_violation": 9.769962616701378e-15
+        },
+        {
+          "robot": 1,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 56,
+          "duration_sec": 0.17692112922668457,
+          "cost": 3.029524251472993,
+          "inequality_violation": 0,
+          "equality_violation": 5.852957007945747e-15
+        },
+        {
+          "robot": 2,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 25,
+          "duration_sec": 0.012817144393920898,
+          "cost": 5.514705882377232,
+          "inequality_violation": 0,
+          "equality_violation": 2.042810365310288e-14
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "accepted": true,
+      "cost": 10.928360149227919,
+      "certificate": {
+        "pass_certificate": true,
+        "max_halfspace_violation_m": 1.7763568394002505e-15,
+        "max_C2_residual": 3.078022006371032e-14,
+        "max_endpoint_residual_m": 1.0986160316453369e-14,
+        "max_wait_residual_m": 0.0
+      },
+      "solver": [
+        {
+          "robot": 0,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 77,
+          "duration_sec": 0.6299452781677246,
+          "cost": 2.720450357147268,
+          "inequality_violation": 1.7763568394002505e-15,
+          "equality_violation": 1.509903313490213e-14
+        },
+        {
+          "robot": 1,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 56,
+          "duration_sec": 0.16654348373413086,
+          "cost": 2.6932039097032874,
+          "inequality_violation": 0,
+          "equality_violation": 5.329070518200751e-15
+        },
+        {
+          "robot": 2,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 25,
+          "duration_sec": 0.012750625610351562,
+          "cost": 5.514705882377363,
+          "inequality_violation": 0,
+          "equality_violation": 2.220446049250313e-14
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "accepted": true,
+      "cost": 10.910478055815968,
+      "certificate": {
+        "pass_certificate": true,
+        "max_halfspace_violation_m": 6.661338147750939e-16,
+        "max_C2_residual": 2.7114910356960115e-14,
+        "max_endpoint_residual_m": 1.0986160316453369e-14,
+        "max_wait_residual_m": 0.0
+      },
+      "solver": [
+        {
+          "robot": 0,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 80,
+          "duration_sec": 0.6486546993255615,
+          "cost": 2.7157745980221124,
+          "inequality_violation": 0.0,
+          "equality_violation": 9.769962616701378e-15
+        },
+        {
+          "robot": 1,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 56,
+          "duration_sec": 0.16938281059265137,
+          "cost": 2.679997575416743,
+          "inequality_violation": 6.661338147750939e-16,
+          "equality_violation": 5.329070518200751e-15
+        },
+        {
+          "robot": 2,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 25,
+          "duration_sec": 0.012768983840942383,
+          "cost": 5.514705882377114,
+          "inequality_violation": 0,
+          "equality_violation": 2.3092638912203256e-14
+        }
+      ]
+    },
+    {
+      "iteration": 4,
+      "accepted": true,
+      "cost": 10.90779250330273,
+      "certificate": {
+        "pass_certificate": true,
+        "max_halfspace_violation_m": 0.0,
+        "max_C2_residual": 2.8435583831733384e-14,
+        "max_endpoint_residual_m": 1.0986160316453369e-14,
+        "max_wait_residual_m": 0.0
+      },
+      "solver": [
+        {
+          "robot": 0,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 80,
+          "duration_sec": 0.6404552459716797,
+          "cost": 2.715774598026384,
+          "inequality_violation": 0.0,
+          "equality_violation": 1.0658141036401503e-14
+        },
+        {
+          "robot": 1,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 55,
+          "duration_sec": 0.1715233325958252,
+          "cost": 2.677312022899122,
+          "inequality_violation": 0.0,
+          "equality_violation": 5.329070518200751e-15
+        },
+        {
+          "robot": 2,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 25,
+          "duration_sec": 0.012857675552368164,
+          "cost": 5.514705882377223,
+          "inequality_violation": 0,
+          "equality_violation": 2.220446049250313e-14
+        }
+      ]
+    },
+    {
+      "iteration": 5,
+      "accepted": true,
+      "cost": 10.90721459391366,
+      "certificate": {
+        "pass_certificate": true,
+        "max_halfspace_violation_m": 1.7763568394002505e-15,
+        "max_C2_residual": 3.517007107451656e-14,
+        "max_endpoint_residual_m": 1.0986160316453369e-14,
+        "max_wait_residual_m": 0.0
+      },
+      "solver": [
+        {
+          "robot": 0,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 80,
+          "duration_sec": 0.6452000141143799,
+          "cost": 2.7157745980487964,
+          "inequality_violation": 1.7763568394002505e-15,
+          "equality_violation": 1.7763568394002505e-14
+        },
+        {
+          "robot": 1,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 56,
+          "duration_sec": 0.1708824634552002,
+          "cost": 2.6767341134875062,
+          "inequality_violation": 0,
+          "equality_violation": 5.329070518200751e-15
+        },
+        {
+          "robot": 2,
+          "success": true,
+          "message": "Optimization terminated successfully",
+          "iterations": 25,
+          "duration_sec": 0.012995004653930664,
+          "cost": 5.514705882377357,
+          "inequality_violation": 0,
+          "equality_violation": 2.4868995751603507e-14
+        }
+      ]
+    }
+  ],
+  "refinements_accepted": 5,
+  "final_cost": 10.90721459391366,
+  "continuous_certificate": {
+    "pass_certificate": true,
+    "errors": [],
+    "error_count": 0,
+    "robots": 3,
+    "pieces": 11,
+    "min_rectangle_extra_clearance_m": 0.3861541461657946,
+    "min_dynamic_object_extra_clearance_m": -1.3877787807814457e-15,
+    "min_interrobot_extra_clearance_m": 4.587549188517195,
+    "min_wall_extra_clearance_m": 3.149999999999975,
+    "max_halfspace_violation_m": 1.7763568394002505e-15,
+    "max_C2_residual": 3.517007107451656e-14,
+    "max_endpoint_residual_m": 1.0986160316453369e-14,
+    "max_wait_residual_m": 0.0,
+    "max_speed_per_virtual_tick_m": 2.0062694964532257,
+    "max_acceleration_per_virtual_tick2_m": 4.815054199431391,
+    "conservative_uniform_tick_seconds": 1.6757504614674548,
+    "conservative_stage_duration_seconds": 18.433255076142004,
+    "speed_bound_m_s": 1.1972364278487713,
+    "acceleration_bound_m_s2": 1.7146776406035664,
+    "limits": {
+      "max_speed_m_s": 2.0,
+      "max_acceleration_m_s2": 2.0
+    },
+    "margin_m": 0.0,
+    "note": "Certificacion conservadora de envolventes convexas; el dt uniforme es solo una cota offline, no V3 ni una ejecucion Gazebo"
+  },
+  "v3": {
+    "clock_file": "pickup2_MILP_V3_clock.json",
+    "timed_input": "pickup2_MILP_TIMED_OFFLINE.npz",
+    "dt_s": 1.5826532136081517,
+    "original_s": 17.40918534968967,
+    "successive_s": 13.907457819913429,
+    "verified_envelopes": {
+      "summit0": {
+        "speed_m_s": 1.7808697102653295,
+        "acceleration_m_s2": 2.0000000099999884
+      },
+      "summit1": {
+        "speed_m_s": 1.767530543820562,
+        "acceleration_m_s2": 2.000000009999975
+      },
+      "summit2": {
+        "speed_m_s": 1.2930153420766732,
+        "acceleration_m_s2": 2.0
+      }
+    }
+  },
+  "wall_s": 7.722
+}

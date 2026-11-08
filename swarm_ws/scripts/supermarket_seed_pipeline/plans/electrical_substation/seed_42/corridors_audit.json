@@ -1,0 +1,82 @@
+{
+  "schema": "supermarket.milp.phase4.geometry_gate.v1",
+  "status": "PASS_CORRIDOR_PREFLIGHT_ONLY",
+  "execution_authorized": false,
+  "source_sha256": {
+    "cbs": "c865412532d6c68bd5aa2338e8ecd0ca0adee9a10f296aa7c20c761df56e641a",
+    "scenario": "e8d42332cd965dc79ab5e437fdf10b0e41ce65a7922244a9b274a0d8c55fefb3",
+    "geometry": "56494e5c6806ca01250cac20358e1abd67313439a7158cd8841084f6b27dcfb3"
+  },
+  "stage_audit": [
+    {
+      "stage": "pickup1",
+      "K": 7,
+      "rectangles": 19,
+      "robots": 3,
+      "accessible_deposits": [],
+      "private_object_counts": [
+        9,
+        9,
+        9
+      ],
+      "status": "PASS",
+      "halfspaces_total": 714,
+      "minimum_constraints_per_piece": 34,
+      "maximum_constraints_per_piece": 34,
+      "min_CBS_endpoint_slack_m": 0.4
+    },
+    {
+      "stage": "delivery1",
+      "K": 25,
+      "rectangles": 19,
+      "robots": 3,
+      "accessible_deposits": [],
+      "private_object_counts": [
+        6,
+        6,
+        6
+      ],
+      "status": "PASS",
+      "halfspaces_total": 2325,
+      "minimum_constraints_per_piece": 31,
+      "maximum_constraints_per_piece": 31,
+      "min_CBS_endpoint_slack_m": 0.308883476
+    },
+    {
+      "stage": "pickup2",
+      "K": 10,
+      "rectangles": 19,
+      "robots": 3,
+      "accessible_deposits": [],
+      "private_object_counts": [
+        6,
+        6,
+        6
+      ],
+      "status": "PASS",
+      "halfspaces_total": 930,
+      "minimum_constraints_per_piece": 31,
+      "maximum_constraints_per_piece": 31,
+      "min_CBS_endpoint_slack_m": 1.130651037
+    },
+    {
+      "stage": "delivery2",
+      "K": 16,
+      "rectangles": 19,
+      "robots": 3,
+      "accessible_deposits": [],
+      "private_object_counts": [
+        3,
+        3,
+        3
+      ],
+      "status": "PASS",
+      "halfspaces_total": 1344,
+      "minimum_constraints_per_piece": 28,
+      "maximum_constraints_per_piece": 28,
+      "min_CBS_endpoint_slack_m": 0.308883476
+    }
+  ],
+  "next_gate": "Hybrid V2 SLSQP + 5 refinements + convex-hull certificate, then common V3 timewarp; NOT yet performed",
+  "notes": "Los depósitos en la fase 3 usaron metas proxy fijas; la misión necesita compatibilidad física D8 y exclusiones estáticas/dinámicas antes de generar NPZ."
+}

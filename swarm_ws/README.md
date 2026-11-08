@@ -1,60 +1,70 @@
-# swarm_ws
+# SwarmBots — ROS 2 Jazzy + Gazebo Harmonic
 
-Workspace de **swarm robotics** sobre **ROS 2 Jazzy** + **Gazebo Harmonic**, containerizado con Docker + NVIDIA Container Toolkit.
+Workspace multimapa con 3 Summit, 6 basuras y 3 depósitos. Mapas:
+`supermarket`, `tugbot_warehouse`, `colored_warehouse`, `pallet_warehouse`,
+`parking_lot`, `rubber_factory` y `electrical_substation`.
 
-## Requisitos del host
-
-- Docker Engine + plugin `compose`
-- NVIDIA Container Toolkit (`nvidia-ctk`) configurado para Docker
-- X11 (Linux con servidor X corriendo)
-
-## Estructura
-
-```
-swarm_ws/
-├── docker/
-│   ├── Dockerfile           # ROS 2 Jazzy + Gazebo Harmonic + ros_gz
-│   ├── docker-compose.yml   # X11, GPU NVIDIA, bind mount del workspace
-│   └── entrypoint.sh        # source de ROS y del overlay
-├── src/
-│   ├── swarm_description/   # URDFs / Xacros / meshes (vacío)
-│   └── swarm_worlds/        # mundos .sdf / .world      (vacío)
-└── scripts/
-    ├── build.sh             # docker compose build
-    ├── run.sh               # arranca/atacha al contenedor con X11+GPU
-    └── colcon_build.sh      # colcon build --symlink-install
-```
-
-## Uso
+## Iniciar Docker (Ubuntu anfitrión)
 
 ```bash
-# 1. Construir la imagen (la primera vez ~10-15 min)
-./scripts/build.sh
+cd ~/swarmbots/swarm_ws/docker
+xhost +local:docker
+docker compose up -d swarm
+docker exec -it swarm_dev bash
+```
 
-# 2. Abrir un shell en el contenedor (X11 + GPU listos)
-./scripts/run.sh
+## Dentro de Docker
 
-# 3. Dentro del contenedor: compilar el workspace
-cd /home/dev/swarm_ws && colcon build --symlink-install
+```bash
+cd /home/dev/swarm_ws
+source /opt/ros/jazzy/setup.bash
+# Solo al crear el workspace o tras cambiar paquetes/launch de ROS:
+colcon build --packages-select swarm_worlds --symlink-install
 source install/setup.bash
 ```
 
-## Validaciones rápidas dentro del contenedor
+## Preparar y ejecutar una misión
 
 ```bash
-# ROS 2
-ros2 doctor --report
-
-# Gazebo Harmonic
-gz sim --version              # debe imprimir 8.x
-gz sim -v 4 shapes.sdf       # GUI con GPU
-
-# Puente ros_gz
-ros2 run ros_gz_bridge parameter_bridge --help
+python3 scripts/supermarket_milp/run_offline_seed.py --seed 2026 --map rubber_factory
+python3 scripts/supermarket_seed_pipeline/run_full_offline.py --seed 2026 --map rubber_factory
+# Solo si aparece OFFLINE_FULL_STATIC_PASS_NOT_GAZEBO_CERTIFIED:
+ros2 launch swarm_worlds supermarket_full_prepared.launch.py seed:=2026 map:=rubber_factory assignment_mode:=milp
 ```
 
-## Notas
+El modo `fixed` usa `--assignment-mode fixed` en la planificación offline y
+`assignment_mode:=fixed` en el launch. Los escenarios, resultados MILP y planes
+se guardan separados por mapa y semilla. No cambies los hashes ni estados de
+certificación para forzar una misión rechazada.
 
-- El contenedor corre como usuario `dev` con el mismo UID/GID del host para que los archivos creados desde dentro queden con tus permisos.
-- `network_mode: host` simplifica DDS multi-robot; cambia a `bridge` si necesitas aislar tráfico.
-- Para correr sin GPU, elimina el bloque `deploy.resources` de `docker/docker-compose.yml`.
+## Pruebas
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 -m unittest discover -s scripts/supermarket_milp/tests -p 'test_*.py' -v
+```
+
+El preflight ROS común reside en `scripts/supermarket_seed_pipeline/ros_preflight.py`.
+La semilla 100 ya no tiene un launch ni un ejecutor especiales. Se conserva
+`data/seed_100.json` únicamente como fixture de regresión A*/MILP.
+
+Más detalles en `scripts/supermarket_seed_pipeline/README.md`.
+
+## Launch de CBS históricos
+
+Se conserva `swarm_cbs_base.launch.py` **solo** para probar tres Summit y sus seguidores de ruta, sin planificador CBS, basura ni pinza. Por ejemplo:
+
+```bash
+ros2 launch swarm_worlds swarm_cbs_base.launch.py world:=tugbot_warehouse
+```
+
+Los launch 7B.2/7B.3 (`swarm_cbs_scenario`, `swarm_cbs_mission`) y el experimento independiente `swarm_cbs_grasp_base` se archivaron en `archive/legacy_cbs_launches/` junto a sus dos auxiliares. Esos flujos requerían scripts de generación/preparación ya ausentes en el workspace y no forman parte del pipeline multimapa actual. Los documentos antiguos bajo `docs/cbs/` son históricos y pueden contener comandos obsoletos.
+
+## Ejecutor CBS en vivo 6B–6E (archivado)
+
+El antiguo `swarm_mission` (6E) y los ejecutores 6B/6C/6D se han archivado en
+`archive/legacy_ros_mission/`. Su entrada `console_scripts` ya no se instala.
+El núcleo compartido (`bridge`, `mission_core`, `ros_plan_helpers`, `ros_planning_probe`),
+las demostraciones híbridas y sus bibliotecas permanecen en `src/swarm_behavior/`.
+Esta limpieza **no afecta** a CBS offline, MILP, Bézier/V3 ni a la misión preparada.
+Consulta `archive/legacy_ros_mission/README.md` para recuperar el prototipo.

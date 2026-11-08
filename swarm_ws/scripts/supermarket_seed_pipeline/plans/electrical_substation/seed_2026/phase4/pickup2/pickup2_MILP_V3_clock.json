@@ -1,0 +1,138 @@
+{
+  "schema": "swarm.d9929.collective_successive_timewarp.v1",
+  "status": "OFFLINE_SCHEDULE_CERTIFIED_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "input_npz": "/home/dev/swarm_ws/scripts/supermarket_seed_pipeline/plans/electrical_substation/seed_2026/phase4/pickup2/pickup2_MILP_TIMED_OFFLINE.npz",
+  "input_sha256": "dfbffef325145812b687fa1b85668ec22edf71b72f57e46ae14016b119844161",
+  "method": "common_virtual_clock_with_C1_smooth_speed_factor",
+  "max_speed_m_s": 2.0,
+  "max_accel_m_s2": 2.0,
+  "max_scale": 2.0,
+  "transition_tau_s": 2.0,
+  "duration_original_s": 17.263301145632525,
+  "duration_uniform_s": 16.924805044737774,
+  "duration_successive_s": 13.42572076656873,
+  "saving_vs_uniform_s": 3.499084278169043,
+  "saving_vs_original_s": 3.8375803790637946,
+  "uniform_scale": 1.0199999999999998,
+  "finish_times_virtual_s": {
+    "summit0": 12.947475859224394,
+    "summit1": 6.473737929612197,
+    "summit2": 17.263301145632525
+  },
+  "finish_times_wall_s": {
+    "summit0": 11.049165391010769,
+    "summit1": 6.346801891776665,
+    "summit2": 13.42572076656873
+  },
+  "ramps": [
+    {
+      "start_tau": 6.473737929612197,
+      "end_tau": 8.473737929612197,
+      "from_scale": 1.0199999999999998,
+      "to_scale": 1.4616186895067376,
+      "robots_finished": [
+        "summit1"
+      ]
+    },
+    {
+      "start_tau": 12.947475859224394,
+      "end_tau": 14.947475859224394,
+      "from_scale": 1.4616186895067376,
+      "to_scale": 1.9470992501767774,
+      "robots_finished": [
+        "summit0"
+      ]
+    }
+  ],
+  "attempts": [
+    {
+      "finish_tau": 6.473737929612197,
+      "accepted": true,
+      "from_scale": 1.0199999999999998,
+      "to_scale": 1.4616186895067376
+    },
+    {
+      "finish_tau": 12.947475859224394,
+      "accepted": true,
+      "from_scale": 1.4616186895067376,
+      "to_scale": 1.9470992501767774
+    }
+  ],
+  "certified_envelopes": {
+    "speed_m_s": 1.837015071564977,
+    "accel_m_s2": 2.0000000099999884,
+    "accel_witness": {
+      "robot": "summit2",
+      "segment_index": 7
+    },
+    "method": "quintic_Bernstein_convex_hull_and_chain_rule"
+  },
+  "common_time_warp": true,
+  "collision_preservation": "Preserva la coincidencia de tiempos entre robots; requiere entrada CBS válida",
+  "source_C2_checked": true,
+  "timewarp_knots": [
+    {
+      "tau_original_s": 0.0,
+      "wall_time_s": 0.0,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 2.1579126432,
+      "wall_time_s": 2.1156006306,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 4.3158252864,
+      "wall_time_s": 4.2312012612,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 6.4737379296,
+      "wall_time_s": 6.3468018918,
+      "speed_factor": 1.02
+    },
+    {
+      "tau_original_s": 8.4737379296,
+      "wall_time_s": 7.9883548241,
+      "speed_factor": 1.4616186895
+    },
+    {
+      "tau_original_s": 8.6316505728,
+      "wall_time_s": 8.0963943862,
+      "speed_factor": 1.4616186895
+    },
+    {
+      "tau_original_s": 10.789563216,
+      "wall_time_s": 9.5727798886,
+      "speed_factor": 1.4616186895
+    },
+    {
+      "tau_original_s": 12.9474758592,
+      "wall_time_s": 11.049165391,
+      "speed_factor": 1.4616186895
+    },
+    {
+      "tau_original_s": 14.9474758592,
+      "wall_time_s": 12.2363487886,
+      "speed_factor": 1.9470992502
+    },
+    {
+      "tau_original_s": 15.1053885024,
+      "wall_time_s": 12.317450275,
+      "speed_factor": 1.9470992502
+    },
+    {
+      "tau_original_s": 17.2633011456,
+      "wall_time_s": 13.4257207666,
+      "speed_factor": 1.9470992502
+    }
+  ],
+  "limitations": [
+    "Horario/ley de reloj virtual offline; NO es aún un NPZ con duración constante por pieza",
+    "La ejecución requerirá un seguidor que evalúe el reloj común sin alterar la geometría ni la sincronización",
+    "No certifica de nuevo las rutas CBS de origen ni el agarre físico"
+  ],
+  "geometry_source": "MILP CBS corrected + Hybrid V2 convex-hull certificate",
+  "physical_D8_reach_verified": false
+}

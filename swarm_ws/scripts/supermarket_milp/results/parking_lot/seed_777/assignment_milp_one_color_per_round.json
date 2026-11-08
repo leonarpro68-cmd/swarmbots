@@ -1,0 +1,129 @@
+{
+  "schema": "supermarket.milp.phase2.assignment.v1",
+  "status": "OPTIMAL_ASTAR_PROXY_OFFLINE_NOT_EXECUTABLE",
+  "execution_authorized": false,
+  "world": "parking_lot",
+  "seed": 777,
+  "objective": "minimize sum of four per-stage max A* travel-time proxies",
+  "milp": {
+    "binary_pair_variables": 90,
+    "continuous_stage_makespans": 4,
+    "linear_constraints": 27,
+    "solver": "scipy.optimize.milp (HiGHS)",
+    "solver_status": 0,
+    "solver_message": "Optimization terminated successfully. (HiGHS Status 7: Optimal)",
+    "one_color_per_round": true,
+    "time_limit_s": 120.0,
+    "relative_gap_tolerance": 1e-09
+  },
+  "chosen": {
+    "summit0": {
+      "pickup1": "trash_A1_azul",
+      "delivery1": "deposit_azul",
+      "pickup2": "trash_A2_azul",
+      "delivery2": "deposit_azul"
+    },
+    "summit1": {
+      "pickup1": "trash_V2_verde",
+      "delivery1": "deposit_verde",
+      "pickup2": "trash_V1_verde",
+      "delivery2": "deposit_verde"
+    },
+    "summit2": {
+      "pickup1": "trash_N2_naranja",
+      "delivery1": "deposit_naranja",
+      "pickup2": "trash_N1_naranja",
+      "delivery2": "deposit_naranja"
+    }
+  },
+  "optimized_proxy": {
+    "stage_makespan_s": {
+      "pickup1": 16.294418,
+      "delivery1": 19.053301,
+      "pickup2": 6.875,
+      "delivery2": 6.875
+    },
+    "sum_stage_makespan_s": 49.097719,
+    "sum_robot_distance_m": 239.28301,
+    "robot_stage_estimated_s": {
+      "summit0": {
+        "pickup1": 10.258883,
+        "delivery1": 13.642767,
+        "pickup2": 6.875,
+        "delivery2": 6.875
+      },
+      "summit1": {
+        "pickup1": 16.294418,
+        "delivery1": 13.535534,
+        "pickup2": 5.15165,
+        "delivery2": 5.15165
+      },
+      "summit2": {
+        "pickup1": 15.517767,
+        "delivery1": 19.053301,
+        "pickup2": 3.642767,
+        "delivery2": 3.642767
+      }
+    }
+  },
+  "validated_fixed_assignment": {
+    "chosen": {
+      "summit0": {
+        "pickup1": "trash_A2_azul",
+        "pickup2": "trash_A1_azul"
+      },
+      "summit1": {
+        "pickup1": "trash_V2_verde",
+        "pickup2": "trash_N2_naranja"
+      },
+      "summit2": {
+        "pickup1": "trash_N1_naranja",
+        "pickup2": "trash_V1_verde"
+      }
+    },
+    "proxy": {
+      "stage_makespan_s": {
+        "pickup1": 16.294418,
+        "delivery1": 13.535534,
+        "pickup2": 13.642767,
+        "delivery2": 19.053301
+      },
+      "sum_stage_makespan_s": 62.52602,
+      "sum_robot_distance_m": 267.818544,
+      "robot_stage_estimated_s": {
+        "summit0": {
+          "pickup1": 10.258883,
+          "delivery1": 6.875,
+          "pickup2": 13.642767,
+          "delivery2": 13.642767
+        },
+        "summit1": {
+          "pickup1": 16.294418,
+          "delivery1": 13.535534,
+          "pickup2": 8.017767,
+          "delivery2": 19.053301
+        },
+        "summit2": {
+          "pickup1": 13.794417,
+          "delivery1": 3.642767,
+          "pickup2": 10.0,
+          "delivery2": 5.15165
+        }
+      }
+    }
+  },
+  "proxy_gain_vs_fixed_s": 13.428301,
+  "proxy_gain_vs_fixed_percent": 21.476,
+  "independent_exhaustive_verification": {
+    "evaluated_full_assignments": 288,
+    "global_proxy_makespan_optimum_verified": true,
+    "best_proxy_makespan_s": 49.097719,
+    "best_proxy_distance_m_under_exact_tie": 239.28301
+  },
+  "methodological_warning": [
+    "Óptimo para esta matriz A*, no es un óptimo de la misión con CBS/Bezier/V3/Gazebo.",
+    "No es un permiso para ejecutar los robots: faltan planificación CBS, Bezier, V3 y validación física.",
+    "La matriz A* no modela esperas, congestión de depósitos, giro ni agarre/liberación.",
+    "Para pasar a ejecución se deben reconstruir planes y reportes, nunca reutilizar los NPZ de la asignación anterior."
+  ]
+}

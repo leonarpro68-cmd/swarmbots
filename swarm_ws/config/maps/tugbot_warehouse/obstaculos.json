@@ -1,0 +1,89 @@
+{
+  "bounds": {
+    "xmin": -14.65,
+    "xmax": 14.64,
+    "ymin": -24.64,
+    "ymax": 24.66
+  },
+  "obstacles": [
+    {
+      "name": "Columna 01",
+      "xmin": 7.144,
+      "ymin": 14.71,
+      "xmax": 7.744,
+      "ymax": 15.31
+    },
+    {
+      "name": "Columna 02",
+      "xmin": -7.706,
+      "ymin": 14.71,
+      "xmax": -7.106,
+      "ymax": 15.31
+    },
+    {
+      "name": "Columna 03",
+      "xmin": 7.144,
+      "ymin": 7.21,
+      "xmax": 7.744,
+      "ymax": 7.81
+    },
+    {
+      "name": "Columna 04",
+      "xmin": -7.706,
+      "ymin": 7.21,
+      "xmax": -7.106,
+      "ymax": 7.81
+    },
+    {
+      "name": "Columna 05",
+      "xmin": 7.144,
+      "ymin": -0.29,
+      "xmax": 7.744,
+      "ymax": 0.31
+    },
+    {
+      "name": "Columna 06",
+      "xmin": -7.706,
+      "ymin": -0.29,
+      "xmax": -7.106,
+      "ymax": 0.31
+    },
+    {
+      "name": "Columna 07",
+      "xmin": 7.144,
+      "ymin": -7.79,
+      "xmax": 7.744,
+      "ymax": -7.19
+    },
+    {
+      "name": "Columna 08",
+      "xmin": -7.706,
+      "ymin": -7.79,
+      "xmax": -7.106,
+      "ymax": -7.19
+    },
+    {
+      "name": "Columna 09",
+      "xmin": 7.144,
+      "ymin": -15.29,
+      "xmax": 7.744,
+      "ymax": -14.69
+    },
+    {
+      "name": "Columna 10",
+      "xmin": -7.706,
+      "ymin": -15.29,
+      "xmax": -7.106,
+      "ymax": -14.69
+    }
+  ],
+  "graph": {
+    "step_m": 1.25,
+    "clearance_m": 0.936,
+    "origin": [
+      -15.0,
+      -25.0
+    ],
+    "neighbors": 8
+  }
+}

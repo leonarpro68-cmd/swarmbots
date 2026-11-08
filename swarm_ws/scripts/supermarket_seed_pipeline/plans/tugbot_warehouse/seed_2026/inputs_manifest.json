@@ -1,0 +1,15 @@
+{
+  "scenario_sha256": "af9de1035261aa3677342db8d861d34dfd916850b27de9b5ef94d70b8054329b",
+  "assignment_sha256": "39a172a9bbbafdbc990f8f9856b549dcfdf36fe57dbbd4ae6eb64e4573579bb4",
+  "geometry_sha256": "676161bd37c426d55127ed7bef041027bbdf4af56fcd2d453ab257b754068e83",
+  "graph_sha256": "04239ad1fe302344e3d2cae1aff189f3e53b378d6e8bd1c58244c6c5f30e4905",
+  "seed": 2026,
+  "assignment_mode": "milp",
+  "max_ct": 6000,
+  "max_cbs_time": 110,
+  "maxiter": 450,
+  "refinements": 5,
+  "max_speed": 2.0,
+  "max_acceleration": 2.0,
+  "map": "tugbot_warehouse"
+}
